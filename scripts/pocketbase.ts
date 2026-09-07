@@ -356,13 +356,7 @@ function pocketBaseAddress(host: string, port: number): string {
 async function runMigrations(binaryPath: string, paths: RuntimePaths): Promise<void> {
   execFileSync(
     binaryPath,
-    [
-      "migrate",
-      "up",
-      `--dir=${paths.dataDir}`,
-      `--migrationsDir=${paths.migrationsDir}`,
-      `--hooksDir=${paths.hooksDir}`,
-    ],
+    ["migrate", "up", `--dir=${paths.dataDir}`, `--migrationsDir=${paths.migrationsDir}`],
     { cwd: paths.worktreeRoot, stdio: "inherit" },
   );
 }
@@ -391,6 +385,30 @@ async function waitForHealth(child: ChildProcess, healthUrl: string): Promise<vo
   );
 }
 
+async function terminateChild(child: ChildProcess): Promise<void> {
+  if (child.exitCode !== null || child.signalCode !== null) return;
+
+  await new Promise<void>((resolvePromise) => {
+    let forceTimer: ReturnType<typeof setTimeout> | undefined;
+    const finish = (): void => {
+      if (forceTimer) clearTimeout(forceTimer);
+      child.off("exit", finish);
+      resolvePromise();
+    };
+
+    child.once("exit", finish);
+    if (child.exitCode !== null || child.signalCode !== null || !child.kill("SIGTERM")) {
+      finish();
+      return;
+    }
+    forceTimer = setTimeout(() => {
+      if (child.exitCode === null && child.signalCode === null && !child.kill("SIGKILL")) {
+        finish();
+      }
+    }, 1_000);
+  });
+}
+
 export async function startPocketBase(config = resolveConfig()): Promise<ChildProcess> {
   const paths = resolveRuntimePaths();
   await assertNoSymlinkInPath(paths.worktreeRoot, paths.dataDir);
@@ -410,7 +428,12 @@ export async function startPocketBase(config = resolveConfig()): Promise<ChildPr
     ],
     { cwd: paths.worktreeRoot, stdio: "inherit" },
   );
-  await waitForHealth(child, `http://${pocketBaseAddress(config.host, config.port)}/api/health`);
+  try {
+    await waitForHealth(child, `http://${pocketBaseAddress(config.host, config.port)}/api/health`);
+  } catch (error) {
+    await terminateChild(child);
+    throw error;
+  }
   return child;
 }
 
