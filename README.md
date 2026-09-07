@@ -23,6 +23,35 @@ Start the development server:
 vp dev
 ```
 
+PocketBase is managed separately so the frontend can be started and tested
+without any credentials:
+
+```sh
+vp run pocketbase
+```
+
+This downloads and checksum-verifies PocketBase `0.40.3` into the user's cache,
+stores development data in `.local/pocketbase/data/`, applies `pb_migrations/`,
+and waits for the loopback health endpoint. To run both processes together, use
+`vp run dev:full`.
+
+Configuration is optional. Copy `.env.example` to `.env` and change only
+`POCKETBASE_PORT` when another local port is needed. `POCKETBASE_HOST` must
+remain a loopback address. The equivalent command-line overrides are
+`vp run pocketbase -- --host 127.0.0.1 --port 8091`.
+
+To reset only the current worktree's development data, use the interactive task:
+
+```sh
+vp run pocketbase:reset
+```
+
+Non-interactive reset requires `--force`:
+
+```sh
+vp run pocketbase:reset -- --force
+```
+
 Run the quality checks, tests, or production build:
 
 ```sh

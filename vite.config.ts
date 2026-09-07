@@ -5,7 +5,9 @@ export default defineConfig({
   staged: {
     "*": "vp check --fix",
   },
-  fmt: {},
+  fmt: {
+    ignorePatterns: [".github/workflows/unblock-issues.lock.yml"],
+  },
   lint: {
     plugins: ["react", "typescript", "oxc"],
     rules: {
@@ -31,7 +33,13 @@ export default defineConfig({
   },
   test: {
     environment: "happy-dom",
-    include: ["src/**/*.test.{ts,tsx}"],
+    include: ["src/**/*.test.{ts,tsx}", "scripts/**/*.test.ts"],
+  },
+  server: {
+    proxy: {
+      "/api": "http://127.0.0.1:8090",
+      "/_/": "http://127.0.0.1:8090",
+    },
   },
   plugins: lazyPlugins(() => [react()]),
 });
