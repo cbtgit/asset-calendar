@@ -10,6 +10,7 @@ node_modules
 dist
 dist-ssr
 *.local
+.local/pocketbase/data/
 
 # Editor directories and files
 .vscode/*
