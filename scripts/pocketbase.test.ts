@@ -12,7 +12,7 @@ import {
   resolveRuntimePaths,
   resolveTarget,
   verifyChecksum,
-} from "./pocketbase.js";
+} from "./pocketbase.ts";
 
 it("resolves and verifies all supported PocketBase targets", async () => {
   const targets = [
