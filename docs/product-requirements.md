@@ -27,7 +27,7 @@ The MVP must:
 - Provide administrator-only CSV and Excel exports for invoicing.
 - Isolate users and data by tenant, with the tenant resolved from the
   subdomain.
-- Run as a lightweight React/Vite SPA and PocketBase deployment behind the
+- Run as a lightweight React/Vite+ SPA and PocketBase deployment behind the
   existing host-level Nginx installation.
 
 ## 3. Non-goals for the MVP
@@ -105,8 +105,9 @@ Administrators cannot deactivate or demote the last active administrator.
 - Users can request a password reset through an external SMTP provider.
 - Deactivating a user prevents sign-in and new bookings but preserves the user
   and their booking history.
-- Existing sessions remain valid until they expire after a user is deactivated,
-  has their role changed, or changes their password.
+- Deactivating a user, changing their role, or changing their password does not
+  revoke existing sessions. Those sessions remain valid until their normal
+  expiry.
 - A deactivated user's existing bookings remain unchanged and continue to block
   their resources unless an administrator edits or deletes an eligible booking.
 - A deactivated user cannot be selected as the booker for a new booking.
@@ -435,7 +436,7 @@ To keep the MVP simple:
 
 - React
 - TypeScript
-- Vite/Vite+
+- Vite+
 - Tailwind CSS
 - shadcn/ui components
 - Ilamy calendar
@@ -456,7 +457,7 @@ proxy:
 
 ```text
 Nginx
-  -> static React/Vite application
+  -> static React/Vite+ application
   -> PocketBase on localhost
 ```
 
