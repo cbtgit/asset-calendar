@@ -437,11 +437,27 @@ To keep the MVP simple:
 - React
 - TypeScript
 - Vite+
+- TanStack Router for type-safe SPA routing, protected routes, and
+  URL-backed navigation state.
+- TanStack Query for PocketBase-backed server state, queries, mutations,
+  cache invalidation, and request loading/error states.
 - Tailwind CSS
 - shadcn/ui components
 - Ilamy calendar
 - PocketBase JavaScript SDK
 - Responsive SPA served as static files
+
+TanStack Router is the application's routing authority. Route definitions must
+provide typed parameters and search state, enforce authentication and
+temporary-password redirects before protected content renders, and support
+direct navigation and browser history.
+
+TanStack Query is the application's server-state authority. PocketBase reads
+and writes used by the UI must be exposed through consistently keyed queries
+and mutations. Successful mutations must invalidate or update all affected
+queries so calendar and administration views remain consistent. Local UI state
+such as an open panel or an unsaved form value must remain component state
+rather than being placed in the query cache.
 
 ### Backend
 
