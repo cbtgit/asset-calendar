@@ -69,7 +69,7 @@ export async function startPocketBaseIntegrationHarness(): Promise<PocketBaseInt
         await rm(temporaryRoot, { recursive: true, force: true });
       } catch (cleanupError) {
         throw new AggregateError(
-          [stopError, cleanupError].filter((error): error is Error => error instanceof Error),
+          [stopError, cleanupError].filter((error) => error !== undefined),
           "Failed to clean up the PocketBase integration harness.",
         );
       }
