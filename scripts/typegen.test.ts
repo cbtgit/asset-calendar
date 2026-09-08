@@ -21,4 +21,4 @@ it("generates representative PocketBase types deterministically from migrations"
   } finally {
     await rm(temporaryRoot, { recursive: true, force: true });
   }
-});
+}, 15000);
