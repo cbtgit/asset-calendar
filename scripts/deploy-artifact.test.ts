@@ -9,7 +9,7 @@ let pocketbaseBinary = "";
 vi.mock("./pocketbase.ts", () => ({
   POCKETBASE_VERSION: "0.40.3",
   ensurePocketBaseBinary: async () => pocketbaseBinary,
-  resolveRuntimePaths: () => ({} as any),
+  resolveRuntimePaths: () => ({}) as any,
 }));
 
 it("creates a release containing only production inputs", async () => {

@@ -1,7 +1,7 @@
 import { cp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { dirname, isAbsolute, join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { ensurePocketBaseBinary, POCKETBASE_VERSION, resolveRuntimePaths } from "./pocketbase.ts";
+import { ensurePocketBaseBinary, resolveRuntimePaths } from "./pocketbase.ts";
 
 export type ArtifactOptions = {
   root?: string;
@@ -16,7 +16,9 @@ export async function createDeploymentArtifact(options: ArtifactOptions = {}): P
   const output = resolve(options.output ?? join(projectRoot, ".local", "deployment", "release"));
   const outputRelative = relative(projectRoot, output);
   if (!outputRelative || outputRelative.startsWith("..") || isAbsolute(outputRelative)) {
-    throw new Error(`Output path must be inside the project root (${projectRoot}); received ${output}.`);
+    throw new Error(
+      `Output path must be inside the project root (${projectRoot}); received ${output}.`,
+    );
   }
   const dist = join(projectRoot, "dist");
   const migrations = join(projectRoot, "pb_migrations");
