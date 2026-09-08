@@ -11,7 +11,10 @@ export default defineConfig(({ mode }) => {
       "*": "vp check --fix",
     },
     fmt: {
-      ignorePatterns: [".github/workflows/unblock-issues.lock.yml"],
+      ignorePatterns: [
+        ".github/workflows/unblock-issues.lock.yml",
+        "src/types/pocketbase-types.ts",
+      ],
     },
     lint: {
       plugins: ["react", "typescript", "oxc"],
