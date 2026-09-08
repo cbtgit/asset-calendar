@@ -8,6 +8,7 @@
     "check": "vp check",
     "test": "vp test",
     "build": "tsc -b && vp build",
+    "deploy:artifact": "node scripts/deploy-artifact.ts",
     "types:compatibility": "node scripts/typegen.ts check",
     "preview": "vp preview",
     "pocketbase": "node --env-file-if-exists=.env scripts/pocketbase.ts start",

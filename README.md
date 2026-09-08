@@ -74,6 +74,56 @@ in `pocketbase-typegen`; application types are therefore hand-written in
 The Vite development server keeps its default loopback host. Use `vp preview`
 to preview a production build locally.
 
+## Production deployment
+
+F02 deploys from pushes to `main` through `.github/workflows/deploy.yml`. The
+workflow runs the checks and build, creates a release containing only `dist`,
+`pb_migrations`, `pb_hooks`, and the checksum-verified Linux PocketBase binary,
+then waits for approval from the GitHub `production` environment.
+
+The VPS keeps releases under `/opt/asset-calendar/releases` and production
+data under `/opt/asset-calendar/shared/pb_data`. PocketBase runs as the
+`assetcalendar` service account on `127.0.0.1:8090`; Nginx serves the SPA and
+proxies `/api/`. The public PocketBase administration UI at `/_/` is blocked.
+
+### One-time VPS installation
+
+After copying the files in `deploy/` to the VPS, install them as root:
+
+```sh
+sudo install -o root -g root -m 0755 deploy/asset-calendar-activate.sh /usr/local/sbin/asset-calendar-activate
+sudo install -o root -g root -m 0644 deploy/asset-calendar.service /etc/systemd/system/asset-calendar.service
+sudo install -o root -g root -m 0440 deploy/asset-calendar.sudoers /etc/sudoers.d/asset-calendar
+sudo visudo -cf /etc/sudoers.d/asset-calendar
+sudo systemctl daemon-reload
+sudo systemctl enable asset-calendar
+```
+
+Nginx must be able to traverse the release path while PocketBase data remains
+private:
+
+```sh
+sudo chmod 0755 /opt/asset-calendar/releases
+```
+
+Install the Nginx file only after a first release exists:
+
+```sh
+sudo install -o root -g root -m 0644 deploy/nejsumlab.frontend-freelance.dk.nginx /etc/nginx/sites-available/nejsumlab.frontend-freelance.dk
+sudo nginx -t
+sudo systemctl reload nginx
+```
+
+The deploy account can administer PocketBase through an SSH tunnel without
+publishing `/_/`:
+
+```sh
+ssh -L 8090:127.0.0.1:8090 assetdeploy@nejsumlab.frontend-freelance.dk
+```
+
+Then open `http://127.0.0.1:8090/_/` locally. Do not expose port `8090` in the
+VPS firewall.
+
 ## Copilot cloud-agent setup
 
 The `copilot-setup-steps` workflow installs the pinned Node.js version,
