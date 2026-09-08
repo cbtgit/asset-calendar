@@ -37,7 +37,7 @@ rollback() {
   fi
   systemctl start "$service" || true
 }
-trap rollback INT TERM HUP
+trap rollback EXIT INT TERM HUP
 
 "$release_dir/pocketbase" migrate up \
   --dir="$root/shared/pb_data" \
@@ -46,17 +46,17 @@ trap rollback INT TERM HUP
 ln -sfn "$release_dir" "$current"
 if ! systemctl start "$service"; then
   rollback
-  trap - INT TERM HUP
+  trap - EXIT INT TERM HUP
   exit 1
 fi
 
 if ! curl --fail --silent --show-error --max-time 10 http://127.0.0.1:8090/api/health >/dev/null; then
   rollback
-  trap - INT TERM HUP
+  trap - EXIT INT TERM HUP
   exit 1
 fi
 
-trap - INT TERM HUP
+trap - EXIT INT TERM HUP
 find "$releases" -mindepth 1 -maxdepth 1 -type d -printf '%T@ %p\n' \
   | sort -nr \
   | awk "NR > $retention {print \$2}" \
