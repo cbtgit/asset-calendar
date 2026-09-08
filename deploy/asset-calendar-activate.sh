@@ -29,6 +29,7 @@ fi
 old_target=$(readlink "$current" 2>/dev/null || true)
 chown -R assetcalendar:assetcalendar "$release_dir/pocketbase" "$release_dir/pb_migrations" "$release_dir/pb_hooks"
 chmod 0755 "$release_dir/pocketbase"
+chown -R assetcalendar:assetcalendar "$root/shared/pb_data"
 
 systemctl stop "$service"
 rollback() {
@@ -39,7 +40,7 @@ rollback() {
 }
 trap rollback EXIT INT TERM HUP
 
-"$release_dir/pocketbase" migrate up \
+runuser -u assetcalendar -- "$release_dir/pocketbase" migrate up \
   --dir="$root/shared/pb_data" \
   --migrationsDir="$release_dir/pb_migrations"
 
