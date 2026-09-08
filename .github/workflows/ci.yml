@@ -11,21 +11,27 @@ permissions:
 
 jobs:
   checks:
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v7
       - uses: voidzero-dev/setup-vp@v1.19.0
         with:
           node-version-file: .node-version
           cache: true
-          run-install: true
-      - run: vp check
-      - run: vp test
-      - run: vp build
-      - name: Start PocketBase and check health
+          run-install: false
+      - name: Install locked dependencies
+        run: vp install --frozen-lockfile
+      - name: Restore PocketBase binary cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/asset-calendar/pocketbase/0.40.3/linux-amd64
+          key: pb-0.40.3-${{ hashFiles('scripts/pocketbase-checksums.json') }}
+      - name: Verify PocketBase binary
         run: |
-          vp run pocketbase -- --port 18090 >/tmp/pocketbase.log 2>&1 &
-          pocketbase_pid=$!
-          trap 'kill "$pocketbase_pid"' EXIT
-          curl --fail --retry 30 --retry-connrefused --retry-delay 1 http://127.0.0.1:18090/api/health
+          node --input-type=module <<'NODE'
+          import { ensurePocketBaseBinary } from "./scripts/pocketbase.ts";
+          await ensurePocketBaseBinary();
+          NODE
+      - name: Run non-deployment CI
+        run: vp run ci

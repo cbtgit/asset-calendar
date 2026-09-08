@@ -60,6 +60,17 @@ vp test
 vp build
 ```
 
+Run the complete non-deployment CI-equivalent check locally:
+
+```sh
+vp run ci
+```
+
+This runs formatting, linting, type checking, unit and React component tests,
+the isolated PocketBase integration tests, and the production build. The
+integration harness creates temporary data and loopback ports; it does not use
+PocketBase credentials or development data.
+
 PocketBase typegen compatibility is checked against an isolated migration
 fixture without using credentials:
 
@@ -70,6 +81,10 @@ vp run types:compatibility
 The compatibility check intentionally records the current auth-create failure
 in `pocketbase-typegen`; application types are therefore hand-written in
 `src/types/pocketbase-types.ts` until the generator supports PocketBase 0.40.3.
+
+If a PocketBase checksum fails, remove the cached
+`~/.cache/asset-calendar/pocketbase/0.40.3/` directory and retry. A checksum
+mismatch is never bypassed, including for cached archives.
 
 The Vite development server keeps its default loopback host. Use `vp preview`
 to preview a production build locally.

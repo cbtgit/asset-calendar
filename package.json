@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "vp dev",
     "check": "vp check",
+    "ci": "vp check && vp test src scripts && vp run types:compatibility && vp test tests/integration && vp build",
     "test": "vp test",
     "build": "tsc -b && vp build",
     "types:compatibility": "node scripts/typegen.ts check",
