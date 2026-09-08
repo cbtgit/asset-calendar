@@ -82,8 +82,7 @@ The compatibility check intentionally records the current auth-create failure
 in `pocketbase-typegen`; application types are therefore hand-written in
 `src/types/pocketbase-types.ts` until the generator supports PocketBase 0.40.3.
 
-If a PocketBase checksum fails, remove the cached
-`~/.cache/asset-calendar/pocketbase/0.40.3/` directory and retry. A checksum
+If a PocketBase checksum fails, remove the cached PocketBase directory and retry (Linux: `~/.cache/asset-calendar/pocketbase/0.40.3/`, macOS: `~/Library/Caches/asset-calendar/pocketbase/0.40.3/`, or `$XDG_CACHE_HOME/asset-calendar/pocketbase/0.40.3/` if set). A checksum
 mismatch is never bypassed, including for cached archives.
 
 The Vite development server keeps its default loopback host. Use `vp preview`
