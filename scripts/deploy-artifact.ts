@@ -1,7 +1,7 @@
 import { cp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { ensurePocketBaseBinary, resolveRuntimePaths } from "./pocketbase.ts";
+import { ensurePocketBaseBinary, POCKETBASE_VERSION, resolveRuntimePaths } from "./pocketbase.ts";
 
 export type ArtifactOptions = {
   root?: string;
