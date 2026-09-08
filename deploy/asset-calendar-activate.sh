@@ -50,7 +50,8 @@ if ! systemctl start "$service"; then
   exit 1
 fi
 
-if ! curl --fail --silent --show-error --max-time 10 http://127.0.0.1:8090/api/health >/dev/null; then
+if ! curl --fail --silent --show-error --retry 30 --retry-connrefused --retry-delay 1 --max-time 10 \
+  http://127.0.0.1:8090/api/health >/dev/null; then
   rollback
   trap - EXIT INT TERM HUP
   exit 1
