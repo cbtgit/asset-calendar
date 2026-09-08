@@ -1,4 +1,7 @@
 import react from "@vitejs/plugin-react";
+import { tanstackRouter } from "@tanstack/router-plugin/vite";
+import tailwindcss from "@tailwindcss/vite";
+import { fileURLToPath } from "node:url";
 import { loadEnv } from "vite-plus";
 import { defineConfig, lazyPlugins } from "vite-plus";
 
@@ -14,6 +17,7 @@ export default defineConfig(({ mode }) => {
       ignorePatterns: [
         ".github/workflows/unblock-issues.lock.yml",
         "src/types/pocketbase-types.ts",
+        "src/routeTree.gen.ts",
       ],
     },
     lint: {
@@ -45,10 +49,15 @@ export default defineConfig(({ mode }) => {
     },
     server: {
       proxy: {
-        "/api": pocketbaseTarget,
+        "/api/": pocketbaseTarget,
         "/_/": pocketbaseTarget,
       },
     },
-    plugins: lazyPlugins(() => [react()]),
+    resolve: {
+      alias: {
+        "@": fileURLToPath(new URL("./src", import.meta.url)),
+      },
+    },
+    plugins: lazyPlugins(() => [tanstackRouter(), react(), tailwindcss()]),
   };
 });
