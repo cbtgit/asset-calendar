@@ -33,9 +33,9 @@ jobs:
           trap 'kill "$pocketbase_pid"' EXIT
           curl --fail --retry 30 --retry-connrefused --retry-delay 1 http://127.0.0.1:18090/api/health
       - name: Build deployment artifact
-        run: node scripts/deploy-artifact.ts ".local/deployment/release"
+        run: node scripts/deploy-artifact.ts
       - name: Archive deployment artifact
-        run: tar -C ".local/deployment/release" -czf "$RUNNER_TEMP/asset-calendar-release.tar.gz" .
+        run: tar -C "$GITHUB_WORKSPACE/.local/deployment/release" -czf "$RUNNER_TEMP/asset-calendar-release.tar.gz" .
       - uses: actions/upload-artifact@v4
         with:
           name: asset-calendar-release-${{ github.sha }}
