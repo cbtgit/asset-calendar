@@ -30,7 +30,7 @@ export type TypegenRecordsRecord<TMetadata = unknown> = {
   active?: boolean;
   amount: number;
   attachment?: FileNameString;
-  id: string;
+  id: RecordIdString;
   kind: TypegenRecordsKind;
   metadata?: null | TMetadata;
   owner: RecordIdString;
