@@ -1,0 +1,1 @@
+assetdeploy ALL=(root) NOPASSWD: /usr/local/sbin/asset-calendar-activate
