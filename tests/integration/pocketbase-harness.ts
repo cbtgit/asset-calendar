@@ -27,15 +27,26 @@ export async function startPocketBaseIntegrationHarness(): Promise<PocketBaseInt
   await mkdir(dataDir);
 
   let child: ChildProcess | undefined;
-  let port: number;
+  let port = 0;
   try {
-    port = await findAvailablePort();
     const paths = { ...resolveRuntimePaths(root), dataDir };
-    child = await startPocketBase({
-      config: { host: "127.0.0.1", port },
-      paths,
-      migrationsDir,
-    });
+    for (let attempt = 0; attempt < 10; attempt += 1) {
+      port = await findAvailablePort();
+      try {
+        child = await startPocketBase({
+          config: { host: "127.0.0.1", port },
+          paths,
+          migrationsDir,
+        });
+        break;
+      } catch (error) {
+        if (error instanceof Error && error.message.includes("is already in use") && attempt < 9) {
+          continue;
+        }
+        throw error;
+      }
+    }
+    if (!child) throw new Error("Unable to start PocketBase on any available port.");
   } catch (error) {
     await rm(temporaryRoot, { recursive: true, force: true });
     throw error;
