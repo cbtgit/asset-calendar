@@ -9,6 +9,7 @@ const pocketbase = spawn(process.execPath, [resolve(root, "scripts/pocketbase.ts
 });
 const frontend = spawn("vp", ["dev"], { cwd: root, stdio: "inherit" });
 const children: ChildProcess[] = [pocketbase, frontend];
+let shuttingDown = false;
 
 function stopChildren(): void {
   for (const child of children) {
@@ -16,8 +17,14 @@ function stopChildren(): void {
   }
 }
 
-process.once("SIGINT", stopChildren);
-process.once("SIGTERM", stopChildren);
+function requestShutdown(): void {
+  if (shuttingDown) return;
+  shuttingDown = true;
+  stopChildren();
+}
+
+process.once("SIGINT", requestShutdown);
+process.once("SIGTERM", requestShutdown);
 
 await new Promise<void>((resolvePromise, rejectPromise) => {
   type ChildResult = {
@@ -28,8 +35,6 @@ await new Promise<void>((resolvePromise, rejectPromise) => {
   };
 
   const results = new Map<ChildProcess, ChildResult>();
-  let shuttingDown = false;
-
   const finish = (): void => {
     if (results.size !== children.length) return;
     const failure = [...results.values()].find(
@@ -46,12 +51,6 @@ await new Promise<void>((resolvePromise, rejectPromise) => {
     } else {
       resolvePromise();
     }
-  };
-
-  const requestShutdown = (): void => {
-    if (shuttingDown) return;
-    shuttingDown = true;
-    stopChildren();
   };
 
   for (const child of children) {

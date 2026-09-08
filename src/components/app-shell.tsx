@@ -1,6 +1,7 @@
-import "./App.css";
+import { HealthStatus } from "./health-status";
+import "../App.css";
 
-function App() {
+export function AppShell() {
   return (
     <main className="shell">
       <p className="eyebrow">Asset Calendar</p>
@@ -8,9 +9,7 @@ function App() {
       <p className="intro">
         A simple home for tracking assets, renewals, and the moments that keep your plans moving.
       </p>
-      <button type="button">Add your first asset</button>
+      <HealthStatus />
     </main>
   );
 }
-
-export default App;

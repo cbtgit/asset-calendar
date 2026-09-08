@@ -33,7 +33,7 @@ vp run pocketbase
 This downloads and checksum-verifies PocketBase `0.40.3` into the user's cache,
 stores development data in `.local/pocketbase/data/`, applies `pb_migrations/`,
 and waits for the loopback health endpoint. To run both processes together, use
-`vp run dev:full`.
+`vp run dev:all`.
 
 Configuration is optional. Copy `.env.example` to `.env` and change only
 `POCKETBASE_PORT` when another local port is needed. `POCKETBASE_HOST` must
