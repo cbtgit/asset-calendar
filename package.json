@@ -8,6 +8,7 @@
     "check": "vp check",
     "test": "vp test",
     "build": "tsc -b && vp build",
+    "types:compatibility": "node scripts/typegen.ts check",
     "preview": "vp preview",
     "pocketbase": "node --env-file-if-exists=.env scripts/pocketbase.ts start",
     "pocketbase:reset": "node --env-file-if-exists=.env scripts/pocketbase.ts reset",
@@ -15,6 +16,7 @@
     "prepare": "vp config"
   },
   "dependencies": {
+    "pocketbase": "0.28.1",
     "react": "19.2.8",
     "react-dom": "19.2.8"
   },
@@ -25,6 +27,7 @@
     "@types/react-dom": "19.2.7",
     "@vitejs/plugin-react": "6.1.1",
     "happy-dom": "20.14.0",
+    "pocketbase-typegen": "1.5.0",
     "typescript": "7.0.2",
     "vite": "npm:@voidzero-dev/vite-plus-core@0.3.0",
     "vite-plus": "0.3.0"

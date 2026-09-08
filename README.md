@@ -60,6 +60,17 @@ vp test
 vp build
 ```
 
+PocketBase typegen compatibility is checked against an isolated migration
+fixture without using credentials:
+
+```sh
+vp run types:compatibility
+```
+
+The compatibility check intentionally records the current auth-create failure
+in `pocketbase-typegen`; application types are therefore hand-written in
+`src/types/pocketbase-types.ts` until the generator supports PocketBase 0.40.3.
+
 The Vite development server keeps its default loopback host. Use `vp preview`
 to preview a production build locally.
 
