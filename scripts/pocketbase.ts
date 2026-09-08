@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 import { execFileSync, spawn, spawnSync, type ChildProcess } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
 import { chmod, lstat, mkdir, readFile, rename, rm, writeFile } from "node:fs/promises";
+import { get as httpsGet } from "node:https";
 import { homedir } from "node:os";
 import { createServer, isIP } from "node:net";
 import { fileURLToPath } from "node:url";
@@ -40,6 +41,13 @@ export type RuntimePaths = {
 export type RuntimeConfig = {
   host: string;
   port: number;
+};
+
+export type PocketBaseStartOptions = {
+  config?: RuntimeConfig;
+  paths?: RuntimePaths;
+  migrationsDir?: string;
+  hooksDir?: string;
 };
 
 export type ParsedArguments = {
@@ -189,17 +197,49 @@ export async function verifyChecksum(path: string, expected: string): Promise<vo
 async function downloadArchive(paths: RuntimePaths): Promise<void> {
   const temporaryPath = `${paths.archivePath}.download-${process.pid}`;
   try {
-    const response = await fetch(`${RELEASE_URL}/${paths.target.archive}`);
-    if (!response.ok) {
-      throw new Error(`PocketBase download failed with HTTP ${response.status}.`);
-    }
-    await writeFile(temporaryPath, Buffer.from(await response.arrayBuffer()), { mode: 0o600 });
+    await writeFile(temporaryPath, await download(`${RELEASE_URL}/${paths.target.archive}`), {
+      mode: 0o600,
+    });
     await verifyChecksum(temporaryPath, paths.target.checksum);
     await rename(temporaryPath, paths.archivePath);
   } catch (error) {
     await rm(temporaryPath, { force: true });
     throw error;
   }
+}
+
+function download(url: string, redirects = 0): Promise<Buffer> {
+  return new Promise<Buffer>((resolvePromise, rejectPromise) => {
+    const request = httpsGet(url, (response) => {
+      const status = response.statusCode ?? 0;
+      const location = response.headers.location;
+      if (status >= 300 && status < 400 && location) {
+        response.resume();
+        if (redirects >= 5) {
+          rejectPromise(new Error(`PocketBase download redirected too many times: ${url}`));
+          return;
+        }
+        download(new URL(location, url).toString(), redirects + 1).then(
+          resolvePromise,
+          rejectPromise,
+        );
+        return;
+      }
+      if (status < 200 || status >= 300) {
+        response.resume();
+        rejectPromise(new Error(`PocketBase download failed with HTTP ${status}.`));
+        return;
+      }
+
+      const chunks: Buffer[] = [];
+      response.on("data", (chunk: Buffer | string) => {
+        chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
+      });
+      response.on("end", () => resolvePromise(Buffer.concat(chunks)));
+      response.on("error", rejectPromise);
+    });
+    request.on("error", rejectPromise);
+  });
 }
 
 function extractBinary(archivePath: string, binaryPath: string): Promise<void> {
@@ -349,14 +389,34 @@ export async function assertPortAvailable(host: string, port: number): Promise<v
   });
 }
 
+export async function findAvailablePort(host = "127.0.0.1"): Promise<number> {
+  return new Promise<number>((resolvePromise, rejectPromise) => {
+    const server = createServer();
+    server.once("error", rejectPromise);
+    server.listen(0, host, () => {
+      const address = server.address();
+      if (!address || typeof address === "string") {
+        server.close();
+        rejectPromise(new Error("Unable to determine the dynamically allocated port."));
+        return;
+      }
+      server.close((error) => (error ? rejectPromise(error) : resolvePromise(address.port)));
+    });
+  });
+}
+
 function pocketBaseAddress(host: string, port: number): string {
   return host.includes(":") ? `[${host}]:${port}` : `${host}:${port}`;
 }
 
-async function runMigrations(binaryPath: string, paths: RuntimePaths): Promise<void> {
+async function runMigrations(
+  binaryPath: string,
+  paths: RuntimePaths,
+  migrationsDir: string,
+): Promise<void> {
   execFileSync(
     binaryPath,
-    ["migrate", "up", `--dir=${paths.dataDir}`, `--migrationsDir=${paths.migrationsDir}`],
+    ["migrate", "up", `--dir=${paths.dataDir}`, `--migrationsDir=${migrationsDir}`],
     { cwd: paths.worktreeRoot, stdio: "inherit" },
   );
 }
@@ -409,12 +469,21 @@ async function terminateChild(child: ChildProcess): Promise<void> {
   });
 }
 
-export async function startPocketBase(config = resolveConfig()): Promise<ChildProcess> {
-  const paths = resolveRuntimePaths();
-  await assertNoSymlinkInPath(paths.worktreeRoot, paths.dataDir);
+export async function startPocketBase(
+  optionsOrConfig: PocketBaseStartOptions | RuntimeConfig = {},
+): Promise<ChildProcess> {
+  const options = "host" in optionsOrConfig ? { config: optionsOrConfig } : optionsOrConfig;
+  const config = options.config ?? resolveConfig();
+  const paths = options.paths ?? resolveRuntimePaths();
+  const migrationsDir = options.migrationsDir ?? paths.migrationsDir;
+  const hooksDir = options.hooksDir ?? paths.hooksDir;
+  const dataRoot = paths.dataDir.startsWith(`${paths.worktreeRoot}/`)
+    ? paths.worktreeRoot
+    : dirname(paths.dataDir);
+  await assertNoSymlinkInPath(dataRoot, paths.dataDir);
   await assertPortAvailable(config.host, config.port);
   await mkdir(paths.dataDir, { recursive: true });
-  await runMigrations(await ensurePocketBaseBinary(paths), paths);
+  await runMigrations(await ensurePocketBaseBinary(paths), paths, migrationsDir);
 
   const child = spawn(
     paths.binaryPath,
@@ -422,8 +491,8 @@ export async function startPocketBase(config = resolveConfig()): Promise<ChildPr
       "serve",
       `--http=${pocketBaseAddress(config.host, config.port)}`,
       `--dir=${paths.dataDir}`,
-      `--migrationsDir=${paths.migrationsDir}`,
-      `--hooksDir=${paths.hooksDir}`,
+      `--migrationsDir=${migrationsDir}`,
+      `--hooksDir=${hooksDir}`,
       "--automigrate=false",
     ],
     { cwd: paths.worktreeRoot, stdio: "inherit" },
@@ -435,6 +504,10 @@ export async function startPocketBase(config = resolveConfig()): Promise<ChildPr
     throw error;
   }
   return child;
+}
+
+export async function stopPocketBase(child: ChildProcess): Promise<void> {
+  await terminateChild(child);
 }
 
 export async function resetPocketBaseData(
