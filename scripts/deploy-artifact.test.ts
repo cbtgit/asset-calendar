@@ -1,9 +1,16 @@
 // @vitest-environment node
-import { mkdir, mkdtemp, readFile, stat, writeFile } from "node:fs/promises";
+import { chmod, mkdir, mkdtemp, readFile, stat, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
-import { expect, it } from "vite-plus/test";
-import { createDeploymentArtifact } from "./deploy-artifact.ts";
+import { expect, it, vi } from "vite-plus/test";
+
+let pocketbaseBinary = "";
+
+vi.mock("./pocketbase.ts", () => ({
+  POCKETBASE_VERSION: "0.40.3",
+  ensurePocketBaseBinary: async () => pocketbaseBinary,
+  resolveRuntimePaths: () => ({} as any),
+}));
 
 it("creates a release containing only production inputs", async () => {
   const root = await mkdtemp(join(tmpdir(), "asset-calendar-artifact-"));
@@ -12,8 +19,14 @@ it("creates a release containing only production inputs", async () => {
   await mkdir(join(root, "pb_hooks"));
   await writeFile(join(root, "dist", "index.html"), "app");
   await writeFile(join(root, "package.json"), '{"version":"0.0.0"}');
+
+  pocketbaseBinary = join(root, "pocketbase-test-binary");
+  await writeFile(pocketbaseBinary, "binary");
+  await chmod(pocketbaseBinary, 0o755);
+
   const output = join(root, "release");
 
+  const { createDeploymentArtifact } = await import("./deploy-artifact.ts");
   await createDeploymentArtifact({ root, output, commit: "test-sha" });
 
   expect(await readFile(join(output, "dist", "index.html"), "utf8")).toBe("app");
