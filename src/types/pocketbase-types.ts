@@ -42,8 +42,7 @@ export type TypegenUsersRecord = {
   displayName: string;
   email: string;
   emailVisibility?: boolean;
-  id: string;
-  password: string;
+  id: RecordIdString;
   verified?: boolean;
 };
 
