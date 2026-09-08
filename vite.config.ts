@@ -45,7 +45,7 @@ export default defineConfig(({ mode }) => {
     },
     test: {
       environment: "happy-dom",
-      include: ["src/**/*.test.{ts,tsx}", "scripts/**/*.test.ts"],
+      include: ["src/**/*.test.{ts,tsx}", "scripts/**/*.test.ts", "tests/**/*.test.{ts,tsx}"],
     },
     server: {
       proxy: {
