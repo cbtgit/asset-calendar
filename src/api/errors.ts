@@ -6,7 +6,7 @@ export type AppErrorKind =
   | "network"
   | "server";
 
-export class AppError extends Error {
+export class ApplicationError extends Error {
   readonly kind: AppErrorKind;
 
   constructor(kind: AppErrorKind, message: string, cause?: unknown) {
@@ -15,6 +15,8 @@ export class AppError extends Error {
     this.kind = kind;
   }
 }
+
+export { ApplicationError as AppError };
 
 function responseStatus(cause: unknown): number | undefined {
   if (typeof cause !== "object" || cause === null) return undefined;
@@ -31,8 +33,8 @@ function responseStatus(cause: unknown): number | undefined {
   return undefined;
 }
 
-export function toAppError(cause: unknown): AppError {
-  if (cause instanceof AppError) return cause;
+export function toAppError(cause: unknown): ApplicationError {
+  if (cause instanceof ApplicationError) return cause;
 
   const status = responseStatus(cause);
   const kind: AppErrorKind =
@@ -55,5 +57,5 @@ export function toAppError(cause: unknown): AppError {
       ? cause.message
       : "PocketBase could not complete the request.";
 
-  return new AppError(kind, message, cause);
+  return new ApplicationError(kind, message, cause);
 }
