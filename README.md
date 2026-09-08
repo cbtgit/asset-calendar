@@ -76,7 +76,7 @@ to preview a production build locally.
 
 ## Production deployment
 
-F02 deploys from pushes to `main` through `.github/workflows/deploy.yml`. The
+F02 deploys from pushes to `main` through `.github/workflows/ci.yml`. The
 workflow runs the checks and build, creates a release containing only `dist`,
 `pb_migrations`, `pb_hooks`, and the checksum-verified Linux PocketBase binary,
 then waits for approval from the GitHub `production` environment.

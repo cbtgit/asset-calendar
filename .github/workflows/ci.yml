@@ -29,3 +29,67 @@ jobs:
           pocketbase_pid=$!
           trap 'kill "$pocketbase_pid"' EXIT
           curl --fail --retry 30 --retry-connrefused --retry-delay 1 http://127.0.0.1:18090/api/health
+      - name: Build deployment artifact
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        run: node scripts/deploy-artifact.ts
+      - name: Archive deployment artifact
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        run: tar -C "$GITHUB_WORKSPACE/.local/deployment/release" -czf "$RUNNER_TEMP/asset-calendar-release.tar.gz" .
+      - uses: actions/upload-artifact@v4
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        with:
+          name: asset-calendar-release-${{ github.sha }}
+          path: ${{ runner.temp }}/asset-calendar-release.tar.gz
+          if-no-files-found: error
+
+  deploy:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: checks
+    runs-on: ubuntu-latest
+    environment: production
+    timeout-minutes: 10
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: asset-calendar-release-${{ github.sha }}
+          path: release
+      - name: Configure SSH
+        env:
+          DEPLOY_KEY: ${{ secrets.DEPLOY_SSH_PRIVATE_KEY }}
+          DEPLOY_KNOWN_HOSTS: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
+        run: |
+          install -d -m 700 ~/.ssh
+          printf '%s\n' "$DEPLOY_KEY" > ~/.ssh/asset-calendar-production
+          chmod 600 ~/.ssh/asset-calendar-production
+          printf '%s\n' "$DEPLOY_KNOWN_HOSTS" > ~/.ssh/known_hosts
+      - name: Upload release
+        env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+          RELEASE_ID: ${{ github.sha }}
+        run: |
+          scp -i ~/.ssh/asset-calendar-production -o IdentitiesOnly=yes \
+            release/asset-calendar-release.tar.gz \
+            "$DEPLOY_USER@$DEPLOY_HOST:/tmp/asset-calendar-release-$RELEASE_ID.tar.gz"
+          ssh -i ~/.ssh/asset-calendar-production -o IdentitiesOnly=yes "$DEPLOY_USER@$DEPLOY_HOST" \
+            "set -eu
+             release_dir=/opt/asset-calendar/releases/$RELEASE_ID
+             current_target=\$(readlink -f /opt/asset-calendar/current 2>/dev/null || true)
+             if [ \"\$current_target\" != \"\$release_dir\" ]; then
+               rm -rf \"\$release_dir\"
+               mkdir -p \"\$release_dir\"
+               tar -xzf /tmp/asset-calendar-release-$RELEASE_ID.tar.gz -C \"\$release_dir\"
+             fi
+             rm -f /tmp/asset-calendar-release-$RELEASE_ID.tar.gz"
+      - name: Activate release
+        env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+          RELEASE_ID: ${{ github.sha }}
+        run: |
+          ssh -i ~/.ssh/asset-calendar-production -o IdentitiesOnly=yes "$DEPLOY_USER@$DEPLOY_HOST" \
+            "sudo /usr/local/sbin/asset-calendar-activate /opt/asset-calendar/releases/$RELEASE_ID"
+      - name: Check public health
+        env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+        run: curl --fail --retry 20 --retry-delay 2 "https://$DEPLOY_HOST/api/health"
