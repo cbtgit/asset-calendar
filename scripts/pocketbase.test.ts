@@ -1,3 +1,4 @@
+// @vitest-environment node
 import { createServer } from "node:net";
 import { lstat, mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
