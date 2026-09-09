@@ -17,4 +17,4 @@ Mutation implementations must:
   cache reflects the server-authoritative result.
 
 Keep PocketBase as the source of truth. Optimistic updates improve interaction
-latency but must not weaken backend validation or authorization. Leave business logic checks to the backend.
+latency but must not weaken backend validation or authorization. Leave business logic checks to the backend
