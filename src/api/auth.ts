@@ -1,5 +1,5 @@
 import type { RecordAuthResponse, RecordModel } from "pocketbase";
-import { pocketbase } from "./client";
+import { pocketbase, setUnauthorizedHandler } from "./client";
 import { toAppError, type ApplicationError } from "./errors";
 
 export type AuthUser = RecordModel & {
@@ -19,6 +19,11 @@ export type AuthSnapshot = {
   user: AuthUser | null;
 };
 
+const hasPersistedAuthState = Boolean(pocketbase.authStore.token || pocketbase.authStore.model);
+if (!pocketbase.authStore.isValid && hasPersistedAuthState) {
+  pocketbase.authStore.clear();
+}
+
 const initialSnapshot: AuthSnapshot = {
   status: pocketbase.authStore.isValid ? "loading" : "unauthenticated",
   user: (pocketbase.authStore.model as AuthUser | null) ?? null,
@@ -26,6 +31,7 @@ const initialSnapshot: AuthSnapshot = {
 
 let snapshot = initialSnapshot;
 let readyPromise: Promise<void> | undefined;
+let unauthorizedRedirect: (() => void) | undefined;
 const listeners = new Set<() => void>();
 
 function publish(next: AuthSnapshot) {
@@ -45,6 +51,11 @@ pocketbase.authStore.onChange((_token, model) => {
     status: model ? "authenticated" : "unauthenticated",
     user: (model as AuthUser | null) ?? null,
   });
+});
+
+setUnauthorizedHandler(() => {
+  signOut();
+  unauthorizedRedirect?.();
 });
 
 export function getAuthSnapshot(): AuthSnapshot {
@@ -121,6 +132,10 @@ export async function setupPassword(token: string, password: string): Promise<Au
 export function signOut(): void {
   readyPromise = undefined;
   pocketbase.authStore.clear();
+}
+
+export function setUnauthorizedRedirect(handler: (() => void) | undefined): void {
+  unauthorizedRedirect = handler;
 }
 
 export function authErrorMessage(error: unknown, purpose: "sign-in" | "setup"): string {
