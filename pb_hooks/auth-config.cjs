@@ -116,6 +116,20 @@ function parsePort(value, name) {
   return port;
 }
 
+function parseEmail(value, name) {
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) {
+    throw new Error(`${name} must be a valid email address.`);
+  }
+  return value;
+}
+
+function parseCredential(value, name) {
+  if (/[\r\n]/.test(value)) {
+    throw new Error(`${name} must not contain line breaks.`);
+  }
+  return value;
+}
+
 function parseMailConfiguration(env, environment, transport) {
   if (environment !== "production") {
     if (transport !== "capture" && transport !== "test") {
@@ -131,12 +145,36 @@ function parseMailConfiguration(env, environment, transport) {
   }
 
   return {
-    host: required(env, "ASSET_CALENDAR_SMTP2GO_HOST"),
+    host: parseHost(required(env, "ASSET_CALENDAR_SMTP2GO_HOST"), "ASSET_CALENDAR_SMTP2GO_HOST"),
     port: parsePort(required(env, "ASSET_CALENDAR_SMTP2GO_PORT"), "ASSET_CALENDAR_SMTP2GO_PORT"),
-    username: required(env, "ASSET_CALENDAR_SMTP2GO_USERNAME"),
-    password: required(env, "ASSET_CALENDAR_SMTP2GO_PASSWORD"),
-    from: required(env, "ASSET_CALENDAR_SMTP2GO_FROM"),
+    username: parseCredential(
+      required(env, "ASSET_CALENDAR_SMTP2GO_USERNAME"),
+      "ASSET_CALENDAR_SMTP2GO_USERNAME",
+    ),
+    password: parseCredential(
+      required(env, "ASSET_CALENDAR_SMTP2GO_PASSWORD"),
+      "ASSET_CALENDAR_SMTP2GO_PASSWORD",
+    ),
+    from: parseEmail(required(env, "ASSET_CALENDAR_SMTP2GO_FROM"), "ASSET_CALENDAR_SMTP2GO_FROM"),
   };
+}
+
+function configurePocketBaseMail(app, configuration) {
+  const settings = app.settings();
+  if (configuration.mailTransport !== "smtp2go") {
+    settings.smtp.enabled = false;
+    return;
+  }
+
+  const smtp = configuration.smtp2go;
+  settings.smtp.enabled = true;
+  settings.smtp.host = smtp.host;
+  settings.smtp.port = smtp.port;
+  settings.smtp.username = smtp.username;
+  settings.smtp.password = smtp.password;
+  settings.smtp.authMethod = "PLAIN";
+  settings.smtp.tls = false;
+  settings.meta.senderAddress = smtp.from;
 }
 
 function validateAuthConfig(env) {
@@ -224,5 +262,6 @@ module.exports = {
   SESSION_LIFETIME_HOURS,
   readEnvironment,
   readPocketBaseEnvironment,
+  configurePocketBaseMail,
   validateAuthConfig,
 };
