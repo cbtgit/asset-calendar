@@ -48,7 +48,7 @@ The following are explicitly deferred:
 - Drag-and-drop creation, movement, or resizing of calendar events.
 - Native mobile applications.
 
-Password-reset email is required even though general booking notifications are
+User invitation email is required even though general booking notifications are
 not part of the MVP.
 
 ## 4. Users and permissions
@@ -96,23 +96,33 @@ Administrators cannot deactivate or demote the last active administrator.
 ### 4.3 User lifecycle and authentication
 
 - Sign-in uses email address and password.
-- Administrators create users and provide a temporary password.
-- A newly created user must change the temporary password before accessing the
-  rest of the application. The SPA enforces this with a redirect to the password
-  change flow; the MVP does not add separate backend authorization for this
-  restriction.
+- There is no public registration or public password-recovery flow in the MVP.
+- Password reset for users who have already completed setup is deferred.
+- Administrators create users, and the system sends each new user an invitation
+  email through SMTP2GO.
+- The invitation email contains a one-time link, valid for 30 days, where the
+  user creates their password before accessing the rest of the application.
+- Passwords use PocketBase's built-in validator. The application does not add
+  custom length or character-composition requirements.
+- After successful password setup, the user is signed in immediately.
 - There is no email verification requirement in the MVP.
-- Users can request a password reset through an external SMTP provider.
-- Deactivating a user prevents sign-in and new bookings but preserves the user
-  and their booking history.
-- Deactivating a user, changing their role, or changing their password does not
-  revoke existing sessions. Those sessions remain valid until their normal
-  expiry.
+- A normal authenticated session lasts one workday and is persisted across page
+  reloads.
+- Deactivating a user prevents sign-in and new protected actions but preserves
+  the user and their booking history.
+- Deactivating a user does not revoke an already-issued token or forcibly sign
+  out an existing browser session. No custom token-revocation system is part of
+  the MVP.
 - A deactivated user's existing bookings remain unchanged and continue to block
   their resources unless an administrator edits or deletes an eligible booking.
 - A deactivated user cannot be selected as the booker for a new booking.
 - User display names are based on first name and last name.
 - A user must belong to exactly one organizational unit.
+
+SMTP2GO credentials remain server-side in protected VPS/PocketBase
+configuration. The SPA never sends email or receives SMTP credentials. Local
+development and CI use a mail capture or test sink rather than sending real
+messages.
 
 ## 5. Booking requirements
 
@@ -322,7 +332,7 @@ Administrators have access to an administration area for:
 - Users.
   - Create regular and administrator users.
   - Assign an organizational unit.
-  - Set a temporary password.
+  - Send an invitation email so the user can create a password.
   - Change role and deactivate users, subject to the last-admin rule.
 - Exports.
   - Select a start date/time and end date/time.
@@ -377,10 +387,10 @@ The MVP data model should include at least:
 - First name
 - Last name
 - Email
-- Role: regular or admin
+- Role: regular or administrator
 - Organizational-unit ID
 - Active/deactivated status
-- Temporary-password-change-required flag
+- Invitation and password-setup state required to complete first-time access
 
 ### OrganizationalUnit
 
@@ -448,9 +458,8 @@ To keep the MVP simple:
 - Responsive SPA served as static files
 
 TanStack Router is the application's routing authority. Route definitions must
-provide typed parameters and search state, enforce authentication and
-temporary-password redirects before protected content renders, and support
-direct navigation and browser history.
+provide typed parameters and search state, enforce authentication before
+protected content renders, and support direct navigation and browser history.
 
 TanStack Query is the application's server-state authority. PocketBase reads
 and writes used by the UI must be exposed through consistently keyed queries
@@ -464,7 +473,9 @@ rather than being placed in the query cache.
 - PocketBase for authentication, persistence, and API access.
 - PocketBase migrations and hooks where server-side validation is required.
 - Tenant and role enforcement in backend rules/hooks, not only in React.
-- External SMTP configured through environment variables for password reset.
+- SMTP2GO configured through protected environment variables for user invitation
+  email. Sender-domain DNS authentication and VPS secret setup are manual
+  production prerequisites.
 
 ### Production
 

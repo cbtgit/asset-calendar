@@ -3,11 +3,20 @@ import { execFileSync, spawn, spawnSync, type ChildProcess } from "node:child_pr
 import { existsSync, readFileSync } from "node:fs";
 import { chmod, lstat, mkdir, readFile, rename, rm, writeFile } from "node:fs/promises";
 import { get as httpsGet } from "node:https";
+import { createRequire } from "node:module";
 import { homedir } from "node:os";
 import { createServer, isIP } from "node:net";
 import { fileURLToPath } from "node:url";
 import { basename, dirname, isAbsolute, join, relative, resolve } from "node:path";
 import { createInterface } from "node:readline/promises";
+
+type AuthConfigurationModule = {
+  validateAuthConfig: (environment: NodeJS.ProcessEnv) => unknown;
+};
+
+const authConfiguration = createRequire(import.meta.url)(
+  resolve(dirname(fileURLToPath(import.meta.url)), "../pb_hooks/auth-config.cjs"),
+) as AuthConfigurationModule;
 
 export const POCKETBASE_VERSION = "0.40.3";
 const RELEASE_URL = `https://github.com/pocketbase/pocketbase/releases/download/v${POCKETBASE_VERSION}`;
@@ -45,6 +54,7 @@ export type RuntimeConfig = {
 
 export type PocketBaseStartOptions = {
   config?: RuntimeConfig;
+  environment?: NodeJS.ProcessEnv;
   paths?: RuntimePaths;
   migrationsDir?: string;
   hooksDir?: string;
@@ -371,6 +381,29 @@ export function resolveConfig(
   };
 }
 
+export function resolveAuthEnvironment(
+  env: NodeJS.ProcessEnv = process.env,
+  port = 8090,
+): NodeJS.ProcessEnv {
+  const environment = env.ASSET_CALENDAR_ENV ?? "local";
+  const defaults =
+    environment === "production"
+      ? {}
+      : {
+          ASSET_CALENDAR_ENV: environment,
+          ASSET_CALENDAR_ROOT_DOMAIN: "localhost",
+          ASSET_CALENDAR_TENANT_HOSTS: "localhost",
+          ASSET_CALENDAR_POCKETBASE_URL: `http://127.0.0.1:${port}`,
+          ASSET_CALENDAR_INVITATION_URL: "http://localhost:5173/setup",
+          ASSET_CALENDAR_INVITATION_LIFETIME_HOURS: "720",
+          ASSET_CALENDAR_SESSION_LIFETIME_HOURS: "24",
+          ASSET_CALENDAR_MAIL_TRANSPORT: "capture",
+        };
+  const resolvedEnvironment = { ...defaults, ...env };
+  authConfiguration.validateAuthConfig(resolvedEnvironment);
+  return resolvedEnvironment;
+}
+
 export async function assertPortAvailable(host: string, port: number): Promise<void> {
   await new Promise<void>((resolvePromise, rejectPromise) => {
     const server = createServer();
@@ -474,6 +507,7 @@ export async function startPocketBase(
 ): Promise<ChildProcess> {
   const options = "host" in optionsOrConfig ? { config: optionsOrConfig } : optionsOrConfig;
   const config = options.config ?? resolveConfig();
+  const environment = resolveAuthEnvironment(options.environment ?? process.env, config.port);
   const paths = options.paths ?? resolveRuntimePaths();
   const migrationsDir = options.migrationsDir ?? paths.migrationsDir;
   const hooksDir = options.hooksDir ?? paths.hooksDir;
@@ -495,7 +529,7 @@ export async function startPocketBase(
       `--hooksDir=${hooksDir}`,
       "--automigrate=false",
     ],
-    { cwd: paths.worktreeRoot, stdio: "inherit" },
+    { cwd: paths.worktreeRoot, env: environment, stdio: "inherit" },
   );
   try {
     await waitForHealth(child, `http://${pocketBaseAddress(config.host, config.port)}/api/health`);

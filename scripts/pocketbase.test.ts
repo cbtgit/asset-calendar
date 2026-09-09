@@ -9,6 +9,7 @@ import {
   POCKETBASE_VERSION,
   assertPortAvailable,
   resetPocketBaseData,
+  resolveAuthEnvironment,
   resolveConfig,
   resolveRuntimePaths,
   resolveTarget,
@@ -53,6 +54,34 @@ it("rejects unsupported targets and unsafe configuration", () => {
   expect(() => resolveConfig({ POCKETBASE_HOST: "0.0.0.0" })).toThrow("loopback-only");
   expect(() => resolveConfig({ POCKETBASE_PORT: "65536" })).toThrow("1 to 65535");
   expect(resolveConfig()).toEqual({ host: "127.0.0.1", port: 8090 });
+});
+
+it("supplies safe local auth defaults and rejects incomplete production configuration", () => {
+  expect(resolveAuthEnvironment({}, 18090)).toMatchObject({
+    ASSET_CALENDAR_ENV: "local",
+    ASSET_CALENDAR_POCKETBASE_URL: "http://127.0.0.1:18090",
+    ASSET_CALENDAR_MAIL_TRANSPORT: "capture",
+  });
+  expect(() =>
+    resolveAuthEnvironment({
+      ...resolveAuthEnvironment({
+        ASSET_CALENDAR_ENV: "test",
+      }),
+      ASSET_CALENDAR_ENV: "production",
+      ASSET_CALENDAR_MAIL_TRANSPORT: "smtp2go",
+      ASSET_CALENDAR_ROOT_DOMAIN: undefined,
+      ASSET_CALENDAR_TENANT_HOSTS: "tenant.example.com",
+      ASSET_CALENDAR_POCKETBASE_URL: "https://example.com",
+      ASSET_CALENDAR_INVITATION_URL: "https://example.com/setup",
+      ASSET_CALENDAR_INVITATION_LIFETIME_HOURS: "720",
+      ASSET_CALENDAR_SESSION_LIFETIME_HOURS: "24",
+      ASSET_CALENDAR_SMTP2GO_HOST: "mail.smtp2go.com",
+      ASSET_CALENDAR_SMTP2GO_PORT: "2525",
+      ASSET_CALENDAR_SMTP2GO_USERNAME: "user",
+      ASSET_CALENDAR_SMTP2GO_PASSWORD: "password",
+      ASSET_CALENDAR_SMTP2GO_FROM: "calendar@example.com",
+    }),
+  ).toThrow("ASSET_CALENDAR_ROOT_DOMAIN");
 });
 
 it("keeps reset worktree-scoped and requires force in non-interactive mode", async () => {

@@ -35,10 +35,18 @@ stores development data in `.local/pocketbase/data/`, applies `pb_migrations/`,
 and waits for the loopback health endpoint. To run both processes together, use
 `vp run dev:all`.
 
-Configuration is optional. Copy `.env.example` to `.env` and change only
-`POCKETBASE_PORT` when another local port is needed. `POCKETBASE_HOST` must
-remain a loopback address. The equivalent command-line overrides are
+Copy `.env.example` to `.env` for explicit local authentication defaults. The
+launcher also supplies the same safe local defaults when `.env` is absent.
+Change `POCKETBASE_PORT` and `ASSET_CALENDAR_POCKETBASE_URL` together when
+another local port is needed. `POCKETBASE_HOST` must remain a loopback address.
+The equivalent command-line overrides are
 `vp run pocketbase -- --host 127.0.0.1 --port 8091`.
+
+Local and CI use `ASSET_CALENDAR_MAIL_TRANSPORT=capture` or `test`; they never
+send invitation mail. Invitation links are configured for 30 days
+(`ASSET_CALENDAR_INVITATION_LIFETIME_HOURS=720`) and authenticated sessions for
+one workday (`ASSET_CALENDAR_SESSION_LIFETIME_HOURS=24`). PocketBase refuses to
+start when the authentication configuration is malformed or incomplete.
 
 To reset only the current worktree's development data, use the interactive task:
 
@@ -98,6 +106,21 @@ sudo visudo -cf /etc/sudoers.d/asset-calendar
 sudo systemctl daemon-reload
 sudo systemctl enable asset-calendar
 ```
+
+Create `/etc/asset-calendar/auth.env` separately on the VPS. It must be owned by
+`root:assetcalendar` with mode `0640`, must not be committed or placed in a
+release directory, and must contain the production values for
+`ASSET_CALENDAR_ENV=production`, `ASSET_CALENDAR_ROOT_DOMAIN`,
+`ASSET_CALENDAR_TENANT_HOSTS` (comma-separated),
+`ASSET_CALENDAR_POCKETBASE_URL`, `ASSET_CALENDAR_INVITATION_URL`,
+`ASSET_CALENDAR_INVITATION_LIFETIME_HOURS=720`,
+`ASSET_CALENDAR_SESSION_LIFETIME_HOURS=24`, and
+`ASSET_CALENDAR_MAIL_TRANSPORT=smtp2go`. It must also contain the SMTP2GO
+host, port, username, password, and sender variables named
+`ASSET_CALENDAR_SMTP2GO_HOST`, `ASSET_CALENDAR_SMTP2GO_PORT`,
+`ASSET_CALENDAR_SMTP2GO_USERNAME`, `ASSET_CALENDAR_SMTP2GO_PASSWORD`, and
+`ASSET_CALENDAR_SMTP2GO_FROM`. PocketBase validates this file before becoming
+healthy and fails closed without logging secret values.
 
 Nginx must be able to traverse the release path while PocketBase data remains
 private:

@@ -7,6 +7,7 @@ Type=simple
 User=assetcalendar
 Group=assetcalendar
 WorkingDirectory=/opt/asset-calendar/current
+EnvironmentFile=/etc/asset-calendar/auth.env
 ExecStart=/opt/asset-calendar/current/pocketbase serve --http=127.0.0.1:8090 --dir=/opt/asset-calendar/shared/pb_data --migrationsDir=/opt/asset-calendar/current/pb_migrations --hooksDir=/opt/asset-calendar/current/pb_hooks --automigrate=false
 Restart=on-failure
 RestartSec=5

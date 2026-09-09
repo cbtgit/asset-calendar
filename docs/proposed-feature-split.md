@@ -36,8 +36,8 @@ features are implemented.
 
 - **Collection:** PocketBase's equivalent of a database table. It defines
   fields, relationships, validation, and indexes.
-- **Auth collection:** A collection with PocketBase authentication, session,
-  and password-reset capabilities.
+- **Auth collection:** A collection with PocketBase authentication and session
+  capabilities.
 - **Migration:** Version-controlled code that creates or changes PocketBase
   schema consistently across environments.
 - **Collection rule:** An authorization expression that controls whether a
@@ -286,14 +286,24 @@ failed.
 
 #### Description
 
-Implement tenant-aware authentication and password lifecycle behavior. Tenant
+Implement tenant-aware authentication and first-time password setup. Tenant
 identity comes from the trusted host or subdomain and cannot be selected by
 request parameters or body fields.
 
-The feature includes sign-in, sign-out, inactive-user rejection, temporary
-password change, password-reset request and completion, SMTP configuration,
-public and protected routes, and manual initial tenant and administrator
-provisioning.
+The production tenant, initial organizational unit, and initial administrator
+already exist and are outside the application workflow. F03 includes sign-in,
+sign-out, inactive-user rejection, invitation email delivery, one-time password
+setup, SMTP configuration, and public and protected routes.
+
+Invitation links are valid for 30 days and can be used once. Normal authenticated
+sessions last one workday and survive page reloads. The MVP has no public
+registration, public password recovery, email verification, MFA, OAuth, custom
+roles, or token-revocation system. Passwords use PocketBase's built-in
+validator without additional application-specific composition rules.
+
+For the MVP's soft deactivation policy, a deactivated user cannot sign in or
+start new protected actions, but an already-issued token is not revoked and an
+existing browser session is not forcibly signed out before normal expiry.
 
 #### PocketBase data and backend behavior
 
@@ -301,7 +311,7 @@ Migrations create:
 
 - A tenant collection with a unique subdomain.
 - A user auth collection with tenant, name, role, organizational unit, active
-  status, and temporary-password-change-required fields.
+  status, and first-time password setup state.
 
 Collection rules restrict every user operation to the authenticated user's
 tenant and prevent regular users from changing protected fields.
@@ -314,31 +324,102 @@ Server hooks or trusted request middleware:
 4. Ignore or reject client-supplied tenant overrides.
 5. Recheck active status for protected operations.
 
+Production invitation delivery uses SMTP2GO's authenticated SMTP relay. Local
+development and CI use a mail capture or test sink. SMTP credentials remain in
+protected VPS/PocketBase configuration and never enter the SPA.
+
 #### Why backend enforcement is needed
 
 React route guards improve navigation but are not a security boundary. A user
 can call PocketBase directly with their authentication token. PocketBase must
 reject cross-tenant and inactive-user requests even when the SPA is bypassed.
 
-SMTP credentials remain server-side. Password-reset responses must not disclose
+SMTP credentials remain server-side. Invitation responses must not disclose
 whether an email address exists.
 
 #### Completion outcome
 
 A user authenticates only through the correct tenant host, cannot access
-another tenant, and completes required password flows before normal application
-access.
+another tenant, and completes password setup through their invitation before
+normal application access. The existing tenant administrator can create a user
+and the user can receive and complete the invitation flow.
 
 #### Missing decisions
 
-- Local, CI, and production tenant-host formats.
-- Root-domain behavior without a tenant subdomain.
-- Trusted proxy headers accepted from Nginx.
-- Password policy and reset-token lifetime.
-- Normal session lifetime.
-- Whether temporary-password restrictions also block direct API operations.
-- Whether an existing token belonging to a deactivated user is rejected on
-  every protected request.
+None for the F03 MVP contract. Implementation details may be chosen in sympathy
+with the existing PocketBase and frontend patterns.
+
+#### Manual production prerequisite
+
+This is an operator task, not an application feature:
+
+- Create and approve the SMTP2GO account.
+- Verify a dedicated sender domain such as `mail.frontend-freelance.dk`.
+- Publish SMTP2GO's SPF and DKIM DNS records.
+- Publish a DMARC record for the sender domain.
+- Store SMTP credentials only in protected VPS/PocketBase configuration.
+- Send a smoke-test invitation to an operator-controlled address.
+
+The VPS does not run an inbound SMTP service and does not expose an SMTP relay.
+
+#### Agent-ready task sequence
+
+The following tasks keep F03 small enough for separate agent assignments:
+
+1. **F03-T01 - Authentication configuration contract**
+   Define safe environment-variable names and validation for the application
+   root domain, tenant hosts, PocketBase URL, SMTP2GO settings, invitation URL,
+   and the 30-day invitation and one-workday session durations. Update the
+   example environment and deployment documentation without adding secrets.
+
+2. **F03-T02 - Tenant host resolution**
+   Resolve the tenant from the trusted host, reject root and unknown tenant
+   hosts generically, and ignore or reject client-supplied tenant IDs. Cover
+   production, local, and test host conventions.
+
+3. **F03-T03 - Tenant and user schema migration**
+   Create or reconcile the migration-backed tenant and auth-user schema,
+   including tenant, name, globally unique email, role, active state,
+   organizational unit, and password-setup state. Preserve the existing
+   production tenant and administrator rather than creating duplicates.
+
+4. **F03-T04 - PocketBase authentication enforcement**
+   Add collection rules and hooks or trusted middleware for same-tenant access,
+   role protection, inactive-user rejection, server-derived tenant assignment,
+   and protected-field handling. Do not add token revocation.
+
+5. **F03-T05 - Invitation and password setup**
+   Implement the server-side one-time invitation flow with a 30-day lifetime.
+   Reject expired and reused links, prevent sign-in before setup, sign the user
+   in after successful setup, and rely on PocketBase's built-in password
+   validator. Do not add custom password composition rules.
+
+6. **F03-T06 - SMTP2GO mail integration**
+   Configure production PocketBase email delivery through SMTP2GO. Provide a
+   local capture/log sink and deterministic CI test sink. Keep all credentials
+   server-side and return generic invitation responses.
+
+7. **F03-T07 - Plain authentication UI**
+   Add the plain sign-in and password-setup routes, sign-out action, protected
+   route redirect, and clear generic handling for invalid credentials, invalid
+   setup links, inactive users, and unknown tenant hosts. Do not add branding,
+   tenant selection, or a password-strength meter.
+
+8. **F03-T08 - PocketBase session integration**
+   Persist the PocketBase auth state across reloads, refresh valid state during
+   startup, clear it on sign-out, and handle authorization failures by clearing
+   local state and returning to sign-in. Configure the one-workday session
+   lifetime without a custom session table.
+
+9. **F03-T09 - Focused authentication tests**
+   Test host resolution, cross-tenant access, sign-in, inactive users,
+   invitation expiry and one-time use, built-in password validation, route
+   guards, session persistence, sign-out, and mail-sink behavior.
+
+10. **F03-T10 - Documentation and deployment reconciliation**
+    Record the SMTP2GO DNS/VPS prerequisite, existing tenant provisioning
+    boundary, environment conventions, and F03 acceptance criteria in the
+    project documentation.
 
 ---
 
@@ -464,15 +545,17 @@ Allow administrators to create and manage tenant users while retaining booking
 history and always preserving at least one active administrator.
 
 The feature includes user listing, creation, unit assignment, role changes,
-deactivation, temporary passwords, and active-user selection data.
+deactivation, invitation email delivery, password setup, and active-user
+selection data.
 
 #### PocketBase data and backend behavior
 
 The auth collection requires a tenant, organizational unit, normalized globally
-unique email, role, active status, and temporary-password flag.
+unique email, role, active status, and password-setup state.
 
 A creation hook derives the tenant server-side, verifies the selected unit is
-in that tenant, normalizes the email, and sets the temporary-password flag.
+in that tenant, normalizes the email, and sends the invitation email with a
+one-time password-setup link.
 
 Before demotion or deactivation, a hook counts the other active administrators
 in the tenant and rejects the operation if none remain.
@@ -973,19 +1056,14 @@ The following decisions materially affect schema, hooks, authorization, or API
 contracts and should be added to the product requirements before affected
 features are decomposed into development tasks:
 
-1. Whether temporary-password restrictions are enforced by PocketBase as well
-   as the SPA.
-2. Whether protected API requests from a deactivated user's existing session
-   are rejected.
-3. Whether deactivated users can be reactivated.
-4. Whether `booked_for_user` is immutable after booking creation.
-5. Whether administrators may reschedule completed bookings into the future or
+1. Whether deactivated users can be reactivated.
+2. Whether `booked_for_user` is immutable after booking creation.
+3. Whether administrators may reschedule completed bookings into the future or
    future bookings into the past.
-6. How archived resources remain accessible for existing bookings.
-7. What regular users can see and change for training bookings.
-8. Whether maintenance bookings need a reason or description.
-9. The safe resource and booking projection mechanism in PocketBase.
-10. Exact-decimal storage and calculation for DKK.
-11. The normative CSV and Excel contracts.
-12. Local, CI, and production tenant-host conventions.
-13. Production paths, users, certificates, backup, and recovery policy.
+4. How archived resources remain accessible for existing bookings.
+5. What regular users can see and change for training bookings.
+6. Whether maintenance bookings need a reason or description.
+7. The safe resource and booking projection mechanism in PocketBase.
+8. Exact-decimal storage and calculation for DKK.
+9. The normative CSV and Excel contracts.
+10. Production paths, users, certificates, backup, and recovery policy.
