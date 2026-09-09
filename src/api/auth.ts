@@ -80,6 +80,20 @@ export async function ensureAuthReady(): Promise<void> {
   await readyPromise;
 }
 
+export async function ensureAuthContextReady(): Promise<void> {
+  await ensureAuthReady();
+  if (snapshot.status !== "unauthenticated") return;
+
+  try {
+    await pocketbase.collection<AuthUser>("users").authRefresh();
+  } catch (cause) {
+    const error = toAppError(cause);
+    if (error.kind === "not-found" || error.kind === "network" || error.kind === "server") {
+      publish(snapshotFromStore("unavailable"));
+    }
+  }
+}
+
 export async function signIn(email: string, password: string): Promise<AuthUser> {
   try {
     const response = await pocketbase
