@@ -13,7 +13,6 @@ const originalEnvironment = {
   ASSET_CALENDAR_SESSION_LIFETIME_HOURS: process.env.ASSET_CALENDAR_SESSION_LIFETIME_HOURS,
   ASSET_CALENDAR_MAIL_TRANSPORT: process.env.ASSET_CALENDAR_MAIL_TRANSPORT,
 };
-
 let invitationFlow: {
   isInvitationValid: (
     invitation: { get: (field: string) => unknown },
@@ -46,7 +45,6 @@ beforeEach(() => {
     "../../pb_hooks/invitation-flow.cjs",
   );
 });
-
 afterEach(() => {
   for (const [key, value] of Object.entries(originalEnvironment)) {
     if (value === undefined) delete process.env[key as keyof NodeJS.ProcessEnv];

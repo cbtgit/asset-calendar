@@ -1,0 +1,181 @@
+// @vitest-environment node
+import { cp, mkdtemp, rm, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { dirname, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
+import PocketBase from "pocketbase";
+import { afterAll, beforeAll, expect, it } from "vite-plus/test";
+import {
+  startPocketBaseIntegrationHarness,
+  type PocketBaseIntegrationHarness,
+} from "./pocketbase-harness";
+
+const root = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
+const productionMigrations = resolve(root, "pb_migrations");
+const adminPassword = "Correct horse battery staple!";
+const setupPassword = "A valid setup password!";
+const pendingEmail = "pending-a@example.test";
+const originalTenantHosts = process.env.ASSET_CALENDAR_TENANT_HOSTS;
+
+let harness: PocketBaseIntegrationHarness;
+let migrationsDir: string;
+
+async function createSeededMigrations(): Promise<string> {
+  migrationsDir = await mkdtemp(resolve(tmpdir(), "asset-calendar-invitation-migrations-"));
+  await cp(productionMigrations, migrationsDir, { recursive: true });
+  await writeFile(
+    resolve(migrationsDir, "1710000005_invitation_fixture.js"),
+    `migrate((app) => {
+  const tenants = app.findCollectionByNameOrId("tenants");
+  const units = app.findCollectionByNameOrId("organizational_units");
+  const users = app.findCollectionByNameOrId("users");
+  const tenant = new Record(tenants);
+  tenant.set("name", "Tenant A");
+  tenant.set("subdomain", "tenant");
+  app.save(tenant);
+  const otherTenant = new Record(tenants);
+  otherTenant.set("name", "Tenant B");
+  otherTenant.set("subdomain", "other");
+  app.save(otherTenant);
+  const unit = new Record(units);
+  unit.set("tenant", tenant.id);
+  unit.set("name", "Unit A");
+  app.save(unit);
+  for (const data of [
+    { email: "admin-a@example.test", pending: false },
+    { email: ${JSON.stringify(pendingEmail)}, pending: true },
+  ]) {
+    const user = new Record(users);
+    user.set("email", data.email);
+    user.set("password", ${JSON.stringify(adminPassword)});
+    user.set("passwordConfirm", ${JSON.stringify(adminPassword)});
+    user.set("tenant", tenant.id);
+    user.set("organizational_unit", unit.id);
+    user.set("role", data.pending ? "regular" : "administrator");
+    user.set("active", true);
+    user.set("password_setup_pending", data.pending);
+    app.save(user);
+  }
+}, () => {});`,
+  );
+  return migrationsDir;
+}
+
+async function request(
+  pocketbase: PocketBase,
+  path: string,
+  options: { method?: string; body?: unknown; host?: string } = {},
+): Promise<Response> {
+  const port = new URL(harness.baseUrl).port;
+  const origin = options.host ? `http://${options.host}:${port}` : harness.baseUrl;
+  return fetch(`${origin}${path}`, {
+    method: options.method ?? "GET",
+    headers: {
+      ...(options.body === undefined ? {} : { "content-type": "application/json" }),
+      ...(pocketbase.authStore.token ? { authorization: pocketbase.authStore.token } : {}),
+      ...(options.host === undefined ? {} : { host: options.host }),
+    },
+    body: options.body === undefined ? undefined : JSON.stringify(options.body),
+  });
+}
+
+beforeAll(async () => {
+  process.env.ASSET_CALENDAR_TENANT_HOSTS = "tenant.localhost,other.localhost";
+  harness = await startPocketBaseIntegrationHarness({
+    migrationsDir: await createSeededMigrations(),
+  });
+});
+
+afterAll(async () => {
+  if (harness) await harness.stop();
+  if (migrationsDir) await rm(migrationsDir, { recursive: true, force: true });
+  if (originalTenantHosts === undefined) delete process.env.ASSET_CALENDAR_TENANT_HOSTS;
+  else process.env.ASSET_CALENDAR_TENANT_HOSTS = originalTenantHosts;
+});
+
+it("creates a one-time invitation and authenticates after built-in password validation", async () => {
+  const admin = new PocketBase(harness.baseUrl);
+  const login = await request(admin, "/api/collections/users/auth-with-password", {
+    method: "POST",
+    host: "tenant.localhost",
+    body: { identity: "admin-a@example.test", password: adminPassword },
+  });
+  expect(login.status).toBe(200);
+  const auth = await login.json();
+  admin.authStore.save(auth.token, auth.record);
+
+  const usersResponse = await request(admin, "/api/collections/users/records", {
+    host: "tenant.localhost",
+  });
+  expect(usersResponse.status).toBe(200);
+  const usersBody = await usersResponse.json();
+  const pendingUser = usersBody.items.find(
+    (user: { password_setup_pending: boolean }) => user.password_setup_pending === true,
+  );
+  expect(pendingUser).toBeDefined();
+
+  const invitationResponse = await request(admin, "/api/invitations", {
+    method: "POST",
+    host: "tenant.localhost",
+    body: { user: pendingUser.id, tenant: "caller-selected-tenant-is-ignored" },
+  });
+  expect(invitationResponse.status).toBe(200);
+  const invitation = await invitationResponse.json();
+  const token = new URL(invitation.link).searchParams.get("token");
+  expect(token).toHaveLength(64);
+  expect(invitation.link).not.toContain(pendingEmail);
+
+  const pendingLogin = await request(
+    new PocketBase(harness.baseUrl),
+    "/api/collections/users/auth-with-password",
+    {
+      method: "POST",
+      host: "tenant.localhost",
+      body: { identity: pendingEmail, password: adminPassword },
+    },
+  );
+  expect(pendingLogin.status).toBe(403);
+
+  const invalidPassword = await request(new PocketBase(harness.baseUrl), "/api/invitations/setup", {
+    method: "POST",
+    host: "tenant.localhost",
+    body: { token, password: "short" },
+  });
+  expect(invalidPassword.status).toBe(400);
+
+  const wrongTenant = await request(new PocketBase(harness.baseUrl), "/api/invitations/setup", {
+    method: "POST",
+    host: "other.localhost",
+    body: { token, password: setupPassword },
+  });
+  expect(wrongTenant.status).toBe(400);
+  expect(await wrongTenant.json()).toEqual(await invalidInvitationBody());
+
+  const setup = await request(new PocketBase(harness.baseUrl), "/api/invitations/setup", {
+    method: "POST",
+    host: "tenant.localhost",
+    body: { token, password: setupPassword },
+  });
+  expect(setup.status).toBe(200);
+  const setupAuth = await setup.json();
+  expect(setupAuth.token).toEqual(expect.any(String));
+  expect(setupAuth.record.password_setup_pending).toBe(false);
+
+  const reused = await request(new PocketBase(harness.baseUrl), "/api/invitations/setup", {
+    method: "POST",
+    host: "tenant.localhost",
+    body: { token, password: setupPassword },
+  });
+  expect(reused.status).toBe(400);
+  expect(await reused.json()).toEqual(await invalidInvitationBody());
+});
+
+async function invalidInvitationBody(): Promise<unknown> {
+  const response = await request(new PocketBase(harness.baseUrl), "/api/invitations/setup", {
+    method: "POST",
+    host: "tenant.localhost",
+    body: { token: "x".repeat(64), password: setupPassword },
+  });
+  expect(response.status).toBe(400);
+  return response.json();
+}
