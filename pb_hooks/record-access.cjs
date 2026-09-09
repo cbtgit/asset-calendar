@@ -152,7 +152,7 @@ function rejectInactive(event) {
     return event.next();
   }
   const record = event.record;
-  if (record.get("active") !== true) deny();
+  if (record.get("active") !== true || record.get("password_setup_pending") === true) deny();
   const info = requestInfo(event);
   const context = resolveTenant(info, event);
   if (context.kind !== "resolved" || record.get(TENANT_FIELD) !== context.tenant.id) deny();

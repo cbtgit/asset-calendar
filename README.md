@@ -48,6 +48,18 @@ send invitation mail. Invitation links are configured for 30 days
 one workday (`ASSET_CALENDAR_SESSION_LIFETIME_HOURS=24`). PocketBase refuses to
 start when the authentication configuration is malformed or incomplete.
 
+### Invitation and first-time password setup
+
+Invitations use the server-side `POST /api/invitations` and
+`POST /api/invitations/setup` routes. Each invitation stores only a SHA-256
+hash of a cryptographically random credential in the private
+`user_invitations` collection. The credential is bound to the invited user's
+tenant, expires after exactly 720 hours, and is marked used after PocketBase
+accepts the submitted password. Password changes go through PocketBase's
+normal auth-record validation; no additional composition rules are applied.
+The setup route returns PocketBase's normal auth response so the user is signed
+in immediately.
+
 ### Tenant host conventions
 
 Tenant context is resolved server-side from the normalized request host. Client
