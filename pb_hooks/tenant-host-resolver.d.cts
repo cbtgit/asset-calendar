@@ -37,4 +37,9 @@ export function resolveTenantContext(
     subdomain: string;
   }) => TenantRecord | null | Promise<TenantRecord | null>,
 ): Promise<TenantContext>;
+export function resolveTenantContextSync(
+  request: TenantRequest,
+  configuration: TenantHostConfiguration,
+  findTenant: (input: { host: string; subdomain: string }) => TenantRecord | null,
+): TenantContext;
 export const resolveTenantHost: typeof resolveTenantContext;
