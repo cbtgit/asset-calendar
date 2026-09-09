@@ -111,7 +111,7 @@ it("applies SMTP2GO settings without persisting credentials", () => {
     port: 2525,
     username: "smtp-user",
     authMethod: "PLAIN",
-    tls: false,
+    tls: true,
   });
   expect(settings.meta).toEqual({ senderAddress: "calendar@example.com" });
 });
