@@ -66,6 +66,7 @@ function parseTrustedProxyIps(value) {
     values.some(
       (address) =>
         !/^[0-9a-f:.]+$/i.test(address) ||
+        (!address.includes(".") && !address.includes(":")) ||
         (address.includes(".") &&
           (!/^\d+\.\d+\.\d+\.\d+$/.test(address) ||
             address.split(".").some((part) => Number(part) > 255))) ||
