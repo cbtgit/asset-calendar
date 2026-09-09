@@ -21,7 +21,11 @@ export type PocketBaseIntegrationHarness = {
   stop: () => Promise<void>;
 };
 
-export async function startPocketBaseIntegrationHarness(): Promise<PocketBaseIntegrationHarness> {
+export async function startPocketBaseIntegrationHarness(
+  options: {
+    migrationsDir?: string;
+  } = {},
+): Promise<PocketBaseIntegrationHarness> {
   const temporaryRoot = await mkdtemp(join(tmpdir(), "asset-calendar-integration-"));
   const dataDir = join(temporaryRoot, "data");
   await mkdir(dataDir);
@@ -36,7 +40,7 @@ export async function startPocketBaseIntegrationHarness(): Promise<PocketBaseInt
         child = await startPocketBase({
           config: { host: "127.0.0.1", port },
           paths,
-          migrationsDir,
+          migrationsDir: options.migrationsDir ?? migrationsDir,
         });
         break;
       } catch (error) {
