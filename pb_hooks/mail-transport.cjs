@@ -67,7 +67,9 @@ function sendInvitation({ configuration, invitation, app = globalThis.$app }) {
   });
 
   if (configuration.mailTransport === "capture" || configuration.mailTransport === "test") {
-    messages[configuration.mailTransport].push(copyMessage(message));
+    const store = messages[configuration.mailTransport];
+    store.push(copyMessage(message));
+    if (store.length > 200) store.splice(0, store.length - 200);
     return;
   }
 
