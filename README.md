@@ -130,6 +130,9 @@ The VPS keeps releases under `/opt/asset-calendar/releases` and production
 data under `/opt/asset-calendar/shared/pb_data`. PocketBase runs as the
 `assetcalendar` service account on `127.0.0.1:8090`; Nginx serves the SPA and
 proxies `/api/`. The public PocketBase administration UI at `/_/` is blocked.
+The [production bootstrap contract](docs/production-bootstrap-contract.md)
+defines the manual tenant, organizational-unit, and administrator prerequisite
+for the existing host `nejsumlab.frontend-freelance.dk`.
 
 ### One-time VPS installation
 
@@ -158,6 +161,33 @@ host, port, username, password, and sender variables named
 `ASSET_CALENDAR_SMTP2GO_USERNAME`, `ASSET_CALENDAR_SMTP2GO_PASSWORD`, and
 `ASSET_CALENDAR_SMTP2GO_FROM`. PocketBase validates this file before becoming
 healthy and fails closed without logging secret values.
+
+The production release contains only `dist`, `pb_migrations`, `pb_hooks`, the
+checksum-verified Linux PocketBase binary, and release metadata. The activation
+script validates those inputs, applies `pb_migrations` to
+`/opt/asset-calendar/shared/pb_data`, and only then switches
+`/opt/asset-calendar/current` and starts the systemd service. If activation or
+the loopback health check fails, it restores the previous release symlink and
+restarts the previous service. This protects the running release, but does not
+reverse a database migration; database rollback requires the operator's backup
+and recovery procedure.
+
+### Production bootstrap and mail prerequisite
+
+The operator manually provisions one tenant with subdomain `nejsumlab`, one
+organizational unit for that tenant, and one active administrator before
+production onboarding is ready. F03 never guesses or duplicates these records
+and does not provide tenant onboarding. Migrations preserve existing records;
+missing or ambiguous relations are not auto-selected. See the
+[production bootstrap contract](docs/production-bootstrap-contract.md) for the
+stable lookup keys and readiness rules.
+
+SMTP2GO account approval, sender-domain SPF/DKIM and DMARC DNS, protected VPS
+configuration, and an operator-controlled invitation smoke test are manual
+prerequisites. The completed [F03-T00 issue #30](https://github.com/cbtgit/asset-calendar/issues/30)
+tracks that work. Do not copy SMTP credentials or production delivery data into
+this repository. `mail.frontend-freelance.dk` is the SMTP sender host, not a
+tenant host.
 
 Nginx must be able to traverse the release path while PocketBase data remains
 private:

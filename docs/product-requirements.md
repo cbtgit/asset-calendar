@@ -1,7 +1,10 @@
 # Asset Calendar Product Requirements
 
-**Status:** Draft MVP requirements
-**Last updated:** 2026-09-07
+**Status:** Normative MVP requirements
+**Last updated:** 2026-09-09
+
+The non-secret operator boundary for the existing production tenant is defined
+in the [production bootstrap contract](./production-bootstrap-contract.md).
 
 ## 1. Product summary
 
@@ -63,9 +66,13 @@ not part of the MVP.
 - Every tenant-owned record must contain a tenant reference.
 - A user authenticated for one tenant must not be able to read or modify
   another tenant's data.
-- Initial tenant and first-administrator provisioning is outside the MVP
-  product workflow. The tenant, initial organizational unit, and first
-  administrator are created manually in PocketBase.
+- Initial tenant, organizational-unit, and first-administrator provisioning is
+  outside the MVP product workflow. For production, the operator manually
+  provisions exactly one tenant for `nejsumlab.frontend-freelance.dk`, one
+  organizational unit, and one active administrator in PocketBase. There is no
+  tenant onboarding or self-service provisioning UI in F03. The stable lookup
+  rules and migration-preservation behavior are defined in the [production
+  bootstrap contract](./production-bootstrap-contract.md).
 
 ### 4.2 User roles
 
@@ -492,6 +499,20 @@ PocketBase must listen on a local-only interface/port and must not be exposed
 directly to the Internet. PocketBase runs as a pinned binary managed by
 `systemd`.
 
+The release contains `dist`, `pb_migrations`, `pb_hooks`, and the
+checksum-verified PocketBase runtime. Deployment applies migrations to the
+persistent PocketBase data directory outside the release before starting the
+service. Failed activation or health checks restore the previous release
+symlink and restart the previous service; database migrations are not
+automatically reversed.
+
+Production authentication configuration is supplied through protected VPS
+configuration, not `.env.example`, frontend code, release directories, or
+issue text. SMTP2GO account approval, sender-domain DNS, protected VPS
+configuration, and an operator-controlled invitation smoke test are manual
+prerequisites. Local and CI mail use capture/test sinks and never send real
+email. See the [production bootstrap contract](./production-bootstrap-contract.md).
+
 The initial production deployment will not require Docker. This fits the
 existing Nginx setup and the 1 GB RAM / 25 GB disk VPS.
 
@@ -569,6 +590,19 @@ The MVP is ready when:
 15. Cross-tenant reads and writes are rejected by backend enforcement.
 16. The application can be built as static files and served by the existing
     Nginx installation.
+17. The existing production tenant is resolved from
+    `nejsumlab.frontend-freelance.dk`; tenant identity is never client-selected.
+18. Production readiness requires the manually provisioned tenant,
+    organizational unit, and active administrator; F03 provides no tenant
+    onboarding workflow.
+19. Invitation links are one-time and valid for 30 days; authenticated
+    sessions last one workday and survive reloads.
+20. PocketBase's built-in password validator is used without additional
+    composition rules, and roles are exactly `administrator` and `regular`.
+21. Deactivation blocks sign-in and new protected actions while preserving the
+    user, bookings, and already-issued tokens until normal expiry.
+22. Production uses SMTP2GO through protected server configuration, while local
+    development and CI use non-network capture/test sinks.
 
 ## 15. Future considerations
 
