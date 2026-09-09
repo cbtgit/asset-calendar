@@ -64,3 +64,54 @@ it("does not treat authentication requests as protected-request failures", () =>
 
   expect(redirect).not.toHaveBeenCalled();
 });
+
+it("refreshes a valid persisted auth state during startup", async () => {
+  vi.resetModules();
+  const reloadedClient = await import("./client");
+  const user = {
+    id: "persisted-user",
+    collectionId: "users",
+    collectionName: "users",
+    email: "person@example.test",
+  };
+  const payload = btoa(JSON.stringify({ exp: Math.floor(Date.now() / 1000) + 3600 }))
+    .replace(/\+/g, "-")
+    .replace(/\//g, "_")
+    .replace(/=+$/, "");
+  const token = `header.${payload}.signature`;
+  reloadedClient.pocketbase.authStore.save(token, user);
+
+  const reloadedAuth = await import("./auth");
+  const authRefresh = vi.fn().mockResolvedValue({ record: user });
+  vi.spyOn(reloadedClient.pocketbase, "collection").mockReturnValue({ authRefresh } as never);
+
+  try {
+    await reloadedAuth.ensureAuthReady();
+
+    expect(authRefresh).toHaveBeenCalledOnce();
+    expect(reloadedAuth.getAuthSnapshot()).toMatchObject({ status: "authenticated", user });
+  } finally {
+    reloadedAuth.signOut();
+    reloadedClient.pocketbase.authStore.clear();
+  }
+});
+
+it("clears an expired persisted auth state before protected routing", async () => {
+  vi.resetModules();
+  const reloadedClient = await import("./client");
+  reloadedClient.pocketbase.authStore.save(
+    `header.${btoa(JSON.stringify({ exp: Math.floor(Date.now() / 1000) - 1 }))}.signature`,
+    {
+      id: "expired-user",
+      collectionId: "users",
+      collectionName: "users",
+      email: "person@example.test",
+    },
+  );
+
+  const reloadedAuth = await import("./auth");
+
+  expect(reloadedAuth.getAuthSnapshot()).toEqual({ status: "unauthenticated", user: null });
+  expect(reloadedClient.pocketbase.authStore.token).toBe("");
+  expect(reloadedClient.pocketbase.authStore.model).toBeNull();
+});

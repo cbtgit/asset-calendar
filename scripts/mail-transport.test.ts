@@ -19,7 +19,7 @@ type MailTransport = {
   sendInvitation: (input: {
     configuration: {
       mailTransport: "capture" | "test" | "smtp2go";
-      smtp2go?: { from: string };
+      smtp2go?: { from: string; username?: string; password?: string };
     };
     invitation: { recipient: string; link: string; expiresAt: string };
     app?: { newMailClient: () => { send: (message: unknown) => void } };
@@ -33,6 +33,7 @@ const mailTransport = createRequire(import.meta.url)(
 afterEach(() => mailTransport.clearMessages());
 
 it("creates plain-text and HTML-safe invitation content", () => {
+  const providerSecret = "smtp-provider-secret";
   const message = mailTransport.createInvitationMessage({
     recipient: "person@example.test",
     link: "https://example.test/setup?token=abc&next=<safe>",
@@ -43,6 +44,8 @@ it("creates plain-text and HTML-safe invitation content", () => {
   expect(message.html).toContain("https://example.test/setup?token=abc&amp;next=&lt;safe&gt;");
   expect(message.text).not.toContain("Correct horse battery staple!");
   expect(message.html).not.toContain("Correct horse battery staple!");
+  expect(message.text).not.toContain(providerSecret);
+  expect(message.html).not.toContain(providerSecret);
 });
 
 it("captures local and CI messages without creating a mail client", () => {
@@ -70,14 +73,21 @@ it("captures local and CI messages without creating a mail client", () => {
 
   expect(mailTransport.getMessages("capture")).toHaveLength(1);
   expect(mailTransport.getMessages("test")).toHaveLength(1);
+  expect(mailTransport.getMessages("capture")[0].text).toContain(invitation.link);
+  expect(mailTransport.getMessages("test")[0].text).toContain(invitation.link);
 });
 
 it("uses the PocketBase mail client only for SMTP2GO", () => {
   let sentMessage: unknown;
+  const providerPassword = "smtp-password-that-must-not-be-mailed";
   mailTransport.sendInvitation({
     configuration: {
       mailTransport: "smtp2go",
-      smtp2go: { from: "calendar@example.test" },
+      smtp2go: {
+        from: "calendar@example.test",
+        username: "smtp-user",
+        password: providerPassword,
+      },
     },
     invitation: {
       recipient: "person@example.test",
@@ -97,5 +107,6 @@ it("uses the PocketBase mail client only for SMTP2GO", () => {
     from: { address: "calendar@example.test" },
     to: [{ address: "person@example.test" }],
   });
+  expect(JSON.stringify(sentMessage)).not.toContain(providerPassword);
   expect(mailTransport.getMessages("test")).toHaveLength(0);
 });

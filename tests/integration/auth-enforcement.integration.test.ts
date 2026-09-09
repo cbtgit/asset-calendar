@@ -123,6 +123,14 @@ it("enforces the resolved tenant and role boundary on direct requests", async ()
   const users = await usersResponse.json();
   expect(users.items).toHaveLength(3);
 
+  const foreignFilter = await request(
+    admin,
+    "/api/collections/users/records?filter=tenant='foreign-tenant'",
+    { host: "tenant.localhost" },
+  );
+  expect(foreignFilter.status).toBe(200);
+  expect((await foreignFilter.json()).items).toHaveLength(0);
+
   const foreignHost = await request(admin, "/api/collections/users/records", {
     host: "other.localhost",
   });
@@ -151,7 +159,13 @@ it("enforces the resolved tenant and role boundary on direct requests", async ()
     {
       method: "PATCH",
       host: "tenant.localhost",
-      body: { role: "administrator", tenant: "foreign-tenant" },
+      body: {
+        role: "administrator",
+        tenant: "foreign-tenant",
+        active: false,
+        organizational_unit: "foreign-unit",
+        password_setup_pending: true,
+      },
     },
   );
   expect(protectedUpdate.status).toBe(403);
@@ -180,4 +194,9 @@ it("enforces the resolved tenant and role boundary on direct requests", async ()
     },
   );
   expect(inactiveResponse.status).toBe(403);
+
+  const inactiveRequest = await request(regular, "/api/collections/users/records", {
+    host: "tenant.localhost",
+  });
+  expect(inactiveRequest.status).toBe(403);
 });

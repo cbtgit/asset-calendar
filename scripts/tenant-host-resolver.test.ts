@@ -75,7 +75,9 @@ it("returns the same generic result for root, unknown, malformed, and out-of-sco
     { headers: { host: "localhost" } },
     { headers: { host: "missing.localhost" } },
     { headers: { host: "tenant.localhost:0" } },
+    { headers: { host: "nested.tenant.localhost" } },
     { headers: { host: "tenant.other.example" } },
+    { headers: { host: "mail.smtp2go.com" } },
   ];
 
   const results = await Promise.all(
@@ -88,7 +90,41 @@ it("returns the same generic result for root, unknown, malformed, and out-of-sco
     { kind: "unknown" },
     { kind: "unknown" },
     { kind: "unknown" },
+    { kind: "unknown" },
+    { kind: "unknown" },
   ]);
+});
+
+it("resolves local and test hosts only when each host is explicitly configured", async () => {
+  const findTenant = (input: { subdomain: string }): TenantRecord => ({
+    id: `${input.subdomain}-id`,
+    subdomain: input.subdomain,
+  });
+
+  await expect(
+    resolver.resolveTenantContext(
+      { host: "tenant.localhost:5173" },
+      localConfiguration,
+      findTenant,
+    ),
+  ).resolves.toMatchObject({ kind: "resolved", host: "tenant.localhost" });
+
+  await expect(
+    resolver.resolveTenantContext({ host: "other.localhost:5173" }, localConfiguration, findTenant),
+  ).resolves.toEqual({ kind: "unknown" });
+
+  await expect(
+    resolver.resolveTenantContext(
+      { host: "tenant.test:5173" },
+      {
+        rootDomain: "test",
+        tenantHosts: ["tenant.test"],
+        environment: "test",
+        hostPortPolicy: "allow",
+      },
+      findTenant,
+    ),
+  ).resolves.toMatchObject({ kind: "resolved", host: "tenant.test" });
 });
 
 it("does not trust forwarded hosts from an untrusted request", async () => {
