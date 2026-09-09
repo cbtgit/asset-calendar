@@ -20,7 +20,7 @@ function requestTenant(event, app) {
       host: info.headers.host ?? event.requestEvent.request.host,
       remoteAddress: info.remoteIP,
       requestInfo: () => info,
-    }
+    },
     configuration,
     ({ subdomain }) => {
       try {
