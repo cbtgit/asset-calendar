@@ -43,7 +43,7 @@ it("applies the tenant and auth schema without seeded records", async () => {
     password_setup_pending: false,
   });
 
-  expect(user.id).toMatch(/[a-z0-9]{15}/);
+  expect(user.id).toMatch(/^[a-z0-9]{15}$/);
   expect(user.first_name).toBe("First");
   expect(user.last_name).toBe("Administrator");
   expect(user.role).toBe("administrator");
