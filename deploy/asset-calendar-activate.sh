@@ -27,12 +27,17 @@ if [ -n "$(find "$release_dir" -type l -print -quit)" ]; then
 fi
 
 old_target=$(readlink "$current" 2>/dev/null || true)
+release_owner=$(stat -c '%u:%g' "$release_dir")
 chown -R assetcalendar:assetcalendar "$release_dir/pocketbase" "$release_dir/pb_migrations" "$release_dir/pb_hooks"
 chmod 0755 "$release_dir/pocketbase"
 chown -R assetcalendar:assetcalendar "$root/shared/pb_data"
 
 systemctl stop "$service"
+restore_release_ownership() {
+  chown -R "$release_owner" "$release_dir/pocketbase" "$release_dir/pb_migrations" "$release_dir/pb_hooks" || true
+}
 rollback() {
+  restore_release_ownership
   if [ -n "$old_target" ]; then
     ln -sfn "$old_target" "$current"
   fi
@@ -58,6 +63,7 @@ if ! curl --fail --silent --show-error --retry 30 --retry-connrefused --retry-de
   exit 1
 fi
 
+restore_release_ownership
 trap - EXIT INT TERM HUP
 find "$releases" -mindepth 1 -maxdepth 1 -type d -printf '%T@ %p\n' \
   | sort -nr \
