@@ -13,28 +13,63 @@ function findCollection(app, ...ids) {
   return null;
 }
 
-function requireCollection(app, ...ids) {
-  const collection = findCollection(app, ...ids);
-  if (!collection) throw new Error(`Required PocketBase collection is missing: ${ids.join(", ")}`);
-  return collection;
-}
-
 function ensureCollectionType(collection, type) {
   if (collection.type !== type) {
     throw new Error(`Collection ${collection.name} must be a ${type} collection.`);
   }
 }
 
+function createField(definition) {
+  switch (definition.type) {
+    case "bool":
+      return new BoolField({
+        id: definition.id,
+        name: definition.name,
+        required: definition.required === true,
+      });
+    case "relation":
+      return new RelationField({
+        id: definition.id,
+        name: definition.name,
+        required: definition.required === true,
+        collectionId: definition.collectionId,
+        cascadeDelete: definition.cascadeDelete === true,
+        minSelect: definition.minSelect,
+        maxSelect: definition.maxSelect,
+      });
+    case "select":
+      return new SelectField({
+        id: definition.id,
+        name: definition.name,
+        required: definition.required === true,
+        maxSelect: definition.maxSelect,
+        values: definition.values,
+      });
+    case "text":
+      return new TextField({
+        id: definition.id,
+        name: definition.name,
+        required: definition.required === true,
+        min: definition.min,
+        max: definition.max,
+        pattern: definition.pattern,
+      });
+    default:
+      throw new Error(`Unsupported field type: ${definition.type}.`);
+  }
+}
+
 function ensureField(collection, definition) {
   const existing = collection.fields.find((field) => field.name === definition.name);
   if (!existing) {
-    collection.fields.push(definition);
+    collection.fields.push(createField(definition));
     return;
   }
 
-  if (existing.type !== definition.type) {
+  const existingType = typeof existing.type === "function" ? existing.type() : existing.type;
+  if (existingType !== definition.type) {
     throw new Error(
-      `Collection ${collection.name} field ${definition.name} has incompatible type ${existing.type}.`,
+      `Collection ${collection.name} field ${definition.name} has incompatible type ${existingType}.`,
     );
   }
 
@@ -53,12 +88,22 @@ function ensureField(collection, definition) {
     );
   }
 
-  if (definition.required) existing.required = true;
+  if (definition.type === "bool") {
+    existing.required = false;
+  } else if (definition.required) {
+    existing.required = true;
+  }
 }
 
 function ensureUniqueIndex(collection, index) {
   collection.indexes ??= [];
-  if (!collection.indexes.includes(index)) collection.indexes.push(index);
+  const indexName = /INDEX\s+`?([^`\s]+)`?/i.exec(index)?.[1];
+  const exists = indexName
+    ? collection.indexes.some((existing) =>
+        new RegExp(`INDEX\\s+\`?${indexName}\`?`, "i").test(existing),
+      )
+    : collection.indexes.includes(index);
+  if (!exists) collection.indexes.push(index);
 }
 
 function records(app, collection) {
@@ -217,7 +262,7 @@ migrate(
       id: "user_first_name",
       name: "first_name",
       type: "text",
-      min: 1,
+      min: 0,
       max: 100,
       pattern: "",
     });
@@ -225,7 +270,7 @@ migrate(
       id: "user_last_name",
       name: "last_name",
       type: "text",
-      min: 1,
+      min: 0,
       max: 100,
       pattern: "",
     });
@@ -241,7 +286,6 @@ migrate(
       id: "user_active",
       name: "active",
       type: "bool",
-      required: true,
     });
     ensureField(users, {
       id: "user_organizational_unit",
@@ -258,7 +302,6 @@ migrate(
       id: "user_password_setup_pending",
       name: "password_setup_pending",
       type: "bool",
-      required: true,
     });
     app.save(users);
 
@@ -278,6 +321,8 @@ migrate(
         }
         values.organizational_unit = organizationalUnitIds[0];
       }
+      if (isMissing(record.get("first_name"))) values.first_name = "";
+      if (isMissing(record.get("last_name"))) values.last_name = "";
       if (isMissing(record.get("role"))) {
         values.role = existingUsers.length === 1 ? "administrator" : "regular";
       }

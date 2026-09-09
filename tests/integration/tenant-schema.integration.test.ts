@@ -43,8 +43,11 @@ it("applies the tenant and auth schema without seeded records", async () => {
     password_setup_pending: false,
   });
 
-  expect(user.email).toBe("admin@example.test");
+  expect(user.id).toMatch(/[a-z0-9]{15}/);
+  expect(user.first_name).toBe("First");
+  expect(user.last_name).toBe("Administrator");
   expect(user.role).toBe("administrator");
+  expect(user.active).toBe(true);
   expect(user.tenant).toBe(tenant.id);
   expect(user.organizational_unit).toBe(organizationalUnit.id);
   expect(user.password_setup_pending).toBe(false);
