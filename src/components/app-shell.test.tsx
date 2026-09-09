@@ -47,3 +47,15 @@ it("signs out and navigates to sign-in", () => {
   expect(pocketbase.authStore.token).toBe("");
   expect(navigate).toHaveBeenCalledWith({ to: "/sign-in", replace: true });
 });
+
+it.each(["loading", "unauthenticated", "unavailable"] as const)(
+  "does not render protected content while auth is %s",
+  (status) => {
+    vi.mocked(useAuth).mockReturnValue({ status, user: null });
+
+    render(<AppShell />);
+
+    expect(screen.queryByRole("main")).toBeNull();
+    expect(screen.queryByText("Keep important date in view.")).toBeNull();
+  },
+);

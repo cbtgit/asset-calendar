@@ -200,3 +200,46 @@ it("rejects invalid production SMTP2GO endpoints and senders", () => {
     }),
   ).toThrow("ASSET_CALENDAR_SMTP2GO_FROM");
 });
+
+it("requires SMTP2GO values only for production and never includes credentials in errors", () => {
+  expect(() =>
+    authConfiguration.validateAuthConfig({
+      ...localEnvironment,
+      ASSET_CALENDAR_ENV: "production",
+      ASSET_CALENDAR_ROOT_DOMAIN: "example.com",
+      ASSET_CALENDAR_TENANT_HOSTS: "tenant.example.com",
+      ASSET_CALENDAR_POCKETBASE_URL: "https://example.com",
+      ASSET_CALENDAR_INVITATION_URL: "https://example.com/setup",
+      ASSET_CALENDAR_MAIL_TRANSPORT: "capture",
+    }),
+  ).toThrow("Production requires");
+
+  expect(() =>
+    authConfiguration.validateAuthConfig({
+      ...localEnvironment,
+      ASSET_CALENDAR_MAIL_TRANSPORT: "smtp2go",
+    }),
+  ).toThrow("does not allow SMTP2GO");
+
+  const secret = "only-a-test-smtp-password";
+  let error: Error | undefined;
+  try {
+    authConfiguration.validateAuthConfig({
+      ...localEnvironment,
+      ASSET_CALENDAR_ENV: "production",
+      ASSET_CALENDAR_ROOT_DOMAIN: "example.com",
+      ASSET_CALENDAR_TENANT_HOSTS: "tenant.example.com",
+      ASSET_CALENDAR_POCKETBASE_URL: "https://example.com",
+      ASSET_CALENDAR_INVITATION_URL: "https://example.com/setup",
+      ASSET_CALENDAR_MAIL_TRANSPORT: "smtp2go",
+      ASSET_CALENDAR_SMTP2GO_HOST: "mail.smtp2go.com",
+      ASSET_CALENDAR_SMTP2GO_PORT: "2525",
+      ASSET_CALENDAR_SMTP2GO_USERNAME: "smtp-user",
+      ASSET_CALENDAR_SMTP2GO_PASSWORD: secret,
+      ASSET_CALENDAR_SMTP2GO_FROM: "invalid",
+    });
+  } catch (caught) {
+    error = caught as Error;
+  }
+  expect(error?.message).not.toContain(secret);
+});

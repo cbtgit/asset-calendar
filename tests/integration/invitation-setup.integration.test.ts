@@ -1,4 +1,5 @@
 // @vitest-environment node
+import { createHash, randomBytes } from "node:crypto";
 import { cp, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, resolve } from "node:path";
@@ -14,6 +15,8 @@ const root = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
 const productionMigrations = resolve(root, "pb_migrations");
 const adminPassword = "Correct horse battery staple!";
 const pendingEmail = "pending-a@example.test";
+const setupToken = randomBytes(32).toString("hex");
+const setupPassword = randomBytes(16).toString("hex");
 const originalTenantHosts = process.env.ASSET_CALENDAR_TENANT_HOSTS;
 
 let harness: PocketBaseIntegrationHarness;
@@ -22,12 +25,14 @@ let migrationsDir: string;
 async function createSeededMigrations(): Promise<string> {
   migrationsDir = await mkdtemp(resolve(tmpdir(), "asset-calendar-invitation-migrations-"));
   await cp(productionMigrations, migrationsDir, { recursive: true });
+  const setupTokenHash = createHash("sha256").update(setupToken).digest("hex");
   await writeFile(
     resolve(migrationsDir, "1710000005_invitation_fixture.js"),
     `migrate((app) => {
   const tenants = app.findCollectionByNameOrId("tenants");
   const units = app.findCollectionByNameOrId("organizational_units");
   const users = app.findCollectionByNameOrId("users");
+  const invitations = app.findCollectionByNameOrId("user_invitations");
   const tenant = new Record(tenants);
   tenant.set("name", "Tenant A");
   tenant.set("subdomain", "tenant");
@@ -54,6 +59,14 @@ async function createSeededMigrations(): Promise<string> {
     user.set("active", true);
     user.set("password_setup_pending", data.pending);
     app.save(user);
+    if (data.pending) {
+      const invitation = new Record(invitations);
+      invitation.set("user", user.id);
+      invitation.set("tenant", tenant.id);
+      invitation.set("token_hash", ${JSON.stringify(setupTokenHash)});
+      invitation.set("expires_at", "2030-01-01T00:00:00.000Z");
+      app.save(invitation);
+    }
   }
 }, () => {});`,
   );
@@ -150,4 +163,59 @@ it("creates an invitation with a generic result without exposing its message", a
     body: { token: "x".repeat(64), password: "short" },
   });
   expect(invalidPassword.status).toBe(400);
+});
+
+it("completes setup only for the owning tenant, validates with PocketBase, and rejects reuse", async () => {
+  const wrongTenant = await request(new PocketBase(harness.baseUrl), "/api/invitations/setup", {
+    method: "POST",
+    host: "other.localhost",
+    body: { token: setupToken, password: setupPassword },
+  });
+  expect(wrongTenant.status).toBe(400);
+  const wrongTenantBody = await wrongTenant.text();
+  expect(wrongTenantBody).toContain("Invalid or expired invitation");
+  expect(wrongTenantBody).not.toContain(setupToken);
+  expect(wrongTenantBody).not.toContain(setupPassword);
+
+  const invalidPassword = await request(new PocketBase(harness.baseUrl), "/api/invitations/setup", {
+    method: "POST",
+    host: "tenant.localhost",
+    body: { token: setupToken, password: "short" },
+  });
+  expect(invalidPassword.status).toBe(400);
+
+  const setup = await request(new PocketBase(harness.baseUrl), "/api/invitations/setup", {
+    method: "POST",
+    host: "tenant.localhost",
+    body: { token: setupToken, password: setupPassword },
+  });
+  expect(setup.status).toBe(200);
+  const setupBody = await setup.text();
+  expect(setupBody).not.toContain(setupToken);
+  expect(setupBody).not.toContain(setupPassword);
+  expect(JSON.parse(setupBody)).toMatchObject({
+    record: { email: pendingEmail, password_setup_pending: false },
+  });
+
+  const replay = await request(new PocketBase(harness.baseUrl), "/api/invitations/setup", {
+    method: "POST",
+    host: "tenant.localhost",
+    body: { token: setupToken, password: setupPassword },
+  });
+  expect(replay.status).toBe(400);
+  const replayBody = await replay.text();
+  expect(replayBody).toContain("Invalid or expired invitation");
+  expect(replayBody).not.toContain(setupToken);
+  expect(replayBody).not.toContain(setupPassword);
+
+  const login = await request(
+    new PocketBase(harness.baseUrl),
+    "/api/collections/users/auth-with-password",
+    {
+      method: "POST",
+      host: "tenant.localhost",
+      body: { identity: pendingEmail, password: setupPassword },
+    },
+  );
+  expect(login.status).toBe(200);
 });
