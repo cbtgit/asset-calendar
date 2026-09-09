@@ -17,10 +17,10 @@ function requestTenant(event, app) {
 
   const context = tenantResolver.resolveTenantContextSync(
     {
-      host: info.headers.host ?? event.request?.host,
+      host: info.headers.host ?? event.requestEvent.request.host,
       remoteAddress: info.remoteIP,
       requestInfo: () => info,
-    },
+    }
     configuration,
     ({ subdomain }) => {
       try {
