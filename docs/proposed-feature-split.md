@@ -1,8 +1,11 @@
 # Asset Calendar Proposed Feature Split
 
-**Status:** Proposal
-**Last updated:** 2026-09-07
+**Status:** Reconciled delivery contract
+**Last updated:** 2026-09-09
 **Source:** [Product requirements](./product-requirements.md)
+
+The non-secret production operator boundary is defined in the
+[production bootstrap contract](./production-bootstrap-contract.md).
 
 ## 1. Purpose
 
@@ -31,6 +34,8 @@ features are implemented.
 - Deployment is established early and hardened progressively.
 - Production data is never stored inside a release directory and is never used
   by local development, CI, or agent environments.
+- Production tenant, organizational-unit, and initial administrator records are
+  manually provisioned; F03 does not add tenant onboarding.
 
 ## 3. PocketBase terminology
 
@@ -259,20 +264,30 @@ SPA-routing problems before the application becomes large.
 
 Merging approved changes to `main` builds and deploys the current application
 to the VPS. Nginx serves the SPA, PocketBase responds through the proxy, its
-direct port is not public, and a failed health check marks deployment as
-failed.
+direct port is not public, and a failed activation or health check restores the
+previous release symlink and attempts to restart the previous service.
+Deployment validation requires `dist`, `pb_migrations`, `pb_hooks`, and the
+checksum-verified PocketBase runtime. Migrations run against persistent data
+outside the release before the service starts.
 
-#### Missing decisions
+#### Reconciled deployment decisions
 
-- VPS operating system and version.
-- Domain and wildcard-certificate arrangement.
-- Service and deployment usernames.
-- Installation, release, data, and log paths.
-- SSH secret-management approach.
-- Whether builds occur only in CI or may also occur on the VPS.
-- Initial health-check URL.
-- Release-retention count.
-- Whether the PocketBase administration UI is reachable in production.
+- Production host: `nejsumlab.frontend-freelance.dk`, with
+  `frontend-freelance.dk` as the root domain.
+- Releases use `/opt/asset-calendar/releases`; persistent data uses
+  `/opt/asset-calendar/shared/pb_data`.
+- The `assetcalendar` systemd service binds PocketBase to
+  `127.0.0.1:8090`; Nginx is the public HTTPS and `/api/` proxy boundary, and
+  blocks `/_/`.
+- Production authentication and SMTP2GO values are supplied by protected
+  `/etc/asset-calendar/auth.env`, never by a release or repository file.
+- The workflow builds on GitHub-hosted CI, uses protected SSH environment
+  secrets, requires production approval, and checks
+  `https://<configured-deploy-host>/api/health`.
+- Release retention is three directories. A release rollback does not reverse
+  a database migration; database recovery remains an operator backup concern.
+- The dedicated sender host `mail.frontend-freelance.dk` is SMTP
+  infrastructure, not an application tenant host.
 
 ---
 
@@ -342,12 +357,20 @@ whether an email address exists.
 A user authenticates only through the correct tenant host, cannot access
 another tenant, and completes password setup through their invitation before
 normal application access. The existing tenant administrator can create a user
-and the user can receive and complete the invitation flow.
+and the user can receive and complete the invitation flow. Production readiness
+still depends on the manual bootstrap of the existing tenant, initial
+organizational unit, and active administrator; the lookup and preservation
+rules are defined in the [production bootstrap
+contract](./production-bootstrap-contract.md).
 
-#### Missing decisions
+#### F03 contract status
 
-None for the F03 MVP contract. Implementation details may be chosen in sympathy
-with the existing PocketBase and frontend patterns.
+The F03 MVP contract is settled. It has exactly the `administrator` and
+`regular` roles, 30-day one-time invitations, one-workday sessions that
+survive reloads, PocketBase built-in password validation, and soft
+deactivation without global token revocation. No public registration, public
+password recovery, email verification, MFA, OAuth, custom roles, or tenant
+onboarding is included.
 
 #### Manual production prerequisite
 
@@ -361,6 +384,10 @@ This is an operator task, not an application feature:
 - Send a smoke-test invitation to an operator-controlled address.
 
 The VPS does not run an inbound SMTP service and does not expose an SMTP relay.
+Issue [F03-T00 / #30](https://github.com/cbtgit/asset-calendar/issues/30)
+tracks this prerequisite. The parent issue [F03 / #29](https://github.com/cbtgit/asset-calendar/issues/29)
+records the completed F03 child work; this repository does not contain the
+operator's secrets or production delivery data.
 
 #### Agent-ready task sequence
 
@@ -417,9 +444,11 @@ The following tasks keep F03 small enough for separate agent assignments:
    guards, session persistence, sign-out, and mail-sink behavior.
 
 10. **F03-T10 - Documentation and deployment reconciliation**
+    Reconcile the normative requirements, deployment behavior, and
+    non-secret [production bootstrap contract](./production-bootstrap-contract.md).
     Record the SMTP2GO DNS/VPS prerequisite, existing tenant provisioning
     boundary, environment conventions, and F03 acceptance criteria in the
-    project documentation.
+    project documentation. This task does not add authentication behavior.
 
 ---
 
@@ -1050,11 +1079,11 @@ this phase closes the remaining deployment, recovery, and full-system gaps.
 
 **Milestone:** The MVP is ready for normal production operation.
 
-## 7. Decisions to resolve before task decomposition
+## 7. Follow-up decisions outside F03
 
-The following decisions materially affect schema, hooks, authorization, or API
-contracts and should be added to the product requirements before affected
-features are decomposed into development tasks:
+The following decisions are not blockers for the reconciled F03 contract. They
+remain follow-up work for later features or production hardening and must be
+resolved in the relevant issue before those features are decomposed:
 
 1. Whether deactivated users can be reactivated.
 2. Whether `booked_for_user` is immutable after booking creation.
