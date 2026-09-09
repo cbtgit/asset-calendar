@@ -17,7 +17,7 @@ function requestTenant(event, app) {
 
   const context = tenantResolver.resolveTenantContextSync(
     {
-      host: info.headers.host ?? event.requestEvent.request.host,
+      host: typeof event.request?.host === "string" ? event.request.host : undefined,
       remoteAddress: info.remoteIP,
       requestInfo: () => info,
     },
