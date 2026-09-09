@@ -36,6 +36,7 @@ function createField(definition) {
         cascadeDelete: definition.cascadeDelete === true,
         minSelect: definition.minSelect,
         maxSelect: definition.maxSelect,
+        displayFields: definition.displayFields,
       });
     case "select":
       return new SelectField({
