@@ -23,6 +23,10 @@ type AuthConfiguration = {
 };
 
 type AuthConfigurationModule = {
+  configurePocketBaseMail: (
+    app: { settings: () => { smtp: Record<string, unknown>; meta: Record<string, unknown> } },
+    configuration: AuthConfiguration,
+  ) => void;
   readEnvironment: (
     getenv: (key: string) => string | undefined,
   ) => Record<string, string | undefined>;
@@ -82,6 +86,36 @@ it("validates production SMTP2GO configuration", () => {
   });
 });
 
+it("applies SMTP2GO settings without persisting credentials", () => {
+  const settings = { smtp: {}, meta: {} };
+  const config = authConfiguration.validateAuthConfig({
+    ...localEnvironment,
+    ASSET_CALENDAR_ENV: "production",
+    ASSET_CALENDAR_ROOT_DOMAIN: "example.com",
+    ASSET_CALENDAR_TENANT_HOSTS: "tenant.example.com",
+    ASSET_CALENDAR_POCKETBASE_URL: "https://example.com",
+    ASSET_CALENDAR_INVITATION_URL: "https://example.com/setup",
+    ASSET_CALENDAR_MAIL_TRANSPORT: "smtp2go",
+    ASSET_CALENDAR_SMTP2GO_HOST: "mail.smtp2go.com",
+    ASSET_CALENDAR_SMTP2GO_PORT: "2525",
+    ASSET_CALENDAR_SMTP2GO_USERNAME: "smtp-user",
+    ASSET_CALENDAR_SMTP2GO_PASSWORD: "smtp-password",
+    ASSET_CALENDAR_SMTP2GO_FROM: "calendar@example.com",
+  });
+
+  authConfiguration.configurePocketBaseMail({ settings: () => settings }, config);
+
+  expect(settings.smtp).toMatchObject({
+    enabled: true,
+    host: "mail.smtp2go.com",
+    port: 2525,
+    username: "smtp-user",
+    authMethod: "PLAIN",
+    tls: false,
+  });
+  expect(settings.meta).toEqual({ senderAddress: "calendar@example.com" });
+});
+
 it("validates tenant host scope and trusted proxy addresses", () => {
   expect(
     authConfiguration.validateAuthConfig({
@@ -135,4 +169,34 @@ it("rejects invalid values without exposing SMTP secrets", () => {
     error = caught as Error;
   }
   expect(error?.message).not.toContain(secret);
+});
+
+it("rejects invalid production SMTP2GO endpoints and senders", () => {
+  const productionEnvironment = {
+    ...localEnvironment,
+    ASSET_CALENDAR_ENV: "production",
+    ASSET_CALENDAR_ROOT_DOMAIN: "example.com",
+    ASSET_CALENDAR_TENANT_HOSTS: "tenant.example.com",
+    ASSET_CALENDAR_POCKETBASE_URL: "https://example.com",
+    ASSET_CALENDAR_INVITATION_URL: "https://example.com/setup",
+    ASSET_CALENDAR_MAIL_TRANSPORT: "smtp2go",
+    ASSET_CALENDAR_SMTP2GO_HOST: "mail.smtp2go.com",
+    ASSET_CALENDAR_SMTP2GO_PORT: "2525",
+    ASSET_CALENDAR_SMTP2GO_USERNAME: "smtp-user",
+    ASSET_CALENDAR_SMTP2GO_PASSWORD: "smtp-password",
+    ASSET_CALENDAR_SMTP2GO_FROM: "calendar@example.com",
+  };
+
+  expect(() =>
+    authConfiguration.validateAuthConfig({
+      ...productionEnvironment,
+      ASSET_CALENDAR_SMTP2GO_HOST: "https://mail.smtp2go.com",
+    }),
+  ).toThrow("ASSET_CALENDAR_SMTP2GO_HOST");
+  expect(() =>
+    authConfiguration.validateAuthConfig({
+      ...productionEnvironment,
+      ASSET_CALENDAR_SMTP2GO_FROM: "not-an-email",
+    }),
+  ).toThrow("ASSET_CALENDAR_SMTP2GO_FROM");
 });

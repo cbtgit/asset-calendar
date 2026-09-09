@@ -13,7 +13,6 @@ import {
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
 const productionMigrations = resolve(root, "pb_migrations");
 const adminPassword = "Correct horse battery staple!";
-const setupPassword = "A valid setup password!";
 const pendingEmail = "pending-a@example.test";
 const originalTenantHosts = process.env.ASSET_CALENDAR_TENANT_HOSTS;
 
@@ -93,7 +92,7 @@ afterAll(async () => {
   else process.env.ASSET_CALENDAR_TENANT_HOSTS = originalTenantHosts;
 });
 
-it("creates a one-time invitation and authenticates after built-in password validation", async () => {
+it("creates an invitation with a generic result without exposing its message", async () => {
   const admin = new PocketBase(harness.baseUrl);
   const login = await request(admin, "/api/collections/users/auth-with-password", {
     method: "POST",
@@ -121,9 +120,18 @@ it("creates a one-time invitation and authenticates after built-in password vali
   });
   expect(invitationResponse.status).toBe(200);
   const invitation = await invitationResponse.json();
-  const token = new URL(invitation.link).searchParams.get("token");
-  expect(token).toHaveLength(64);
-  expect(invitation.link).not.toContain(pendingEmail);
+  expect(invitation).toEqual({
+    message: "If the invitation is eligible, an email will be sent.",
+  });
+
+  const rejectedInvitation = await request(admin, "/api/invitations", {
+    method: "POST",
+    host: "tenant.localhost",
+    body: { user: "missing-user-id" },
+  });
+  expect(rejectedInvitation.status).toBe(403);
+  expect(JSON.stringify(await rejectedInvitation.json())).not.toContain(pendingEmail);
+  expect(JSON.stringify(invitation)).not.toContain(pendingEmail);
 
   const pendingLogin = await request(
     new PocketBase(harness.baseUrl),
@@ -139,43 +147,7 @@ it("creates a one-time invitation and authenticates after built-in password vali
   const invalidPassword = await request(new PocketBase(harness.baseUrl), "/api/invitations/setup", {
     method: "POST",
     host: "tenant.localhost",
-    body: { token, password: "short" },
+    body: { token: "x".repeat(64), password: "short" },
   });
   expect(invalidPassword.status).toBe(400);
-
-  const wrongTenant = await request(new PocketBase(harness.baseUrl), "/api/invitations/setup", {
-    method: "POST",
-    host: "other.localhost",
-    body: { token, password: setupPassword },
-  });
-  expect(wrongTenant.status).toBe(400);
-  expect(await wrongTenant.json()).toEqual(await invalidInvitationBody());
-
-  const setup = await request(new PocketBase(harness.baseUrl), "/api/invitations/setup", {
-    method: "POST",
-    host: "tenant.localhost",
-    body: { token, password: setupPassword },
-  });
-  expect(setup.status).toBe(200);
-  const setupAuth = await setup.json();
-  expect(setupAuth.token).toEqual(expect.any(String));
-  expect(setupAuth.record.password_setup_pending).toBe(false);
-
-  const reused = await request(new PocketBase(harness.baseUrl), "/api/invitations/setup", {
-    method: "POST",
-    host: "tenant.localhost",
-    body: { token, password: setupPassword },
-  });
-  expect(reused.status).toBe(400);
-  expect(await reused.json()).toEqual(await invalidInvitationBody());
 });
-
-async function invalidInvitationBody(): Promise<unknown> {
-  const response = await request(new PocketBase(harness.baseUrl), "/api/invitations/setup", {
-    method: "POST",
-    host: "tenant.localhost",
-    body: { token: "x".repeat(64), password: setupPassword },
-  });
-  expect(response.status).toBe(400);
-  return response.json();
-}
