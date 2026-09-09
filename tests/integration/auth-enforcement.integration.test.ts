@@ -123,11 +123,9 @@ it("enforces the resolved tenant and role boundary on direct requests", async ()
   const users = await usersResponse.json();
   expect(users.items).toHaveLength(3);
 
-  const foreign = await request(admin, "/api/collections/users/records", {
-    host: "tenant.localhost",
+  const foreignHost = await request(admin, "/api/collections/users/records", {
+    host: "other.localhost",
   });
-  expect(foreign.status).toBe(200);
-  expect((await foreign.json()).items).toHaveLength(3);
 
   const unknownHost = await request(admin, "/api/collections/users/records", {
     host: "missing.localhost",
@@ -135,9 +133,14 @@ it("enforces the resolved tenant and role boundary on direct requests", async ()
   const rootHost = await request(admin, "/api/collections/users/records", {
     host: "localhost",
   });
-  expect([unknownHost.status, rootHost.status]).toEqual([403, 403]);
-  expect(await unknownHost.json()).toEqual(await rootHost.json());
-
+  expect([foreignHost.status, unknownHost.status, rootHost.status]).toEqual([403, 403, 403]);
+  const [foreignBody, unknownBody, rootBody] = await Promise.all([
+    foreignHost.json(),
+    unknownHost.json(),
+    rootHost.json(),
+  ]);
+  expect(foreignBody).toEqual(unknownBody);
+  expect(unknownBody).toEqual(rootBody);
   const regular = new PocketBase(harness.baseUrl);
   await authenticate(regular, "regular-a@example.test");
   const regularRecord = regular.authStore.model;
