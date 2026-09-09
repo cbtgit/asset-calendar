@@ -43,7 +43,8 @@ The equivalent command-line overrides are
 `vp run pocketbase -- --host 127.0.0.1 --port 8091`.
 
 Local and CI use `ASSET_CALENDAR_MAIL_TRANSPORT=capture` or `test`; they never
-send invitation mail. Invitation links are configured for 30 days
+send invitation mail over the network. Capture and test messages stay in the
+server-side sink. Invitation links are configured for 30 days
 (`ASSET_CALENDAR_INVITATION_LIFETIME_HOURS=720`) and authenticated sessions for
 one workday (`ASSET_CALENDAR_SESSION_LIFETIME_HOURS=24`). PocketBase refuses to
 start when the authentication configuration is malformed or incomplete.
@@ -59,6 +60,10 @@ accepts the submitted password. Password changes go through PocketBase's
 normal auth-record validation; no additional composition rules are applied.
 The setup route returns PocketBase's normal auth response so the user is signed
 in immediately.
+
+The invitation endpoint returns only a generic result. The server builds the
+plain-text and HTML message and sends it through SMTP2GO in production; local
+and CI transports do not contact a mail provider.
 
 ### Tenant host conventions
 
