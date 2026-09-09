@@ -1,7 +1,7 @@
 # Production Bootstrap Contract
 
-**Status:** Version-controlled, non-secret operator contract  
-**Applies to:** F03 production readiness  
+**Status:** Version-controlled, non-secret operator contract
+**Applies to:** F03 production readiness
 **Related:** [F03 parent issue #29](https://github.com/cbtgit/asset-calendar/issues/29), [manual prerequisite #30](https://github.com/cbtgit/asset-calendar/issues/30)
 
 This document describes the boundary between the application and the operator.
