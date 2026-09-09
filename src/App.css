@@ -44,3 +44,7 @@ button {
 button:hover {
   background: #23473d;
 }
+
+.shell button {
+  margin-top: 2rem;
+}
