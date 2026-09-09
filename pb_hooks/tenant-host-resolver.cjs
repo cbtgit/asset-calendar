@@ -25,6 +25,13 @@ function unknownTenant() {
 
 function headerValue(headers, name) {
   if (!headers) return undefined;
+  if (typeof headers.entries === "function") {
+    for (const [key, value] of headers.entries()) {
+      if (typeof key === "string" && key.toLowerCase() === name) {
+        return typeof value === "string" ? value : undefined;
+      }
+    }
+  }
   if (typeof headers.get === "function") {
     const value = headers.get(name);
     return typeof value === "string" ? value : undefined;
