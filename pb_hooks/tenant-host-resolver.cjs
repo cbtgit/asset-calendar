@@ -163,9 +163,48 @@ async function resolveTenantContext(request, configuration, findTenant) {
   };
 }
 
+function resolveTenantContextSync(request, configuration, findTenant) {
+  const allowPort =
+    configuration.hostPortPolicy === "allow" || configuration.environment !== "production";
+  const rootDomain = normalizeHost(configuration.rootDomain, { allowPort: false });
+  const host = requestHost(request, configuration);
+  if (!rootDomain || !host) return unknownTenant();
+
+  const subdomain = extractTenantSubdomain(host, rootDomain);
+  const allowedHosts = Array.isArray(configuration.tenantHosts)
+    ? configuration.tenantHosts
+        .map((tenantHost) => normalizeHost(tenantHost, { allowPort }))
+        .filter(Boolean)
+    : [];
+  if (!subdomain || !allowedHosts.includes(host)) return unknownTenant();
+
+  let record;
+  try {
+    record = findTenant({ host, subdomain });
+  } catch {
+    return unknownTenant();
+  }
+  if (
+    !record ||
+    typeof record.then === "function" ||
+    typeof record.id !== "string" ||
+    typeof record.subdomain !== "string" ||
+    record.subdomain.toLowerCase() !== subdomain
+  ) {
+    return unknownTenant();
+  }
+
+  return {
+    kind: "resolved",
+    host,
+    tenant: { id: record.id, subdomain },
+  };
+}
+
 module.exports = {
   extractTenantSubdomain,
   normalizeHost,
   resolveTenantHost: resolveTenantContext,
   resolveTenantContext,
+  resolveTenantContextSync,
 };

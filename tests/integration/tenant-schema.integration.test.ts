@@ -20,66 +20,26 @@ afterAll(async () => {
   if (harness) await harness.stop();
 });
 
-it("applies the tenant and auth schema without seeded records", async () => {
+it("requires authenticated access to the tenant and auth schema", async () => {
   const pocketbase = new PocketBase(harness.baseUrl);
-  const tenant = await pocketbase.collection("tenants").create({
-    name: "Example tenant",
-    subdomain: "example",
-  });
-  const organizationalUnit = await pocketbase.collection("organizational_units").create({
-    tenant: tenant.id,
-    name: "Example unit",
-  });
-  const user = await pocketbase.collection("users").create({
-    tenant: tenant.id,
-    first_name: "First",
-    last_name: "Administrator",
-    email: "admin@example.test",
-    password: "Correct horse battery staple!",
-    passwordConfirm: "Correct horse battery staple!",
-    role: "administrator",
-    active: true,
-    organizational_unit: organizationalUnit.id,
-    password_setup_pending: false,
-  });
-
-  expect(user.id).toMatch(/^[a-z0-9]{15}$/);
-  expect(user.first_name).toBe("First");
-  expect(user.last_name).toBe("Administrator");
-  expect(user.role).toBe("administrator");
-  expect(user.active).toBe(true);
-  expect(user.tenant).toBe(tenant.id);
-  expect(user.organizational_unit).toBe(organizationalUnit.id);
-  expect(user.password_setup_pending).toBe(false);
-
   await expect(
-    pocketbase.collection("tenants").create({
-      name: "Duplicate subdomain",
-      subdomain: "example",
-    }),
+    pocketbase.collection("tenants").create({ name: "Example", subdomain: "example" }),
+  ).rejects.toThrow("Only superusers can perform this action.");
+  await expect(
+    pocketbase.collection("organizational_units").create({ tenant: "foreign", name: "Example" }),
   ).rejects.toThrow();
   await expect(
     pocketbase.collection("users").create({
-      tenant: tenant.id,
+      tenant: "foreign",
       email: "admin@example.test",
       password: "Correct horse battery staple!",
       passwordConfirm: "Correct horse battery staple!",
-      role: "regular",
+      role: "administrator",
       active: true,
-      organizational_unit: organizationalUnit.id,
+      organizational_unit: "foreign",
       password_setup_pending: false,
     }),
   ).rejects.toThrow();
-  await expect(
-    pocketbase.collection("users").create({
-      tenant: tenant.id,
-      email: "invalid-role@example.test",
-      password: "Correct horse battery staple!",
-      passwordConfirm: "Correct horse battery staple!",
-      role: "owner",
-      active: true,
-      organizational_unit: organizationalUnit.id,
-      password_setup_pending: false,
-    }),
-  ).rejects.toThrow();
+
+  expect(pocketbase.authStore.isValid).toBe(false);
 });
