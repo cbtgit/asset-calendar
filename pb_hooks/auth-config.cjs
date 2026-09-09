@@ -173,7 +173,7 @@ function configurePocketBaseMail(app, configuration) {
   settings.smtp.username = smtp.username;
   settings.smtp.password = smtp.password;
   settings.smtp.authMethod = "PLAIN";
-  settings.smtp.tls = false;
+  settings.smtp.tls = true;
   settings.meta.senderAddress = smtp.from;
 }
 
