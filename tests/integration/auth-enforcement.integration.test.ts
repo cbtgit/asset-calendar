@@ -93,7 +93,10 @@ async function authenticate(pocketbase: PocketBase, email: string): Promise<void
   pocketbase.authStore.save(auth.token, auth.record);
 }
 
+const originalTenantHosts = process.env.ASSET_CALENDAR_TENANT_HOSTS;
+
 beforeAll(async () => {
+  process.env.ASSET_CALENDAR_TENANT_HOSTS = "tenant.localhost,other.localhost";
   harness = await startPocketBaseIntegrationHarness({
     migrationsDir: await createSeededMigrations(),
   });
@@ -102,6 +105,11 @@ beforeAll(async () => {
 afterAll(async () => {
   if (harness) await harness.stop();
   if (migrationsDir) await rm(migrationsDir, { recursive: true, force: true });
+  if (originalTenantHosts === undefined) {
+    delete process.env.ASSET_CALENDAR_TENANT_HOSTS;
+  } else {
+    process.env.ASSET_CALENDAR_TENANT_HOSTS = originalTenantHosts;
+  }
 });
 
 it("enforces the resolved tenant and role boundary on direct requests", async () => {
