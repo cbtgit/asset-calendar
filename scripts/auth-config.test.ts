@@ -11,7 +11,7 @@ type AuthConfiguration = {
   invitationLifetimeHours: number;
   sessionLifetimeHours: number;
   mailTransport: string;
-  smtp2go?: {
+  brevo?: {
     host: string;
     port: number;
     username: string;
@@ -53,7 +53,7 @@ it("validates local capture configuration and fixed lifetimes", () => {
   });
 });
 
-it("validates production SMTP2GO configuration", () => {
+it("validates production Brevo configuration", () => {
   const config = authConfiguration.validateAuthConfig({
     ...localEnvironment,
     ASSET_CALENDAR_ENV: "production",
@@ -61,17 +61,17 @@ it("validates production SMTP2GO configuration", () => {
     ASSET_CALENDAR_TENANT_HOSTS: "tenant.example.com, second.example.com",
     ASSET_CALENDAR_POCKETBASE_URL: "https://example.com",
     ASSET_CALENDAR_INVITATION_URL: "https://example.com/setup",
-    ASSET_CALENDAR_MAIL_TRANSPORT: "smtp2go",
-    ASSET_CALENDAR_SMTP2GO_HOST: "mail.smtp2go.com",
-    ASSET_CALENDAR_SMTP2GO_PORT: "2525",
-    ASSET_CALENDAR_SMTP2GO_USERNAME: "smtp-user",
-    ASSET_CALENDAR_SMTP2GO_PASSWORD: "do-not-print-this",
-    ASSET_CALENDAR_SMTP2GO_FROM: "calendar@example.com",
+    ASSET_CALENDAR_MAIL_TRANSPORT: "brevo",
+    ASSET_CALENDAR_BREVO_HOST: "smtp-relay.brevo.com",
+    ASSET_CALENDAR_BREVO_PORT: "587",
+    ASSET_CALENDAR_BREVO_USERNAME: "smtp-user",
+    ASSET_CALENDAR_BREVO_PASSWORD: "do-not-print-this",
+    ASSET_CALENDAR_BREVO_FROM: "calendar@example.com",
   });
 
-  expect(config.smtp2go).toEqual({
-    host: "mail.smtp2go.com",
-    port: 2525,
+  expect(config.brevo).toEqual({
+    host: "smtp-relay.brevo.com",
+    port: 587,
     username: "smtp-user",
     password: "do-not-print-this",
     from: "calendar@example.com",
@@ -108,8 +108,8 @@ it("rejects invalid values without exposing SMTP secrets", () => {
     authConfiguration.validateAuthConfig({
       ...localEnvironment,
       ASSET_CALENDAR_ENV: "production",
-      ASSET_CALENDAR_MAIL_TRANSPORT: "smtp2go",
-      ASSET_CALENDAR_SMTP2GO_PASSWORD: secret,
+      ASSET_CALENDAR_MAIL_TRANSPORT: "brevo",
+      ASSET_CALENDAR_BREVO_PASSWORD: secret,
     });
   } catch (caught) {
     error = caught as Error;

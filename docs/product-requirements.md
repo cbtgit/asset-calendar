@@ -99,7 +99,7 @@ Administrators cannot deactivate or demote the last active administrator.
 - There is no public registration or public password-recovery flow in the MVP.
 - Password reset for users who have already completed setup is deferred.
 - Administrators create users, and the system sends each new user an invitation
-  email through SMTP2GO.
+  email through Brevo.
 - The invitation email contains a one-time link, valid for 30 days, where the
   user creates their password before accessing the rest of the application.
 - Passwords use PocketBase's built-in validator. The application does not add
@@ -119,7 +119,7 @@ Administrators cannot deactivate or demote the last active administrator.
 - User display names are based on first name and last name.
 - A user must belong to exactly one organizational unit.
 
-SMTP2GO credentials remain server-side in protected VPS/PocketBase
+Brevo SMTP credentials remain server-side in protected VPS/PocketBase
 configuration. The SPA never sends email or receives SMTP credentials. Local
 development and CI use a mail capture or test sink rather than sending real
 messages.
@@ -473,7 +473,7 @@ rather than being placed in the query cache.
 - PocketBase for authentication, persistence, and API access.
 - PocketBase migrations and hooks where server-side validation is required.
 - Tenant and role enforcement in backend rules/hooks, not only in React.
-- SMTP2GO configured through protected environment variables for user invitation
+- Brevo configured through protected environment variables for user invitation
   email. Sender-domain DNS authentication and VPS secret setup are manual
   production prerequisites.
 

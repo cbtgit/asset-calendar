@@ -1,5 +1,5 @@
 const AUTH_ENVIRONMENT_VALUES = ["local", "test", "production"];
-const MAIL_TRANSPORT_VALUES = ["capture", "test", "smtp2go"];
+const MAIL_TRANSPORT_VALUES = ["capture", "test", "brevo"];
 const INVITATION_LIFETIME_HOURS = 30 * 24;
 const SESSION_LIFETIME_HOURS = 24;
 
@@ -12,11 +12,11 @@ const CONFIGURATION_KEYS = [
   "ASSET_CALENDAR_INVITATION_LIFETIME_HOURS",
   "ASSET_CALENDAR_SESSION_LIFETIME_HOURS",
   "ASSET_CALENDAR_MAIL_TRANSPORT",
-  "ASSET_CALENDAR_SMTP2GO_HOST",
-  "ASSET_CALENDAR_SMTP2GO_PORT",
-  "ASSET_CALENDAR_SMTP2GO_USERNAME",
-  "ASSET_CALENDAR_SMTP2GO_PASSWORD",
-  "ASSET_CALENDAR_SMTP2GO_FROM",
+  "ASSET_CALENDAR_BREVO_HOST",
+  "ASSET_CALENDAR_BREVO_PORT",
+  "ASSET_CALENDAR_BREVO_USERNAME",
+  "ASSET_CALENDAR_BREVO_PASSWORD",
+  "ASSET_CALENDAR_BREVO_FROM",
 ];
 
 function required(env, name) {
@@ -91,22 +91,22 @@ function parseMailConfiguration(env, environment, transport) {
   if (environment !== "production") {
     if (transport !== "capture" && transport !== "test") {
       throw new Error(
-        `${transport === "smtp2go" ? "ASSET_CALENDAR_MAIL_TRANSPORT" : "ASSET_CALENDAR_ENV"} does not allow SMTP2GO outside production.`,
+        `${transport === "brevo" ? "ASSET_CALENDAR_MAIL_TRANSPORT" : "ASSET_CALENDAR_ENV"} does not allow Brevo outside production.`,
       );
     }
     return undefined;
   }
 
-  if (transport !== "smtp2go") {
-    throw new Error("Production requires ASSET_CALENDAR_MAIL_TRANSPORT=smtp2go.");
+  if (transport !== "brevo") {
+    throw new Error("Production requires ASSET_CALENDAR_MAIL_TRANSPORT=brevo.");
   }
 
   return {
-    host: required(env, "ASSET_CALENDAR_SMTP2GO_HOST"),
-    port: parsePort(required(env, "ASSET_CALENDAR_SMTP2GO_PORT"), "ASSET_CALENDAR_SMTP2GO_PORT"),
-    username: required(env, "ASSET_CALENDAR_SMTP2GO_USERNAME"),
-    password: required(env, "ASSET_CALENDAR_SMTP2GO_PASSWORD"),
-    from: required(env, "ASSET_CALENDAR_SMTP2GO_FROM"),
+    host: required(env, "ASSET_CALENDAR_BREVO_HOST"),
+    port: parsePort(required(env, "ASSET_CALENDAR_BREVO_PORT"), "ASSET_CALENDAR_BREVO_PORT"),
+    username: required(env, "ASSET_CALENDAR_BREVO_USERNAME"),
+    password: required(env, "ASSET_CALENDAR_BREVO_PASSWORD"),
+    from: required(env, "ASSET_CALENDAR_BREVO_FROM"),
   };
 }
 
@@ -157,7 +157,7 @@ function validateAuthConfig(env) {
     invitationLifetimeHours,
     sessionLifetimeHours,
     mailTransport: transport,
-    smtp2go: parseMailConfiguration(env, environment, transport),
+    brevo: parseMailConfiguration(env, environment, transport),
   };
 }
 

@@ -115,11 +115,11 @@ release directory, and must contain the production values for
 `ASSET_CALENDAR_POCKETBASE_URL`, `ASSET_CALENDAR_INVITATION_URL`,
 `ASSET_CALENDAR_INVITATION_LIFETIME_HOURS=720`,
 `ASSET_CALENDAR_SESSION_LIFETIME_HOURS=24`, and
-`ASSET_CALENDAR_MAIL_TRANSPORT=smtp2go`. It must also contain the SMTP2GO
+`ASSET_CALENDAR_MAIL_TRANSPORT=brevo`. It must also contain the Brevo SMTP
 host, port, username, password, and sender variables named
-`ASSET_CALENDAR_SMTP2GO_HOST`, `ASSET_CALENDAR_SMTP2GO_PORT`,
-`ASSET_CALENDAR_SMTP2GO_USERNAME`, `ASSET_CALENDAR_SMTP2GO_PASSWORD`, and
-`ASSET_CALENDAR_SMTP2GO_FROM`. PocketBase validates this file before becoming
+`ASSET_CALENDAR_BREVO_HOST`, `ASSET_CALENDAR_BREVO_PORT`,
+`ASSET_CALENDAR_BREVO_USERNAME`, `ASSET_CALENDAR_BREVO_PASSWORD`, and
+`ASSET_CALENDAR_BREVO_FROM`. PocketBase validates this file before becoming
 healthy and fails closed without logging secret values.
 
 Nginx must be able to traverse the release path while PocketBase data remains

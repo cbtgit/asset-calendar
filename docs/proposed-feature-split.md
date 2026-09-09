@@ -324,7 +324,7 @@ Server hooks or trusted request middleware:
 4. Ignore or reject client-supplied tenant overrides.
 5. Recheck active status for protected operations.
 
-Production invitation delivery uses SMTP2GO's authenticated SMTP relay. Local
+Production invitation delivery uses Brevo's authenticated SMTP relay. Local
 development and CI use a mail capture or test sink. SMTP credentials remain in
 protected VPS/PocketBase configuration and never enter the SPA.
 
@@ -353,9 +353,9 @@ with the existing PocketBase and frontend patterns.
 
 This is an operator task, not an application feature:
 
-- Create and approve the SMTP2GO account.
+- Create and approve the Brevo account.
 - Verify a dedicated sender domain such as `mail.frontend-freelance.dk`.
-- Publish SMTP2GO's SPF and DKIM DNS records.
+- Publish Brevo's SPF and DKIM DNS records.
 - Publish a DMARC record for the sender domain.
 - Store SMTP credentials only in protected VPS/PocketBase configuration.
 - Send a smoke-test invitation to an operator-controlled address.
@@ -368,7 +368,7 @@ The following tasks keep F03 small enough for separate agent assignments:
 
 1. **F03-T01 - Authentication configuration contract**
    Define safe environment-variable names and validation for the application
-   root domain, tenant hosts, PocketBase URL, SMTP2GO settings, invitation URL,
+   root domain, tenant hosts, PocketBase URL, Brevo settings, invitation URL,
    and the 30-day invitation and one-workday session durations. Update the
    example environment and deployment documentation without adding secrets.
 
@@ -394,8 +394,8 @@ The following tasks keep F03 small enough for separate agent assignments:
    in after successful setup, and rely on PocketBase's built-in password
    validator. Do not add custom password composition rules.
 
-6. **F03-T06 - SMTP2GO mail integration**
-   Configure production PocketBase email delivery through SMTP2GO. Provide a
+6. **F03-T06 - Brevo mail integration**
+   Configure production PocketBase email delivery through Brevo. Provide a
    local capture/log sink and deterministic CI test sink. Keep all credentials
    server-side and return generic invitation responses.
 
@@ -417,7 +417,7 @@ The following tasks keep F03 small enough for separate agent assignments:
    guards, session persistence, sign-out, and mail-sink behavior.
 
 10. **F03-T10 - Documentation and deployment reconciliation**
-    Record the SMTP2GO DNS/VPS prerequisite, existing tenant provisioning
+    Record the Brevo DNS/VPS prerequisite, existing tenant provisioning
     boundary, environment conventions, and F03 acceptance criteria in the
     project documentation.
 
