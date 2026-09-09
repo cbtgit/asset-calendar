@@ -1,6 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { SetupPasswordPage } from "@/components/setup-password-form";
-import "../components/auth-page.css";
 
 export const Route = createFileRoute("/setup-password")({
   validateSearch: (search: Record<string, unknown>) => ({
