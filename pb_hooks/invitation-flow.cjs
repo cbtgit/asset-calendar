@@ -1,11 +1,13 @@
 const authConfig = require(`${__hooks}/auth-config.cjs`);
 const tenantResolver = require(`${__hooks}/tenant-host-resolver.cjs`);
+const mailTransport = require(`${__hooks}/mail-transport.cjs`);
 
 const configuration = authConfig.validateAuthConfig(authConfig.readPocketBaseEnvironment());
 const USER_COLLECTION = "users";
 const INVITATION_COLLECTION = "user_invitations";
 const TOKEN_LENGTH = 64;
 const INVALID_INVITATION_MESSAGE = "Invalid or expired invitation.";
+const GENERIC_INVITATION_MESSAGE = "If the invitation is eligible, an email will be sent.";
 
 function invalidInvitation() {
   throw new BadRequestError(INVALID_INVITATION_MESSAGE, null);
@@ -142,16 +144,21 @@ function createInvitationRoute(event) {
     throw new ForbiddenError("authorization_failed");
   }
 
-  return event.json(
-    200,
-    createInvitation({
-      app: $app,
-      security: $security,
-      user,
-      invitationUrl: configuration.invitationUrl,
-      lifetimeHours: configuration.invitationLifetimeHours,
-    }),
-  );
+  const invitation = createInvitation({
+    app: $app,
+    security: $security,
+    user,
+    invitationUrl: configuration.invitationUrl,
+    lifetimeHours: configuration.invitationLifetimeHours,
+  });
+
+  try {
+    mailTransport.sendInvitation({ configuration, invitation, app: $app });
+  } catch {
+    throw new InternalServerError("invitation_delivery_failed");
+  }
+
+  return event.json(200, { message: GENERIC_INVITATION_MESSAGE });
 }
 
 function completePasswordSetup(event, { now = () => new Date() } = {}) {
@@ -205,6 +212,7 @@ function completePasswordSetup(event, { now = () => new Date() } = {}) {
 module.exports = {
   TOKEN_LENGTH,
   INVALID_INVITATION_MESSAGE,
+  GENERIC_INVITATION_MESSAGE,
   createInvitation,
   isInvitationValid,
   createInvitationRoute,

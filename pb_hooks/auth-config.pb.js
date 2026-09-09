@@ -1,5 +1,6 @@
 onBootstrap((e) => {
   const authConfig = require(`${__hooks}/auth-config.cjs`);
-  authConfig.validateAuthConfig(authConfig.readPocketBaseEnvironment());
+  const configuration = authConfig.validateAuthConfig(authConfig.readPocketBaseEnvironment());
+  authConfig.configurePocketBaseMail($app, configuration);
   e.next();
 });
