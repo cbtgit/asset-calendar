@@ -1,6 +1,8 @@
+/// <reference types="node" />
 // @vitest-environment node
 import { createRequire } from "node:module";
-import { resolve } from "node:path";
+import { dirname, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 import { afterEach, beforeEach, expect, it } from "vite-plus/test";
 
 const originalEnvironment = {
@@ -20,6 +22,7 @@ let invitationFlow: {
     now: Date,
   ) => boolean;
 };
+const testDirectory = dirname(fileURLToPath(import.meta.url));
 
 beforeEach(() => {
   Object.assign(process.env, {
@@ -32,18 +35,11 @@ beforeEach(() => {
     ASSET_CALENDAR_SESSION_LIFETIME_HOURS: "24",
     ASSET_CALENDAR_MAIL_TRANSPORT: "test",
   });
-  (globalThis as { __hooks?: string }).__hooks = resolve(
-    import.meta.dirname,
-    "../../pb_hooks",
-  );
-  (globalThis as { $os?: { getenv: (key: string) => string | undefined } })[
-    "$os"
-  ] = {
+  (globalThis as { __hooks?: string }).__hooks = resolve(testDirectory, "../../pb_hooks");
+  (globalThis as { $os?: { getenv: (key: string) => string | undefined } })["$os"] = {
     getenv: (key) => process.env[key],
   };
-  invitationFlow = createRequire(import.meta.url)(
-    "../../pb_hooks/invitation-flow.cjs",
-  );
+  invitationFlow = createRequire(import.meta.url)("../../pb_hooks/invitation-flow.cjs");
 });
 afterEach(() => {
   for (const [key, value] of Object.entries(originalEnvironment)) {
@@ -60,25 +56,17 @@ it("uses an exact 30-day, one-time expiry window", () => {
   const invitation = {
     get: (field: string) =>
       (
-        {
+        ({
           tenant: "tenant-id",
           expires_at: expiresAt.toISOString(),
           used_at: "",
-        } as Record<string, unknown>
+        }) as Record<string, unknown>
       )[field],
   };
 
   expect(
-    invitationFlow.isInvitationValid(
-      invitation,
-      "tenant-id",
-      new Date(expiresAt.getTime() - 1),
-    ),
+    invitationFlow.isInvitationValid(invitation, "tenant-id", new Date(expiresAt.getTime() - 1)),
   ).toBe(true);
-  expect(invitationFlow.isInvitationValid(invitation, "tenant-id", expiresAt)).toBe(
-    false,
-  );
-  expect(
-    invitationFlow.isInvitationValid(invitation, "other-tenant", issuedAt),
-  ).toBe(false);
+  expect(invitationFlow.isInvitationValid(invitation, "tenant-id", expiresAt)).toBe(false);
+  expect(invitationFlow.isInvitationValid(invitation, "other-tenant", issuedAt)).toBe(false);
 });
