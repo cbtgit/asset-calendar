@@ -79,6 +79,20 @@ function isInvitationValid(invitation, tenantId, now) {
   );
 }
 
+function saveSetup(app, user, invitation, usedAt) {
+  const save = (transactionApp) => {
+    transactionApp.save(user);
+    invitation.set("used_at", usedAt.toISOString());
+    transactionApp.save(invitation);
+  };
+
+  if (typeof app.runInTransaction === "function") {
+    app.runInTransaction((transactionApp) => save(transactionApp));
+  } else {
+    save(app);
+  }
+}
+
 function createInvitation({
   app,
   security,
@@ -183,10 +197,7 @@ function completePasswordSetup(event, { now = () => new Date() } = {}) {
   user.set("password", body.password);
   user.set("passwordConfirm", body.password);
   user.set("password_setup_pending", false);
-  $app.save(user);
-
-  invitation.set("used_at", currentTime.toISOString());
-  $app.save(invitation);
+  saveSetup($app, user, invitation, currentTime);
 
   return $apis.recordAuthResponse(event, user, "", null);
 }
