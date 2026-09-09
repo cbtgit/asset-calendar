@@ -60,11 +60,11 @@ migrate(
         "CREATE UNIQUE INDEX idx_user_invitations_token_hash ON user_invitations (token_hash)",
         "CREATE INDEX idx_user_invitations_user ON user_invitations (user)",
       ],
-      listRule: null,
-      viewRule: null,
-      createRule: null,
-      updateRule: null,
-      deleteRule: null,
+      listRule: "",
+      viewRule: "",
+      createRule: "",
+      updateRule: "",
+      deleteRule: "",
     });
 
     app.save(invitations);
