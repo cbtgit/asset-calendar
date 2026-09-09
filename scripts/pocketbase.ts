@@ -392,7 +392,7 @@ export function resolveAuthEnvironment(
       : {
           ASSET_CALENDAR_ENV: environment,
           ASSET_CALENDAR_ROOT_DOMAIN: "localhost",
-          ASSET_CALENDAR_TENANT_HOSTS: "localhost",
+          ASSET_CALENDAR_TENANT_HOSTS: "tenant.localhost",
           ASSET_CALENDAR_POCKETBASE_URL: `http://127.0.0.1:${port}`,
           ASSET_CALENDAR_INVITATION_URL: "http://localhost:5173/setup",
           ASSET_CALENDAR_INVITATION_LIFETIME_HOURS: "720",

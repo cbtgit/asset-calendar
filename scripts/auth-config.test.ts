@@ -6,6 +6,8 @@ type AuthConfiguration = {
   environment: string;
   rootDomain: string;
   tenantHosts: string[];
+  trustedProxyIps: string[];
+  hostPortPolicy: "allow" | "forbid";
   pocketbaseUrl: string;
   invitationUrl: string;
   invitationLifetimeHours: number;
@@ -47,6 +49,8 @@ it("validates local capture configuration and fixed lifetimes", () => {
     environment: "local",
     rootDomain: "localhost",
     tenantHosts: ["tenant.localhost"],
+    trustedProxyIps: [],
+    hostPortPolicy: "allow",
     invitationLifetimeHours: 720,
     sessionLifetimeHours: 24,
     mailTransport: "capture",
@@ -78,13 +82,29 @@ it("validates production SMTP2GO configuration", () => {
   });
 });
 
+it("validates tenant host scope and trusted proxy addresses", () => {
+  expect(
+    authConfiguration.validateAuthConfig({
+      ...localEnvironment,
+      ASSET_CALENDAR_TRUSTED_PROXY_IPS: "127.0.0.1",
+    }),
+  ).toMatchObject({ trustedProxyIps: ["127.0.0.1"] });
+
+  expect(() =>
+    authConfiguration.validateAuthConfig({
+      ...localEnvironment,
+      ASSET_CALENDAR_TENANT_HOSTS: "nested.tenant.localhost",
+    }),
+  ).toThrow("exactly one subdomain");
+});
+
 it("reads only the declared configuration keys", () => {
   const values = authConfiguration.readEnvironment((key) =>
     key === "ASSET_CALENDAR_ENV" ? "test" : undefined,
   );
 
   expect(values).toMatchObject({ ASSET_CALENDAR_ENV: "test" });
-  expect(Object.keys(values)).toHaveLength(13);
+  expect(Object.keys(values)).toHaveLength(14);
 });
 
 it("rejects invalid values without exposing SMTP secrets", () => {

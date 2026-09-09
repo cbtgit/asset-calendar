@@ -48,6 +48,26 @@ send invitation mail. Invitation links are configured for 30 days
 one workday (`ASSET_CALENDAR_SESSION_LIFETIME_HOURS=24`). PocketBase refuses to
 start when the authentication configuration is malformed or incomplete.
 
+### Tenant host conventions
+
+Tenant context is resolved server-side from the normalized request host. Client
+tenant IDs, route parameters, browser storage, and frontend state are not used.
+The configured tenant host list must contain exactly one subdomain under the
+configured root domain.
+
+- Production: `nejsumlab.frontend-freelance.dk` under
+  `frontend-freelance.dk`.
+- Local development: `<tenant>.localhost` (for example,
+  `tenant.localhost:5173`); local ports are stripped after validation.
+- CI/integration tests: use an explicitly configured test host such as
+  `tenant.test` or set the request `Host` value directly.
+
+The production host is supplied through `ASSET_CALENDAR_ROOT_DOMAIN` and
+`ASSET_CALENDAR_TENANT_HOSTS`; neither value is hard-coded in frontend code.
+`X-Forwarded-Host` is ignored unless the request comes from an address listed in
+`ASSET_CALENDAR_TRUSTED_PROXY_IPS`. The dedicated sender host
+`mail.frontend-freelance.dk` is SMTP infrastructure, not a tenant host.
+
 To reset only the current worktree's development data, use the interactive task:
 
 ```sh

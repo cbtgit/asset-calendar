@@ -7,6 +7,7 @@ const CONFIGURATION_KEYS = [
   "ASSET_CALENDAR_ENV",
   "ASSET_CALENDAR_ROOT_DOMAIN",
   "ASSET_CALENDAR_TENANT_HOSTS",
+  "ASSET_CALENDAR_TRUSTED_PROXY_IPS",
   "ASSET_CALENDAR_POCKETBASE_URL",
   "ASSET_CALENDAR_INVITATION_URL",
   "ASSET_CALENDAR_INVITATION_LIFETIME_HOURS",
@@ -51,6 +52,33 @@ function parseHosts(value) {
     throw new Error("ASSET_CALENDAR_TENANT_HOSTS must not contain duplicate hosts.");
   }
   return hosts;
+}
+
+function parseTrustedProxyIps(value) {
+  if (typeof value !== "string" || value.trim() === "") return [];
+
+  const values = value.split(",").map((address) => address.trim().toLowerCase());
+  if (values.some((address) => address === "")) {
+    throw new Error("ASSET_CALENDAR_TRUSTED_PROXY_IPS must not contain empty entries.");
+  }
+
+  if (
+    values.some(
+      (address) =>
+        !/^[0-9a-f:.]+$/i.test(address) ||
+        (address.includes(".") &&
+          (!/^\d+\.\d+\.\d+\.\d+$/.test(address) ||
+            address.split(".").some((part) => Number(part) > 255))) ||
+        (address.includes(":") && address.split(":").length < 3),
+    )
+  ) {
+    throw new Error("ASSET_CALENDAR_TRUSTED_PROXY_IPS must contain valid IP addresses.");
+  }
+
+  if (new Set(values).size !== values.length) {
+    throw new Error("ASSET_CALENDAR_TRUSTED_PROXY_IPS must not contain duplicate addresses.");
+  }
+  return values;
 }
 
 function parseUrl(value, name) {
@@ -139,13 +167,29 @@ function validateAuthConfig(env) {
     throw new Error("ASSET_CALENDAR_SESSION_LIFETIME_HOURS must be 24 (one workday).");
   }
 
+  const rootDomain = parseHost(
+    required(env, "ASSET_CALENDAR_ROOT_DOMAIN"),
+    "ASSET_CALENDAR_ROOT_DOMAIN",
+  );
+  const tenantHosts = parseHosts(required(env, "ASSET_CALENDAR_TENANT_HOSTS"));
+  const rootSuffix = `.${rootDomain}`;
+  if (
+    tenantHosts.some((host) => {
+      const subdomain = host.endsWith(rootSuffix) ? host.slice(0, -rootSuffix.length) : "";
+      return !subdomain || subdomain.includes(".");
+    })
+  ) {
+    throw new Error(
+      "ASSET_CALENDAR_TENANT_HOSTS must contain exactly one subdomain under ASSET_CALENDAR_ROOT_DOMAIN.",
+    );
+  }
+
   return {
     environment,
-    rootDomain: parseHost(
-      required(env, "ASSET_CALENDAR_ROOT_DOMAIN"),
-      "ASSET_CALENDAR_ROOT_DOMAIN",
-    ),
-    tenantHosts: parseHosts(required(env, "ASSET_CALENDAR_TENANT_HOSTS")),
+    rootDomain,
+    tenantHosts,
+    trustedProxyIps: parseTrustedProxyIps(env.ASSET_CALENDAR_TRUSTED_PROXY_IPS),
+    hostPortPolicy: environment === "production" ? "forbid" : "allow",
     pocketbaseUrl: parseUrl(
       required(env, "ASSET_CALENDAR_POCKETBASE_URL"),
       "ASSET_CALENDAR_POCKETBASE_URL",
