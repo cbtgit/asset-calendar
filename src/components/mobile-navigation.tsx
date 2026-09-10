@@ -22,12 +22,16 @@ function useDrawerLifecycle({
   openerRef: RefObject<HTMLButtonElement | null>;
   onPopState: () => void;
 }) {
+  const wasOpenRef = useRef(false);
+
   useEffect(() => {
     if (!isOpen) {
-      openerRef.current?.focus();
+      if (wasOpenRef.current) openerRef.current?.focus();
+      wasOpenRef.current = false;
       return;
     }
 
+    wasOpenRef.current = true;
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
     drawerRef.current?.focus();

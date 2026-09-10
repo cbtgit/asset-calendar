@@ -1,7 +1,8 @@
-import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { afterEach, expect, it, vi } from "vite-plus/test";
 import { pocketbase } from "@/api/client";
+import { useNavigate } from "@tanstack/react-router";
 import { MobileNavigation } from "./mobile-navigation";
 
 vi.mock("@tanstack/react-router", () => ({
@@ -40,6 +41,28 @@ function openNavigation() {
   return screen.getByRole("complementary", { name: "Mobile navigation" });
 }
 
+it("does not restore focus while initially closed or when remounted closed", () => {
+  const marker = document.createElement("button");
+  document.body.append(marker);
+  marker.focus();
+
+  const view = render(
+    <MobileNavigation activeModule="calendar" isAdministrator={false} navigationKey="/calendar" />,
+  );
+  expect(document.activeElement).toBe(marker);
+
+  view.rerender(
+    <MobileNavigation
+      key="new-location"
+      activeModule="calendar"
+      isAdministrator={false}
+      navigationKey="/calendar"
+    />,
+  );
+  expect(document.activeElement).toBe(marker);
+  marker.remove();
+});
+
 it("opens the drawer, moves focus into it, locks scrolling, and keeps Escape inert", () => {
   saveUser("regular");
   render(
@@ -65,26 +88,46 @@ it("shows administrator destinations and closes on outside tap with focus restor
   fireEvent.click(screen.getByRole("button", { name: "Administration" }));
 
   expect(screen.getByRole("link", { name: "Groups" })).toBeTruthy();
-  fireEvent.click(
-    within(screen.getByRole("complementary", { name: "Mobile navigation" })).getByRole("button", {
-      name: "Close navigation",
-    }),
-  );
+  const backdrop = document.querySelector(".shell-mobile-backdrop");
+  expect(backdrop).toBeTruthy();
+  fireEvent.click(backdrop as HTMLElement);
 
   expect(screen.queryByRole("complementary", { name: "Mobile navigation" })).toBeNull();
   expect(document.activeElement).toBe(screen.getByRole("button", { name: "Open navigation" }));
   expect(document.body.style.overflow).toBe("");
 });
 
-it("closes on browser Back and route selection", () => {
+it("closes on browser Back", async () => {
   saveUser("administrator");
   render(<MobileNavigation activeModule="calendar" isAdministrator navigationKey="/calendar" />);
 
   openNavigation();
-  fireEvent.popState(window);
-  expect(screen.queryByRole("complementary", { name: "Mobile navigation" })).toBeNull();
+  window.history.back();
+  await waitFor(() =>
+    expect(screen.queryByRole("complementary", { name: "Mobile navigation" })).toBeNull(),
+  );
+});
+
+it("closes on route selection", () => {
+  saveUser("administrator");
+  render(<MobileNavigation activeModule="calendar" isAdministrator navigationKey="/calendar" />);
 
   openNavigation();
   fireEvent.click(screen.getByRole("link", { name: "Calendar" }));
   expect(screen.queryByRole("complementary", { name: "Mobile navigation" })).toBeNull();
+});
+
+it("logs out with auth cleanup and replace navigation", () => {
+  const navigate = vi.fn();
+  vi.mocked(useNavigate).mockReturnValue(navigate as never);
+  saveUser("regular");
+  render(
+    <MobileNavigation activeModule="calendar" isAdministrator={false} navigationKey="/calendar" />,
+  );
+
+  openNavigation();
+  fireEvent.click(screen.getByRole("button", { name: "Log out" }));
+
+  expect(pocketbase.authStore.isValid).toBe(false);
+  expect(navigate).toHaveBeenCalledWith({ to: "/sign-in", replace: true });
 });
