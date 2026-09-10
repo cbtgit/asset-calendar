@@ -44,6 +44,7 @@ async function createSeededMigrations(): Promise<string> {
   const unit = new Record(units);
   unit.set("tenant", tenant.id);
   unit.set("name", "Unit A");
+  unit.set("name_normalized", "unit a");
   app.save(unit);
   for (const data of [
     { email: "admin-a@example.test", pending: false },

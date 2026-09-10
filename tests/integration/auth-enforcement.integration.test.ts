@@ -37,10 +37,12 @@ async function createSeededMigrations(): Promise<string> {
   const unitA = new Record(units);
   unitA.set("tenant", tenantA.id);
   unitA.set("name", "Unit A");
+  unitA.set("name_normalized", "unit a");
   app.save(unitA);
   const unitB = new Record(units);
   unitB.set("tenant", tenantB.id);
   unitB.set("name", "Unit B");
+  unitB.set("name_normalized", "unit b");
   app.save(unitB);
   for (const data of [
     { email: "admin-a@example.test", tenant: tenantA.id, unit: unitA.id, role: "administrator", active: true },
@@ -82,10 +84,14 @@ async function request(
   });
 }
 
-async function authenticate(pocketbase: PocketBase, email: string): Promise<void> {
+async function authenticate(
+  pocketbase: PocketBase,
+  email: string,
+  host = "tenant.localhost",
+): Promise<void> {
   const response = await request(pocketbase, "/api/collections/users/auth-with-password", {
     method: "POST",
-    host: "tenant.localhost",
+    host,
     body: { identity: email, password },
   });
   expect(response.status).toBe(200);
@@ -115,6 +121,102 @@ afterAll(async () => {
 it("enforces the resolved tenant and role boundary on direct requests", async () => {
   const admin = new PocketBase(harness.baseUrl);
   await authenticate(admin, "admin-a@example.test");
+
+  const groupsResponse = await request(admin, "/api/groups", { host: "tenant.localhost" });
+  expect(groupsResponse.status).toBe(200);
+  expect(await groupsResponse.json()).toMatchObject({
+    items: [
+      {
+        name: "Unit A",
+        member_count: 3,
+      },
+    ],
+  });
+
+  const groupRecord = admin.authStore.model;
+  if (!groupRecord) throw new Error("Expected the administrator auth record.");
+  const groupId = groupRecord.organizational_unit;
+  const trimmedGroup = await request(admin, "/api/collections/organizational_units/records", {
+    method: "POST",
+    host: "tenant.localhost",
+    body: { name: "  Trimmed group  " },
+  });
+  expect(trimmedGroup.status).toBe(200);
+  expect((await trimmedGroup.json()).name).toBe("Trimmed group");
+
+  const directGroup = await request(admin, `/api/groups/${groupId}`, { host: "tenant.localhost" });
+  expect(directGroup.status).toBe(200);
+  expect(await directGroup.json()).toMatchObject({ id: groupId, name: "Unit A", member_count: 3 });
+
+  const duplicateGroup = await request(admin, "/api/collections/organizational_units/records", {
+    method: "POST",
+    host: "tenant.localhost",
+    body: { name: " unit a " },
+  });
+  expect(duplicateGroup.status).toBe(400);
+
+  const normalizedOverride = await request(admin, "/api/collections/organizational_units/records", {
+    method: "POST",
+    host: "tenant.localhost",
+    body: { name: "Override", name_normalized: "unit a" },
+  });
+  expect(normalizedOverride.status).toBe(200);
+  expect((await normalizedOverride.json()).name).toBe("Override");
+
+  const blankGroup = await request(admin, "/api/collections/organizational_units/records", {
+    method: "POST",
+    host: "tenant.localhost",
+    body: { name: "   " },
+  });
+  expect(blankGroup.status).toBe(400);
+
+  const longGroup = await request(admin, "/api/collections/organizational_units/records", {
+    method: "POST",
+    host: "tenant.localhost",
+    body: { name: "x".repeat(201) },
+  });
+  expect(longGroup.status).toBe(400);
+
+  const otherAdmin = new PocketBase(harness.baseUrl);
+  await authenticate(otherAdmin, "admin-b@example.test", "other.localhost");
+  const sameNameOtherTenant = await request(
+    otherAdmin,
+    "/api/collections/organizational_units/records",
+    {
+      method: "POST",
+      host: "other.localhost",
+      body: { name: " unit a " },
+    },
+  );
+  expect(sameNameOtherTenant.status).toBe(200);
+  const otherGroup = await sameNameOtherTenant.json();
+  const crossTenantView = await request(admin, `/api/groups/${otherGroup.id}`, {
+    host: "tenant.localhost",
+  });
+  expect(crossTenantView.status).toBe(404);
+
+  const foreignGroup = await request(
+    admin,
+    `/api/collections/organizational_units/records/${groupId}`,
+    {
+      method: "PATCH",
+      host: "tenant.localhost",
+      body: { tenant: "foreign-tenant" },
+    },
+  );
+  expect(foreignGroup.status).toBe(403);
+
+  const assignedGroupDelete = await request(
+    admin,
+    `/api/collections/organizational_units/records/${groupId}`,
+    { method: "DELETE", host: "tenant.localhost" },
+  );
+  expect(assignedGroupDelete.status).toBe(400);
+
+  const regular = new PocketBase(harness.baseUrl);
+  await authenticate(regular, "regular-a@example.test");
+  const regularGroups = await request(regular, "/api/groups", { host: "tenant.localhost" });
+  expect(regularGroups.status).toBe(403);
 
   const usersResponse = await request(admin, "/api/collections/users/records?page=1&perPage=50", {
     host: "tenant.localhost",
@@ -149,8 +251,6 @@ it("enforces the resolved tenant and role boundary on direct requests", async ()
   ]);
   expect(foreignBody).toEqual(unknownBody);
   expect(unknownBody).toEqual(rootBody);
-  const regular = new PocketBase(harness.baseUrl);
-  await authenticate(regular, "regular-a@example.test");
   const regularRecord = regular.authStore.model;
   if (!regularRecord) throw new Error("Expected the regular user auth record.");
   const protectedUpdate = await request(
