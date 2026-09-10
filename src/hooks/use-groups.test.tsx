@@ -96,20 +96,20 @@ it("optimistically re-sorts a renamed group", async () => {
   vi.spyOn(pocketbase, "collection").mockReturnValue({ update } as never);
   vi.spyOn(pocketbase, "send").mockResolvedValue({
     ...group,
-    name: "Beta",
+    name: "Zulu",
   });
   const { queryClient, wrapper } = setup([
-    { ...group, name: "Operations" },
-    { ...secondGroup, name: "Gamma" },
+    { ...group, name: "Alpha" },
+    { ...secondGroup, name: "Zeta" },
   ]);
   const { result } = renderHook(() => useRenameGroupMutation(), { wrapper });
 
   await act(async () => {
-    await result.current.mutateAsync({ id: "group-1", input: { name: " Beta " } });
+    await result.current.mutateAsync({ id: "group-1", input: { name: " Zulu " } });
   });
   expect(queryClient.getQueryData<Group[]>(groupsKeys.list())?.map(({ name }) => name)).toEqual([
-    "Beta",
-    "Gamma",
+    "Zeta",
+    "Zulu",
   ]);
 });
 
