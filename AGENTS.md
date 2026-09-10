@@ -1,5 +1,12 @@
 # Agent Instructions
 
+## GitHub issue scope
+
+When implementing a GitHub issue, read its parent feature for context and
+dependencies, but implement only the work explicitly included in the issue.
+Do not expand the change to cover adjacent parent-feature work unless the issue
+is updated first.
+
 ## Optimistic mutations
 
 For create, update, and delete operations in the calendar and administration
