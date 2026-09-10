@@ -2,6 +2,7 @@ import { afterEach, expect, it, vi } from "vite-plus/test";
 import * as auth from "@/api/auth";
 import { Route as AuthenticatedRoute } from "./_authenticated";
 import { Route as GroupsRoute } from "./_authenticated/groups";
+import { Route as AuthenticatedIndexRoute } from "./_authenticated/index";
 import { Route as SignInRoute } from "./sign-in";
 
 const runBeforeLoad = (route: { options: { beforeLoad?: unknown } }) => {
@@ -38,6 +39,23 @@ it("keeps the groups destination administrator-only", async () => {
   });
 
   await expect(runBeforeLoad(GroupsRoute)).rejects.toMatchObject({
+    options: { to: "/calendar" },
+  });
+});
+
+it("allows administrators through the groups guard", async () => {
+  vi.spyOn(auth, "getAuthSnapshot").mockReturnValue({
+    status: "authenticated",
+    user: { role: "administrator" } as auth.AuthUser,
+  });
+
+  await expect(runBeforeLoad(GroupsRoute)).resolves.toBeUndefined();
+});
+
+it("redirects the authenticated index to the calendar", async () => {
+  await expect(
+    Promise.resolve().then(() => runBeforeLoad(AuthenticatedIndexRoute)),
+  ).rejects.toMatchObject({
     options: { to: "/calendar" },
   });
 });
