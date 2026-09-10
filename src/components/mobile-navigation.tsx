@@ -68,7 +68,11 @@ function useMobileNavigation(activeModule: ActiveModule) {
   }
 
   function openDrawer() {
-    window.history.pushState({ ...(window.history.state ?? {}), mobileNavigation: true }, "", window.location.href);
+    window.history.pushState(
+      { ...(window.history.state ?? {}), mobileNavigation: true },
+      "",
+      window.location.href,
+    );
     setExpandedModule(activeModule);
     setIsOpen(true);
   }
