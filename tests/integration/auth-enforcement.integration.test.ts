@@ -64,6 +64,20 @@ async function createSeededMigrations(): Promise<string> {
   }
 }, () => {});`,
   );
+  await writeFile(
+    resolve(migrationsDir, "1710000006_auth_groups_sort_fixture.js"),
+    `migrate((app) => {
+  const units = app.findCollectionByNameOrId("organizational_units");
+  const tenant = app.findRecordsByFilter("tenants", "subdomain = 'tenant'", "", 1, 0)[0];
+  for (const name of ["banana", "Cherry", "apple", "Date"]) {
+    const unit = new Record(units);
+    unit.set("tenant", tenant.id);
+    unit.set("name", name);
+    unit.set("name_normalized", name.toLowerCase());
+    app.save(unit);
+  }
+}, () => {});`,
+  );
   return migrationsDir;
 }
 
@@ -128,6 +142,22 @@ it("enforces the resolved tenant and role boundary on direct requests", async ()
   expect(groupsResponse.status).toBe(200);
   expect(await groupsResponse.json()).toMatchObject({
     items: [
+      {
+        name: "apple",
+        member_count: 0,
+      },
+      {
+        name: "banana",
+        member_count: 0,
+      },
+      {
+        name: "Cherry",
+        member_count: 0,
+      },
+      {
+        name: "Date",
+        member_count: 0,
+      },
       {
         name: "Unit A",
         member_count: 4,

@@ -176,7 +176,7 @@ function groupsProjectionRoute(event) {
     groups = $app.findRecordsByFilter(
       ORGANIZATIONAL_UNIT_COLLECTION,
       "tenant = {:tenant}",
-      "name",
+      "name_normalized,id",
       0,
       0,
       { tenant: context.context.tenant.id },
