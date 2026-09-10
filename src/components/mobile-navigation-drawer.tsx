@@ -11,13 +11,22 @@ type MobileNavigationDrawerProps = {
   isAdministrator: boolean;
   navigationKey: string;
   onClose: () => void;
+  onSelectRoute: () => void;
   onLogOut: () => void;
   onToggleModule: (module: ActiveModule | null) => void;
 };
 
 export const MobileNavigationDrawer = forwardRef<HTMLElement, MobileNavigationDrawerProps>(
   function MobileNavigationDrawer(
-    { expandedModule, isAdministrator, onClose, onLogOut, onToggleModule, navigationKey },
+    {
+      expandedModule,
+      isAdministrator,
+      onClose,
+      onSelectRoute,
+      onLogOut,
+      onToggleModule,
+      navigationKey,
+    },
     ref,
   ) {
     return (
@@ -39,7 +48,7 @@ export const MobileNavigationDrawer = forwardRef<HTMLElement, MobileNavigationDr
           {renderDrawerLinks({
             expandedModule,
             isAdministrator,
-            onClose,
+            onSelectRoute,
             onToggleModule,
           })}
           {renderDrawerFooter(onLogOut)}

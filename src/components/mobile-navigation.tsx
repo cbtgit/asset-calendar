@@ -120,6 +120,7 @@ export function MobileNavigation({
           expandedModule={expandedModule}
           isAdministrator={isAdministrator}
           onClose={closeDrawer}
+          onSelectRoute={() => closeDrawer(false)}
           onLogOut={handleLogOut}
           onToggleModule={setExpandedModule}
           navigationKey={navigationKey}
