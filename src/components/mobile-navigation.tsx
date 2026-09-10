@@ -1,5 +1,5 @@
 import { useNavigate } from "@tanstack/react-router";
-import { useEffect, useRef, useState, type RefObject } from "react";
+import { useCallback, useEffect, useRef, useState, type RefObject } from "react";
 import { signOut } from "@/api/auth";
 import type { ActiveModule } from "./app-shell";
 import { MobileNavigationDrawer } from "./mobile-navigation-drawer";
@@ -10,6 +10,13 @@ type MobileNavigationProps = {
   isAdministrator: boolean;
   navigationKey: string;
 };
+
+function scheduleOpenerFocus() {
+  window.setTimeout(
+    () => document.querySelector<HTMLButtonElement>(".shell-mobile-trigger")?.focus(),
+    0,
+  );
+}
 
 function useDrawerLifecycle({
   isOpen,
@@ -50,12 +57,14 @@ function useMobileNavigation(activeModule: ActiveModule) {
   const drawerRef = useRef<HTMLElement>(null);
   const [isOpen, setIsOpen] = useState(false);
   const [expandedModule, setExpandedModule] = useState<ActiveModule | null>(activeModule);
+  const handlePopState = useCallback(() => setIsOpen(false), []);
 
-  useDrawerLifecycle({ isOpen, drawerRef, openerRef, onPopState: () => setIsOpen(false) });
+  useDrawerLifecycle({ isOpen, drawerRef, openerRef, onPopState: handlePopState });
 
-  function closeDrawer() {
+  function closeDrawer(traverseHistory = true) {
     setIsOpen(false);
-    if (window.history.state?.mobileNavigation) window.history.back();
+    scheduleOpenerFocus();
+    if (traverseHistory && window.history.state?.mobileNavigation) window.history.back();
   }
 
   function openDrawer() {
@@ -70,7 +79,7 @@ function useMobileNavigation(activeModule: ActiveModule) {
 
   function handleLogOut() {
     signOut();
-    closeDrawer();
+    closeDrawer(false);
     void navigate({ to: "/sign-in", replace: true });
   }
 
