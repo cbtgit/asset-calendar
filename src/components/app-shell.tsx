@@ -18,7 +18,7 @@ export function getActiveModule(pathname: string): ActiveModule {
 }
 
 export function AppShell() {
-  const pathname = useRouterState({ select: (state) => state.location.pathname });
+  const { pathname, href } = useRouterState({ select: (state) => state.location });
   const activeDestination = getActiveDestination(pathname);
   const activeModule = getActiveModule(pathname);
   const administrator = isAdministrator(getAuthSnapshot().user);
@@ -32,7 +32,7 @@ export function AppShell() {
       <ShellHeader
         activeModule={activeModule}
         isAdministrator={administrator}
-        navigationKey={pathname}
+        navigationKey={href}
       />
       <div className="shell-body">
         {administrator && activeModule === "administration" ? (
