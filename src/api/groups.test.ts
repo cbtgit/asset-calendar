@@ -52,3 +52,18 @@ it("uses PocketBase records for rename and delete", async () => {
   expect(update).toHaveBeenCalledWith("group-1", { name: "Renamed" });
   expect(remove).toHaveBeenCalledWith("group-1");
 });
+
+it("classifies rename and delete errors", async () => {
+  const conflict = Object.assign(new Error("Duplicate group name"), { status: 409 });
+  const forbidden = Object.assign(new Error("Forbidden"), { status: 403 });
+  const update = vi.fn().mockRejectedValue(conflict);
+  const remove = vi.fn().mockRejectedValue(forbidden);
+  vi.spyOn(pocketbase, "collection").mockReturnValue({ update, delete: remove } as never);
+
+  await expect(renameGroup("group-1", { name: "Operations" })).rejects.toMatchObject({
+    kind: "conflict",
+  });
+  await expect(deleteGroup("group-1")).rejects.toMatchObject({
+    kind: "unauthorized",
+  });
+});

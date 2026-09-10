@@ -19,12 +19,18 @@ const group: Group = {
   member_count: 2,
 };
 
-function setup() {
+const secondGroup: Group = {
+  ...group,
+  id: "group-2",
+  name: "Operations",
+};
+
+function setup(groups: Group[] = [group]) {
   const queryClient = new QueryClient({ defaultOptions: { mutations: { retry: false } } });
   const wrapper = ({ children }: { children: ReactNode }) => (
     <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
   );
-  queryClient.setQueryData(groupsKeys.list(), [group]);
+  queryClient.setQueryData(groupsKeys.list(), groups);
   return { queryClient, wrapper };
 }
 
@@ -69,17 +75,42 @@ it("optimistically adds a trimmed group", async () => {
     name: "New group",
     member_count: 0,
   });
-  const { queryClient, wrapper } = setup();
+  const { queryClient, wrapper } = setup([group, secondGroup]);
   const { result } = renderHook(() => useCreateGroupMutation(), { wrapper });
   const mutation = result.current.mutateAsync({ name: " New group " });
 
   await act(async () => {
     await Promise.resolve();
   });
-  expect(queryClient.getQueryData<Group[]>(groupsKeys.list())).toHaveLength(2);
-  expect(queryClient.getQueryData<Group[]>(groupsKeys.list())?.[1]?.name).toBe("New group");
+  expect(queryClient.getQueryData<Group[]>(groupsKeys.list())?.map(({ name }) => name)).toEqual([
+    "New group",
+    "Operations",
+    "Operations",
+  ]);
   resolveCreate({ id: "group-2" });
   await mutation;
+});
+
+it("optimistically re-sorts a renamed group", async () => {
+  const update = vi.fn().mockResolvedValue({});
+  vi.spyOn(pocketbase, "collection").mockReturnValue({ update } as never);
+  vi.spyOn(pocketbase, "send").mockResolvedValue({
+    ...group,
+    name: "Beta",
+  });
+  const { queryClient, wrapper } = setup([
+    { ...group, name: "Operations" },
+    { ...secondGroup, name: "Gamma" },
+  ]);
+  const { result } = renderHook(() => useRenameGroupMutation(), { wrapper });
+
+  await act(async () => {
+    await result.current.mutateAsync({ id: "group-1", input: { name: " Beta " } });
+  });
+  expect(queryClient.getQueryData<Group[]>(groupsKeys.list())?.map(({ name }) => name)).toEqual([
+    "Beta",
+    "Gamma",
+  ]);
 });
 
 it("optimistically deletes and reconciles after settlement", async () => {

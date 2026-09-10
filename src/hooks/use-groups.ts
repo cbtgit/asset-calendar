@@ -25,6 +25,12 @@ function optimisticGroup(input: GroupCreate): Group {
   };
 }
 
+function sortGroups(groups: Group[]): Group[] {
+  return [...groups].sort((left, right) =>
+    left.name.trim().localeCompare(right.name.trim(), undefined, { sensitivity: "base" }),
+  );
+}
+
 export function useGroupsQuery() {
   return useQuery(groupsQueryOptions());
 }
@@ -38,7 +44,10 @@ export function useCreateGroupMutation() {
       await queryClient.cancelQueries({ queryKey: groupsKeys.list() });
       const previousGroups = queryClient.getQueryData<Group[]>(groupsKeys.list());
       if (previousGroups) {
-        queryClient.setQueryData(groupsKeys.list(), [...previousGroups, optimisticGroup(input)]);
+        queryClient.setQueryData(
+          groupsKeys.list(),
+          sortGroups([...previousGroups, optimisticGroup(input)]),
+        );
       }
       return { previousGroups };
     },
@@ -60,7 +69,13 @@ export function useRenameGroupMutation() {
       await queryClient.cancelQueries({ queryKey: groupsKeys.list() });
       const previousGroups = queryClient.getQueryData<Group[]>(groupsKeys.list());
       queryClient.setQueryData<Group[]>(groupsKeys.list(), (groups) =>
-        groups?.map((group) => (group.id === id ? { ...group, name: input.name.trim() } : group)),
+        groups
+          ? sortGroups(
+              groups.map((group) =>
+                group.id === id ? { ...group, name: input.name.trim() } : group,
+              ),
+            )
+          : groups,
       );
       return { previousGroups };
     },
