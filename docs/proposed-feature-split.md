@@ -395,67 +395,6 @@ tracks this prerequisite. The parent issue [F03 / #29](https://github.com/cbtgit
 records the completed F03 child work; this repository does not contain the
 operator's secrets or production delivery data.
 
-#### Agent-ready task sequence
-
-The following tasks keep F03 small enough for separate agent assignments:
-
-1. **F03-T01 - Authentication configuration contract**
-   Define safe environment-variable names and validation for the application
-   root domain, tenant hosts, PocketBase URL, SMTP2GO settings, invitation URL,
-   and the 30-day invitation and one-workday session durations. Update the
-   example environment and deployment documentation without adding secrets.
-
-2. **F03-T02 - Tenant host resolution**
-   Resolve the tenant from the trusted host, reject root and unknown tenant
-   hosts generically, and ignore or reject client-supplied tenant IDs. Cover
-   production, local, and test host conventions.
-
-3. **F03-T03 - Tenant and user schema migration**
-   Create or reconcile the migration-backed tenant and auth-user schema,
-   including tenant, name, globally unique email, role, active state, group,
-   and password-setup state. Preserve the existing
-   production tenant and administrator rather than creating duplicates.
-
-4. **F03-T04 - PocketBase authentication enforcement**
-   Add collection rules and hooks or trusted middleware for same-tenant access,
-   role protection, inactive-user rejection, server-derived tenant assignment,
-   and protected-field handling. Do not add token revocation.
-
-5. **F03-T05 - Invitation and password setup**
-   Implement the server-side one-time invitation flow with a 30-day lifetime.
-   Reject expired and reused links, prevent sign-in before setup, sign the user
-   in after successful setup, and rely on PocketBase's built-in password
-   validator. Do not add custom password composition rules.
-
-6. **F03-T06 - SMTP2GO mail integration**
-   Configure production PocketBase email delivery through SMTP2GO. Provide a
-   local capture/log sink and deterministic CI test sink. Keep all credentials
-   server-side and return generic invitation responses.
-
-7. **F03-T07 - Plain authentication UI**
-   Add the plain sign-in and password-setup routes, sign-out action, protected
-   route redirect, and clear generic handling for invalid credentials, invalid
-   setup links, inactive users, and unknown tenant hosts. Do not add branding,
-   tenant selection, or a password-strength meter.
-
-8. **F03-T08 - PocketBase session integration**
-   Persist the PocketBase auth state across reloads, refresh valid state during
-   startup, clear it on sign-out, and handle authorization failures by clearing
-   local state and returning to sign-in. Configure the one-workday session
-   lifetime without a custom session table.
-
-9. **F03-T09 - Focused authentication tests**
-   Test host resolution, cross-tenant access, sign-in, inactive users,
-   invitation expiry and one-time use, built-in password validation, route
-   guards, session persistence, sign-out, and mail-sink behavior.
-
-10. **F03-T10 - Documentation and deployment reconciliation**
-    Reconcile the normative requirements, deployment behavior, and
-    non-secret [production bootstrap contract](./production-bootstrap-contract.md).
-    Record the SMTP2GO DNS/VPS prerequisite, existing tenant provisioning
-    boundary, environment conventions, and F03 acceptance criteria in the
-    project documentation. This task does not add authentication behavior.
-
 ---
 
 ### F03.5 - Authenticated application shell and navigation
@@ -575,25 +514,128 @@ F03.5 does not add a dashboard, group data, resource data, calendar behavior,
 booking behavior, or future administration links that do not have implemented
 routes.
 
-#### Agent-ready task sequence
+#### F03.5 implementation issue drafts
 
-1. Define the authenticated route boundary and shared outlet while keeping
-   public authentication routes outside it. Route authenticated entry and the
-   product identity to Calendar.
-2. Define the global navigation contract, URL-derived active state, role
-   visibility, module default routes, current-user popover, immediate logout,
-   and history-replacing sign-in redirect.
-3. Define desktop and narrow-screen shell behavior, including the 768px
-   breakpoint, Administration navigation rail, full-viewport right-side
-   drawer, X close control, accordion groups, focus restoration, browser Back
-   handling, no-Escape behavior, and no-horizontal-scroll constraints.
-4. Establish and apply the shared design-token foundation from the supplied
-   Calendar and Groups administration references.
-5. Add the administrator-only Groups placeholder route using the reference
-   heading hierarchy and responsive content frame, while ensuring it contains
-   no group data access or management controls.
-6. Verify that the shell has no ownership of calendar panes, group data,
-   administration data operations, or feature-specific forms and error UI.
+The following local draft identifiers are planning references only. They are not
+GitHub issue numbers or metadata. Each draft stays within the F03.5 contract;
+feature data workflows, calendar behavior, and future administration links
+remain owned by later features.
+
+```mermaid
+flowchart TD
+  F035([F03.5 Authenticated shell]) --> T01[F03.5-T01 Protected shell routes]
+  T01 --> T02[F03.5-T02 Desktop frame and tokens]
+  T01 --> T03[F03.5-T03 Role-aware destinations]
+  T01 --> T04[F03.5-T04 Account action and logout]
+  T02 --> T03
+  T02 --> T05[F03.5-T05 Mobile navigation drawer]
+  T03 --> T05
+  T04 --> T05
+  T02 --> T06[F03.5-T06 Acceptance and regression coverage]
+  T03 --> T06
+  T04 --> T06
+  T05 --> T06
+```
+
+##### F03.5-T01 - Establish the protected shell route foundation
+
+**Depends on:** F03
+
+**Description:** Add the authenticated route layout and shared outlet that
+contains post-login destinations. Connect the existing F03 route guard and
+session state without duplicating authentication logic. Add only the route
+scaffolding needed for the Calendar default destination and the
+administrator-only Groups placeholder; keep route content responsible for its
+own data and states. Define the page landmarks and route-derived active
+destination data that later shell pieces consume.
+
+**When this issue is done, the user can:** sign in and reach a stable
+authenticated frame, refresh or directly open an implemented protected route,
+and see route content rendered through one shared outlet.
+
+##### F03.5-T02 - Build the shared tokens and desktop application frame
+
+**Depends on:** F03.5-T01
+
+**Description:** Define the F03.5 design tokens and implement the desktop
+layout at widths of 768px and above. Add Asset Calendar identity, Calendar and
+Administration module navigation, the authenticated content landmark, and the
+optional Administration rail using only implemented destinations. Match the
+supplied references for spacing, typography, control dimensions, semantic
+states, borders, radii, shadows, and focus treatment without introducing
+feature data surfaces.
+
+**When this issue is done, the user can:** orient themselves in the Asset
+Calendar application, identify the active module and destination from the URL,
+and use a consistent desktop frame for authenticated pages.
+
+##### F03.5-T03 - Add role-aware destinations and the Groups placeholder
+
+**Depends on:** F03.5-T01 and F03.5-T02
+
+**Description:** Register the implemented Calendar and Administration
+destinations and enforce their navigation visibility from the authenticated
+user role. Expose Administration and its Groups child route only to
+administrators. Render the Groups placeholder with the contracted heading and
+introductory copy, while omitting group records, filters, directory data,
+mutations, and links for Resources, Users & Roles, Billing, or other future
+destinations. Ensure direct navigation cannot use the shell to bypass the
+administrator-only boundary.
+
+**When this issue is done, the user can:** navigate between the implemented
+destinations permitted for their role, while regular users neither see nor
+reach the administration surface.
+
+##### F03.5-T04 - Implement the authenticated account action and logout
+
+**Depends on:** F03.5-T01 and F03.5-T02
+
+**Description:** Add the desktop current-user avatar/name trigger and its
+single-action popover. Close it when toggled, clicked outside, or navigation
+occurs, but not on Escape. Wire Log out to the existing F03 session cleanup and
+navigate to sign-in with history replacement, without confirmation or a second
+authorization path.
+
+**When this issue is done, the user can:** open their account action, sign out
+immediately, and arrive at sign-in without the protected page remaining in
+browser history.
+
+##### F03.5-T05 - Implement the responsive mobile navigation drawer
+
+**Depends on:** F03.5-T02, F03.5-T03, and F03.5-T04
+
+**Description:** At widths below 768px, replace the desktop navigation with a
+compact header, hamburger trigger, and full-viewport right-side drawer. Add
+the contracted two-level Calendar and Administration accordions using only
+implemented child routes, role-aware visibility, bottom-anchored Log out,
+outside-tap handling, route-selection close, X close, browser-Back close,
+background scroll locking, and focus move/restore behavior. Preserve the
+contracted no-Escape-close behavior and keep the drawer usable without
+horizontal scrolling.
+
+**When this issue is done, the user can:** navigate every implemented
+authenticated destination on a narrow screen, close the drawer through each
+supported interaction, and continue from the control that opened it after
+closing.
+
+##### F03.5-T06 - Verify the shell contract with focused regression coverage
+
+**Depends on:** F03.5-T02, F03.5-T03, F03.5-T04, and F03.5-T05
+
+**Description:** Add focused route and component coverage for the shared
+authenticated outlet, default Calendar navigation, role-based module and
+Groups visibility, active URL-derived navigation, logout cleanup and history
+replacement, desktop account-popover dismissal, and mobile drawer behavior.
+Cover the 768px boundary, focus movement and restoration, scroll locking,
+browser-Back close, outside-tap close, route-selection close, and the explicit
+no-Escape-close rule. Confirm the placeholder does not load or mutate group
+data and that no future administration links are rendered. Keep the checks
+within the existing unit/component test setup; browser end-to-end testing
+remains deferred as specified by F01.
+
+**When this issue is done, the user can:** use the authenticated shell on
+desktop and narrow screens with the documented role, navigation, logout,
+focus, and placeholder behavior protected against regression.
 
 ---
 
