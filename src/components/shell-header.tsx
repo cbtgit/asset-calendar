@@ -1,5 +1,6 @@
 import { Link } from "@tanstack/react-router";
 import type { ActiveModule } from "./app-shell";
+import { MobileNavigation } from "./mobile-navigation";
 import { ShellAccountMenu } from "./shell-account-menu";
 
 type ShellHeaderProps = {
@@ -36,6 +37,12 @@ export function ShellHeader({ activeModule, isAdministrator, navigationKey }: Sh
         ) : null}
       </nav>
       <ShellAccountMenu key={navigationKey} />
+      <MobileNavigation
+        key={`mobile-${navigationKey}`}
+        activeModule={activeModule}
+        isAdministrator={isAdministrator}
+        navigationKey={navigationKey}
+      />
     </header>
   );
 }
