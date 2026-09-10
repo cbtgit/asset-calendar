@@ -1,5 +1,5 @@
 import "../App.css";
-import { getAuthSnapshot } from "@/api/auth";
+import { getAuthSnapshot, isAdministrator } from "@/api/auth";
 import { Outlet, useRouterState } from "@tanstack/react-router";
 import { AdministrationRail } from "./administration-rail";
 import { ShellHeader } from "./shell-header";
@@ -21,7 +21,7 @@ export function AppShell() {
   const pathname = useRouterState({ select: (state) => state.location.pathname });
   const activeDestination = getActiveDestination(pathname);
   const activeModule = getActiveModule(pathname);
-  const isAdministrator = getAuthSnapshot().user?.role === "administrator";
+  const administrator = isAdministrator(getAuthSnapshot().user);
 
   return (
     <div
@@ -29,9 +29,9 @@ export function AppShell() {
       data-active-destination={activeDestination}
       data-active-module={activeModule}
     >
-      <ShellHeader activeModule={activeModule} isAdministrator={isAdministrator} />
+      <ShellHeader activeModule={activeModule} isAdministrator={administrator} />
       <div className="shell-body">
-        {isAdministrator && activeModule === "administration" ? (
+        {administrator && activeModule === "administration" ? (
           <AdministrationRail activeDestination={activeDestination} />
         ) : null}
         <main className="shell-content" aria-label="Authenticated content">

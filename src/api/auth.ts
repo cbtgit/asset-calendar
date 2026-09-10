@@ -19,6 +19,10 @@ export type AuthSnapshot = {
   user: AuthUser | null;
 };
 
+export function isAdministrator(user: AuthUser | null): boolean {
+  return user?.role === "administrator";
+}
+
 const hasPersistedAuthState = Boolean(pocketbase.authStore.token || pocketbase.authStore.model);
 if (!pocketbase.authStore.isValid && hasPersistedAuthState) {
   pocketbase.authStore.clear();
