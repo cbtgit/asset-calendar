@@ -1,61 +1,36 @@
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, expect, it, vi } from "vite-plus/test";
-import { pocketbase } from "@/api/client";
-import { useAuth } from "@/hooks/use-auth";
-import { useNavigate } from "@tanstack/react-router";
-import { AppShell } from "./app-shell";
-
-vi.mock("@/hooks/use-auth", () => ({
-  useAuth: vi.fn(),
-}));
+import { useRouterState } from "@tanstack/react-router";
+import { AppShell, getActiveDestination } from "./app-shell";
 
 vi.mock("@tanstack/react-router", () => ({
-  useNavigate: vi.fn(),
-}));
-
-vi.mock("./health-status", () => ({
-  HealthStatus: () => <div>Connected</div>,
+  Outlet: () => <p>Calendar destination</p>,
+  useRouterState: vi.fn(),
 }));
 
 afterEach(() => {
   cleanup();
-  pocketbase.authStore.clear();
   vi.restoreAllMocks();
 });
 
-it("signs out and navigates to sign-in", () => {
-  const navigate = vi.fn();
-  const user = {
-    id: "user-1",
-    collectionId: "users",
-    collectionName: "users",
-    email: "person@example.test",
-  };
-
-  vi.mocked(useAuth).mockReturnValue({
-    status: "authenticated",
-    user,
-  });
-  vi.mocked(useNavigate).mockReturnValue(navigate as never);
-  pocketbase.authStore.save("token", user);
-
-  render(<AppShell />);
-  fireEvent.click(screen.getByRole("button", { name: "Sign out" }));
-
-  expect(pocketbase.authStore.isValid).toBe(false);
-  expect(pocketbase.authStore.model).toBeNull();
-  expect(pocketbase.authStore.token).toBe("");
-  expect(navigate).toHaveBeenCalledWith({ to: "/sign-in", replace: true });
+it.each([
+  ["/calendar", "calendar"],
+  ["/groups", "groups"],
+  ["/groups/new", "groups"],
+] as const)("derives the active destination from %s", (pathname, destination) => {
+  expect(getActiveDestination(pathname)).toBe(destination);
 });
 
-it.each(["loading", "unauthenticated", "unavailable"] as const)(
-  "does not render protected content while auth is %s",
-  (status) => {
-    vi.mocked(useAuth).mockReturnValue({ status, user: null });
+it("provides the shared authenticated page landmarks and outlet state", () => {
+  vi.mocked(useRouterState).mockReturnValue("calendar" as never);
 
-    render(<AppShell />);
+  render(<AppShell />);
 
-    expect(screen.queryByRole("main")).toBeNull();
-    expect(screen.queryByText("Keep important date in view.")).toBeNull();
-  },
-);
+  expect(screen.getByRole("banner").textContent).toContain("Asset Calendar");
+  expect(
+    screen
+      .getByRole("navigation", { name: "Primary navigation" })
+      .getAttribute("data-active-destination"),
+  ).toBe("calendar");
+  expect(screen.getByRole("main").textContent).toContain("Calendar destination");
+});

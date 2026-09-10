@@ -2,7 +2,7 @@ import { createFileRoute, redirect } from "@tanstack/react-router";
 import { ensureAuthContextReady, getAuthSnapshot } from "@/api/auth";
 import { AppShell } from "@/components/app-shell";
 
-export const Route = createFileRoute("/")({
+export const Route = createFileRoute("/_authenticated")({
   beforeLoad: async () => {
     await ensureAuthContextReady();
     const status = getAuthSnapshot().status;
