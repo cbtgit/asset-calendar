@@ -55,12 +55,12 @@ export function renderDrawerHeader(onClose: () => void) {
 export function renderDrawerLinks({
   expandedModule,
   isAdministrator,
-  onClose,
+  onSelectRoute,
   onToggleModule,
 }: {
   expandedModule: ActiveModule | null;
   isAdministrator: boolean;
-  onClose: () => void;
+  onSelectRoute: () => void;
   onToggleModule: (module: ActiveModule | null) => void;
 }) {
   return (
@@ -70,7 +70,7 @@ export function renderDrawerLinks({
         expandedModule,
         onToggleModule,
         children: (
-          <Link className="shell-mobile-child-link" to="/calendar" onClick={onClose}>
+          <Link className="shell-mobile-child-link" to="/calendar" onClick={onSelectRoute}>
             Calendar
           </Link>
         ),
@@ -81,7 +81,7 @@ export function renderDrawerLinks({
             expandedModule,
             onToggleModule,
             children: (
-              <Link className="shell-mobile-child-link" to="/groups" onClick={onClose}>
+              <Link className="shell-mobile-child-link" to="/groups" onClick={onSelectRoute}>
                 Groups
               </Link>
             ),
