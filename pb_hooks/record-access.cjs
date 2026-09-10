@@ -4,6 +4,7 @@ const tenantResolver = require(`${__hooks}/tenant-host-resolver.cjs`);
 const configuration = authConfig.validateAuthConfig(authConfig.readPocketBaseEnvironment());
 const TENANT_FIELD = "tenant";
 const USER_COLLECTION = "users";
+const ORGANIZATIONAL_UNIT_COLLECTION = "organizational_units";
 const PROTECTED_USER_FIELDS = [
   "tenant",
   "role",
@@ -35,7 +36,10 @@ function authRecord(event) {
 
 function resolveTenant(info, event) {
   return tenantResolver.resolveTenantContextSync(
-    { host: info.headers.host ?? event.requestEvent.request.host, requestInfo: () => info },
+    {
+      host: info.headers.host ?? event.request?.host ?? event.requestEvent?.request?.host,
+      requestInfo: () => info,
+    },
     configuration,
     ({ subdomain }) => {
       try {
@@ -101,6 +105,73 @@ function applyServerTenant(info, record, tenantId) {
   }
 }
 
+function normalizeOrganizationalUnit(info, record, tenantId) {
+  if (Object.prototype.hasOwnProperty.call(info.body, TENANT_FIELD)) deny();
+  if (Object.prototype.hasOwnProperty.call(info.body, "name_normalized")) deny();
+
+  const name = Object.prototype.hasOwnProperty.call(info.body, "name")
+    ? info.body.name
+    : record.get("name");
+  if (typeof name !== "string" || name.trim() === "") {
+    throw new BadRequestError("organizational_unit_name_required");
+  }
+  const trimmedName = name.trim();
+  if (trimmedName.length > 200) {
+    throw new BadRequestError("organizational_unit_name_too_long");
+  }
+  info.body.name = trimmedName;
+  info.body.name_normalized = trimmedName.toLowerCase();
+  info.body[TENANT_FIELD] = tenantId;
+  record.set("name", trimmedName);
+  record.set("name_normalized", info.body.name_normalized);
+  record.set(TENANT_FIELD, tenantId);
+}
+
+function memberCount(record) {
+  return $app.findRecordsByFilter(
+    USER_COLLECTION,
+    `tenant = '${record.get(TENANT_FIELD)}' && organizational_unit = '${record.id}'`,
+    "",
+    0,
+    0,
+  ).length;
+}
+
+function guardOrganizationalUnitDelete(record) {
+  if (memberCount(record) > 0) {
+    throw new BadRequestError("organizational_unit_has_members");
+  }
+}
+
+function groupsProjectionRoute(event) {
+  const context = applicationContext({
+    ...event,
+    collection: {
+      name: ORGANIZATIONAL_UNIT_COLLECTION,
+      fields: [{ name: TENANT_FIELD }],
+    },
+  });
+  if (!context) deny();
+  if (context.auth.get("role") !== "administrator") deny();
+
+  const groupId = event.request.pathValue("id");
+  const filter = groupId
+    ? `tenant = '${context.context.tenant.id}' && id = '${groupId}'`
+    : `tenant = '${context.context.tenant.id}'`;
+  const groups = $app.findRecordsByFilter(ORGANIZATIONAL_UNIT_COLLECTION, filter, "name", 0, 0);
+  const items = groups.map((record) => ({
+    id: record.id,
+    name: record.get("name"),
+    created: record.get("created"),
+    updated: record.get("updated"),
+    member_count: memberCount(record),
+  }));
+  if (groupId && items.length === 0) {
+    throw new NotFoundError("group_not_found");
+  }
+  return event.json(200, groupId ? items[0] : { items });
+}
+
 function protectUserFields(context, record) {
   if (
     collectionName({ record }) !== USER_COLLECTION ||
@@ -127,11 +198,25 @@ function checkRecords(event) {
   return event.next();
 }
 
+function deleteRecord(event) {
+  const context = applicationContext(event);
+  if (!context) return event.next();
+  ensureRecordTenant(event.record, context.context.tenant.id);
+  if (collectionName({ record: event.record }) === ORGANIZATIONAL_UNIT_COLLECTION) {
+    guardOrganizationalUnitDelete(event.record);
+  }
+  return event.next();
+}
+
 function createRecord(event) {
   const context = applicationContext(event);
   if (!context) return event.next();
 
-  applyServerTenant(context.info, event.record, context.context.tenant.id);
+  if (collectionName({ record: event.record }) === ORGANIZATIONAL_UNIT_COLLECTION) {
+    normalizeOrganizationalUnit(context.info, event.record, context.context.tenant.id);
+  } else {
+    applyServerTenant(context.info, event.record, context.context.tenant.id);
+  }
   ensureOrganizationalUnitTenant(context.info.body.organizational_unit, context.context.tenant.id);
   return event.next();
 }
@@ -142,7 +227,11 @@ function updateRecord(event) {
 
   ensureRecordTenant(event.record, context.context.tenant.id);
   protectUserFields(context, event.record);
-  applyServerTenant(context.info, event.record, context.context.tenant.id);
+  if (collectionName({ record: event.record }) === ORGANIZATIONAL_UNIT_COLLECTION) {
+    normalizeOrganizationalUnit(context.info, event.record, context.context.tenant.id);
+  } else {
+    applyServerTenant(context.info, event.record, context.context.tenant.id);
+  }
   ensureOrganizationalUnitTenant(context.info.body.organizational_unit, context.context.tenant.id);
   return event.next();
 }
@@ -162,6 +251,8 @@ function rejectInactive(event) {
 module.exports = {
   checkRecords,
   createRecord,
+  deleteRecord,
+  groupsProjectionRoute,
   rejectInactive,
   updateRecord,
 };
