@@ -1,7 +1,7 @@
 # Asset Calendar Proposed Feature Split
 
 **Status:** Reconciled delivery contract
-**Last updated:** 2026-09-09
+**Last updated:** 2026-09-10
 **Source:** [Product requirements](./product-requirements.md)
 
 The non-secret production operator boundary is defined in the
@@ -32,10 +32,15 @@ features are implemented.
 - TanStack Router is the routing authority.
 - TanStack Query is the PocketBase-backed server-state authority.
 - Deployment is established early and hardened progressively.
+- The authenticated application shell is a shared product foundation, not an
+  implementation detail of the first administration feature.
+- Mobile behavior is designed, implemented, and accepted within the feature
+  that introduces each workflow; later validation does not replace feature
+  ownership.
 - Production data is never stored inside a release directory and is never used
   by local development, CI, or agent environments.
-- Production tenant, organizational-unit, and initial administrator records are
-  manually provisioned; F03 does not add tenant onboarding.
+- Production tenant, group, and initial administrator records are manually
+  provisioned; F03 does not add tenant onboarding.
 
 ## 3. PocketBase terminology
 
@@ -62,21 +67,22 @@ features are implemented.
 F01 Application foundation and isolated runtime
  └─> F02 Initial VPS deployment and continuous delivery
       └─> F03 Tenant isolation, authentication, and password lifecycle
-           ├─> F04 Organizational-unit administration
-           │    └─> F06 Tenant user administration
-           └─> F05 Resource administration
-                └─> F07 Calendar navigation and resource selection
+     └─> F03.5 Authenticated application shell and navigation
+      ├─> F04 Groups administration
+       │    └─> F06 Tenant user administration
+       └─> F05 Resource administration
+         └─> F07 Calendar navigation and resource selection
 
 F04 + F05 + F06 + F07
  └─> F08 Regular booking creation and visibility
       ├─> F09 Booking editing and deletion
       └─> F10 Administrative, training, and maintenance bookings
 
-F07 + F08 + F09 + F10
- └─> F11 Mobile and accessible booking experience
-
 F08 + F09 + F10
  └─> F12 Invoicing exports
+
+F03.5 + F04 + F05 + F06 + F07 + F08 + F09 + F10
+ └─> F11 Cross-feature mobile and accessibility validation
 
 F01-F12
  └─> F13 Production hardening and complete system validation
@@ -305,8 +311,8 @@ Implement tenant-aware authentication and first-time password setup. Tenant
 identity comes from the trusted host or subdomain and cannot be selected by
 request parameters or body fields.
 
-The production tenant, initial organizational unit, and initial administrator
-already exist and are outside the application workflow. F03 includes sign-in,
+The production tenant, initial group, and initial administrator already exist
+and are outside the application workflow. F03 includes sign-in,
 sign-out, inactive-user rejection, invitation email delivery, one-time password
 setup, SMTP configuration, and public and protected routes.
 
@@ -325,7 +331,7 @@ existing browser session is not forcibly signed out before normal expiry.
 Migrations create:
 
 - A tenant collection with a unique subdomain.
-- A user auth collection with tenant, name, role, organizational unit, active
+- A user auth collection with tenant, name, role, group, active
   status, and first-time password setup state.
 
 Collection rules restrict every user operation to the authenticated user's
@@ -358,8 +364,8 @@ A user authenticates only through the correct tenant host, cannot access
 another tenant, and completes password setup through their invitation before
 normal application access. The existing tenant administrator can create a user
 and the user can receive and complete the invitation flow. Production readiness
-still depends on the manual bootstrap of the existing tenant, initial
-organizational unit, and active administrator; the lookup and preservation
+still depends on the manual bootstrap of the existing tenant, initial group,
+and active administrator; the lookup and preservation
 rules are defined in the [production bootstrap
 contract](./production-bootstrap-contract.md).
 
@@ -406,8 +412,8 @@ The following tasks keep F03 small enough for separate agent assignments:
 
 3. **F03-T03 - Tenant and user schema migration**
    Create or reconcile the migration-backed tenant and auth-user schema,
-   including tenant, name, globally unique email, role, active state,
-   organizational unit, and password-setup state. Preserve the existing
+   including tenant, name, globally unique email, role, active state, group,
+   and password-setup state. Preserve the existing
    production tenant and administrator rather than creating duplicates.
 
 4. **F03-T04 - PocketBase authentication enforcement**
@@ -452,61 +458,179 @@ The following tasks keep F03 small enough for separate agent assignments:
 
 ---
 
-### F04 - Organizational-unit administration
+### F03.5 - Authenticated application shell and navigation
 
-**Can start:** When tenant-scoped administrator authorization is stable
+**Can start:** When tenant-aware authentication and protected route guards are stable
 
 **Depends on:** F03
 
-**Blocks:** F06 and organizational-unit booking snapshots in F08
+**Blocks:** F04, F05, F06, F07, F08, F09, F10, F11, and F12
 
 #### Description
 
-Allow administrators to list, create, rename, and delete organizational units
-within their tenant. Every user belongs to exactly one unit.
+Establish the shared authenticated application frame that all post-login
+features use. Public sign-in, password setup, and unavailable routes remain
+outside this frame. Authenticated destinations render inside a shared route
+outlet rather than each feature inventing its own page chrome.
+
+The shell owns product identity, primary navigation, the current-user action,
+sign-out, page landmarks, and the responsive frame. Route content owns its own
+title, data layout, actions, loading states, forms, and domain-specific
+navigation.
+
+The visual direction is the focused operations workbench shown in the supplied
+Calendar and Administration references rather than a dashboard. At viewport
+widths of 768px and above, the shared shell uses a horizontal header with the
+Asset Calendar identity on the left, top-level Calendar and Administration
+module navigation, and the current-user action on the right. The active module
+and child destination are derived from the URL. The identity and sign-in
+success navigation lead to Calendar, which is the default authenticated
+destination.
+
+The shell does not own module work areas. Calendar owns its resource list and
+calendar workspace. Administration owns its child-navigation pane and content
+workspace. Desktop module tabs navigate to each module's default route. The
+Administration module is visible only to administrators. Regular users do not
+see it in either desktop or mobile navigation.
+
+The shell is responsive from its first implementation. Below 768px, it uses a
+compact authenticated header with a hamburger trigger. The navigation surface
+takes over the full mobile viewport and slides in from the right. It has an X
+close control, locks background scrolling, moves focus into the surface, and
+returns focus to the hamburger trigger when it closes. It closes when the user
+selects a child route, taps outside, presses the X, or uses browser Back. It
+does not close on Escape. The drawer presents Calendar and Administration as
+two-level accordion groups, with implemented child routes indented beneath
+them. The group containing the current route is expanded and other groups are
+collapsed. Only implemented child routes are shown. Log out is placed at the
+bottom of the drawer.
+
+On desktop, the current-user avatar/name trigger toggles a popover containing
+only Log out. The popover closes when toggled again, when the user clicks
+outside, or when navigation occurs. It does not close on Escape. Logout is
+immediate, requires no confirmation, clears the local session, and navigates
+to sign-in with history replacement. The shell does not define the calendar's
+daily view or booking forms; those behaviors belong to F07-F10.
+
+F03.5 establishes shared design tokens from the supplied references for the
+shell and placeholder surfaces, including typography, semantic colors,
+spacing, borders, radii, shadows, header and control dimensions, icon sizing,
+responsive breakpoints, focus states, and active, hover, pending, and disabled
+states. It does not implement F04-specific data presentation components.
+
+F03.5 adds an administrator-only Administration > Groups route so the module
+has a real first destination. That route is intentionally a placeholder: it
+shows a Groups heading and short placeholder text only. It does not load or
+mutate group data and has no list, filters, create button, form, edit, or
+delete actions. F04 replaces this placeholder with the actual Groups list and
+management workflow. Resource Registry, Users & Roles, Billing, and other
+administration destinations remain absent until their routes are implemented.
+
+Error classification remains defined by F01, authentication error handling by
+F03, and domain error representation by the feature that introduces the
+workflow. F03.5 does not add a speculative global error component or a shared
+error-screen task. Each later feature must define its own loading, empty,
+error, validation, and destructive-action states under the product
+requirements.
+
+#### Completion outcome
+
+Every authenticated feature can render inside one consistent frame with a
+predictable content landmark on desktop and narrow screens. Users can move
+between implemented destinations, see only navigation allowed by their role,
+and sign out without feature routes duplicating identity or navigation logic.
+
+F03.5 does not add a dashboard, group data, resource data, calendar behavior,
+booking behavior, or future administration links that do not have implemented
+routes.
+
+#### Agent-ready task sequence
+
+1. Define the authenticated route boundary and shared outlet while keeping
+   public authentication routes outside it. Route authenticated entry and the
+   product identity to Calendar.
+2. Define the global navigation contract, URL-derived active state, role
+   visibility, module default routes, current-user popover, immediate logout,
+   and history-replacing sign-in redirect.
+3. Define desktop and narrow-screen shell behavior, including the 768px
+   breakpoint, full-viewport right-side drawer, X close control, accordion
+   groups, focus restoration, browser Back handling, no-Escape behavior, and
+   no-horizontal-scroll constraints.
+4. Establish and apply the shared design-token foundation from the supplied
+   Calendar and Administration references.
+5. Add the administrator-only Groups placeholder route and ensure it contains
+   no group data access or management controls.
+6. Verify that the shell has no ownership of calendar panes, group data,
+   administration data operations, or feature-specific forms and error UI.
+
+---
+
+### F04 - Groups administration
+
+**Can start:** When tenant-scoped administrator authorization and the shared
+application shell are stable
+
+**Depends on:** F03 and F03.5
+
+**Blocks:** F06 and group snapshots in F08
+
+#### Description
+
+Allow administrators to list, create, rename, and delete groups within their
+tenant. Every user belongs to exactly one group.
 
 The frontend provides typed administration routes, accessible forms, and
-TanStack Query operations with consistent invalidation.
+TanStack Query operations with consistent invalidation inside the shared
+administration destination. F04 replaces the F03.5 Groups placeholder with the
+actual Groups list and management workflow. It does not add placeholder links
+for future Resource Registry, Users & Roles, or Billing routes.
+
+On narrow screens, the group list remains readable as a single-column or stacked
+layout without horizontal scrolling. Create and edit use a full-width or
+full-screen surface with labels, validation, focus handling, and destructive
+confirmation that remain usable by keyboard and touch.
 
 #### PocketBase data and backend behavior
 
-A migration creates the organizational-unit collection with a required,
+A migration creates the group collection with a required,
 immutable tenant relationship, name, timestamps, and tenant-scoped unique-name
 index.
 
 Collection rules limit writes to same-tenant administrators. Before deletion, a
-server hook queries users assigned to the unit and rejects deletion when any
+server hook queries users assigned to the group and rejects deletion when any
 remain.
 
 #### Why the backend check is needed
 
 A disabled delete button can be bypassed with a direct API request. The state
 may also change between a frontend availability check and deletion. PocketBase
-must make the final decision immediately before deleting the unit.
+must make the final decision immediately before deleting the group.
 
-Bookings later store the unit name as a snapshot. Renaming or deleting an
-unused unit therefore does not rewrite historical exports.
+Bookings later store the group name as a snapshot. Renaming or deleting an
+unused group therefore does not rewrite historical exports.
 
 #### Completion outcome
 
-Administrators can manage same-tenant units, while assigned and cross-tenant
-units remain protected.
+Administrators can manage same-tenant groups, while assigned and cross-tenant
+groups remain protected. The feature works inside the shared shell on desktop
+and narrow screens, including list, create, rename, and delete flows.
 
 #### Missing decisions
 
-- Case and whitespace normalization for names.
+- Case and whitespace normalization for group names.
 - Minimum and maximum name lengths.
-- Whether the manually created initial unit may be deleted once unused.
-- Whether regular users can read units directly or only through safe
+- Whether the manually created initial group may be deleted once unused.
+- Whether regular users can read groups directly or only through safe
   projections.
 
 ---
 
 ### F05 - Resource administration and permanent archival
 
-**Can start:** When tenant-scoped administrator authorization is stable
+**Can start:** When tenant-scoped administrator authorization and the shared
+application shell are stable
 
-**Depends on:** F03
+**Depends on:** F03 and F03.5
 
 **Blocks:** F07 and F08
 
@@ -516,8 +640,11 @@ Allow administrators to maintain tenant resources, regular rates, training
 rates, and permanent archival state.
 
 The frontend provides resource administration, rate fields, archive
-confirmation, active-resource selection data, and TanStack Query invalidation.
-Regular users never receive rates.
+confirmation, active-resource selection data, and TanStack Query invalidation
+inside the shared shell. Regular users never receive rates. Resource lists,
+forms, archive confirmation, and rate fields must define a usable narrow-screen
+layout without horizontal scrolling; the same role restrictions apply at every
+viewport size.
 
 #### PocketBase data and backend behavior
 
@@ -562,9 +689,10 @@ rates.
 
 ### F06 - Tenant user administration and administrator protection
 
-**Can start:** When authentication and organizational units are stable
+**Can start:** When authentication, groups, and the shared
+application shell are stable
 
-**Depends on:** F03 and F04
+**Depends on:** F03, F03.5, and F04
 
 **Blocks:** F08 and F10
 
@@ -573,16 +701,16 @@ rates.
 Allow administrators to create and manage tenant users while retaining booking
 history and always preserving at least one active administrator.
 
-The feature includes user listing, creation, unit assignment, role changes,
+The feature includes user listing, creation, group assignment, role changes,
 deactivation, invitation email delivery, password setup, and active-user
 selection data.
 
 #### PocketBase data and backend behavior
 
-The auth collection requires a tenant, organizational unit, normalized globally
-unique email, role, active status, and password-setup state.
+The auth collection requires a tenant, group, normalized globally unique email,
+role, active status, and password-setup state.
 
-A creation hook derives the tenant server-side, verifies the selected unit is
+A creation hook derives the tenant server-side, verifies the selected group is
 in that tenant, normalizes the email, and sends the invitation email with a
 one-time password-setup link.
 
@@ -591,6 +719,12 @@ in the tenant and rejects the operation if none remain.
 
 Deactivation preserves the user and bookings but excludes that user from new
 booking selectors and booking creation.
+
+The user list and user editor are responsive from their first implementation.
+On narrow screens, user records remain scannable without horizontal scrolling,
+and create/edit, role, group, invitation, and deactivation actions use a
+full-width or full-screen surface with the same focus, validation, and
+confirmation behavior as desktop.
 
 #### Why hooks are needed
 
@@ -603,7 +737,8 @@ rather than a submitted tenant ID.
 
 Administrators can manage same-tenant users without privilege escalation,
 cross-tenant assignment, historical deletion, or loss of the final active
-administrator.
+administrator. The complete user-management workflow is usable inside the
+shared shell on desktop and narrow screens.
 
 #### Missing decisions
 
@@ -619,9 +754,10 @@ administrator.
 
 ### F07 - Calendar navigation and safe resource selection
 
-**Can start:** When authentication and safe resource queries are stable
+**Can start:** When authentication, safe resource queries, and the shared
+application shell are stable
 
-**Depends on:** F03 and F05
+**Depends on:** F03, F03.5, and F05
 
 **Blocks:** F08 and F11
 
@@ -633,6 +769,12 @@ resource selection, period navigation, 15-minute slots, Monday-first weeks,
 
 The Ilamy calendar is a view and interaction surface, not a source of truth.
 Drag-and-drop remains disabled.
+
+Responsive behavior is part of F07. Desktop provides the required resource list
+and larger calendar pane. Narrow screens use the daily view, a compact resource
+selector above the calendar, and no slide-in resource drawer. The calendar and
+selector must remain usable without horizontal scrolling, and URL-backed state
+must continue to work at both viewport sizes.
 
 #### PocketBase and backend behavior
 
@@ -674,7 +816,7 @@ current URL state, and view only permitted booking information.
 
 **Can start:** When units, resources, users, and the calendar are stable
 
-**Depends on:** F04, F05, F06, and F07
+**Depends on:** F03.5, F04, F05, F06, and F07
 
 **Blocks:** F09, F10, F11, and F12
 
@@ -686,6 +828,11 @@ view the permitted booking details.
 The frontend provides a reusable booking form opened from day/week slots or a
 month date. The selected resource is implicit, regular type is automatic, and
 prices are absent.
+
+The booking form is responsive from its first implementation. On desktop it
+uses the right-hand content pane while the resource pane remains available. On
+narrow screens it becomes a full-width or full-screen experience with the same
+field order, labels, validation, focus behavior, and authorization rules.
 
 #### PocketBase data and backend behavior
 
@@ -701,7 +848,7 @@ A creation hook:
 4. Validates future start, positive duration, and 15-minute boundaries.
 5. Checks overlap on the same resource using end-exclusive intervals.
 6. Loads the applicable trusted resource rate.
-7. Copies booker, unit, email, resource, and rate snapshots.
+7. Copies booker, group, email, resource, and rate snapshots.
 8. Rejects client attempts to supply protected values.
 
 Overlap is detected when:
@@ -717,7 +864,7 @@ A user can bypass form validation and submit another tenant's resource, a
 privileged type, or a manipulated rate. The server must derive protected values
 from authenticated identity and trusted records.
 
-Snapshots prevent later name, unit, email, resource, or rate changes from
+Snapshots prevent later name, group, email, resource, or rate changes from
 rewriting historical invoicing data.
 
 The MVP accepts a narrow race between simultaneous overlap checks because
@@ -754,6 +901,11 @@ bookings while preserving immutable history and role-specific time rules.
 
 The frontend provides booking details, a reusable edit form, role-aware
 actions, explicit delete confirmation, and TanStack Query invalidation.
+
+Editing and deletion are responsive from their first implementation. Desktop
+uses the shared booking content area; narrow screens use a full-width or
+full-screen detail/edit surface. Confirmation, validation, focus placement, and
+error recovery must remain usable without horizontal scrolling.
 
 #### PocketBase and backend behavior
 
@@ -810,6 +962,12 @@ Training uses the resource's training rate. Maintenance has no rate, is not
 billable, participates in conflicts, and appears to regular users only as a
 generic unavailable interval.
 
+Administrative, training, and maintenance creation uses the same responsive
+booking surfaces established by F08 and F09. On narrow screens, administrators
+can select the booking type and active user where applicable, complete the
+form, view permitted details, and confirm destructive actions without
+horizontal scrolling or a separate authorization path.
+
 #### PocketBase and backend behavior
 
 The booking hook verifies administrator role and same-tenant relationships.
@@ -850,23 +1008,34 @@ cannot discover private maintenance information.
 
 ---
 
-### F11 - Mobile and accessible booking experience
+### F11 - Cross-feature mobile and accessibility validation
 
-**Can start:** When desktop calendar and booking workflows are stable
+**Can start:** Incrementally as UI features land; completes after F04-F10 and F12
 
-**Depends on:** F07, F08, F09, and F10
+**Depends on:** F03.5, F04, F05, F06, F07, F08, F09, and F10
 
 **Blocks:** F13
 
 #### Description
 
-Adapt the complete booking workflow to mobile and meet the agreed accessibility
-standard.
+Validate and harden the complete responsive application experience against the
+contracts established by the individual UI features. F11 is not the first
+feature where mobile behavior is implemented. It finds cross-feature gaps,
+inconsistent interaction patterns, and accessibility regressions after the
+shell, administration, calendar, booking, and export surfaces exist.
 
-Mobile provides daily view only, a compact resource selector, and full-screen
-create, detail, edit, and delete experiences. Core workflows include keyboard
-support, focus placement and restoration, programmatic labels, announced
-validation errors, and sufficient contrast.
+The validation covers desktop and narrow-screen navigation, Groups and resource
+administration, user administration, calendar selection, booking
+creation/edit/delete, booking-type workflows, and export controls. It checks
+that each workflow avoids horizontal scrolling, preserves role and tenant
+behavior, provides usable keyboard and touch interaction, places and restores
+focus predictably, exposes labels and validation errors programmatically, and
+meets the agreed contrast and target-size requirements.
+
+F11 may repair shared interaction or accessibility gaps where the responsible
+feature cannot do so without cross-feature coordination. It must not move
+feature-specific behavior into a generic mobile layer or create a second
+authorization path.
 
 #### PocketBase and backend implications
 
@@ -876,8 +1045,10 @@ validation behavior.
 
 #### Completion outcome
 
-Core booking workflows are usable on supported mobile devices and through
-keyboard and assistive interaction without changing backend security behavior.
+All implemented workflows are usable on supported desktop and narrow-screen
+viewports and through keyboard and assistive interaction without changing
+backend security behavior. The result is a verified, coherent experience
+rather than a late mobile port.
 
 #### Missing decisions
 
@@ -905,7 +1076,10 @@ shared, server-generated billing projection.
 
 The frontend provides an administrator-only route, application-timezone start
 and end fields, format selection, and an export mutation. The browser performs
-no billing calculation.
+no billing calculation. The export controls are responsive from their first
+implementation: on narrow screens, date/time fields and format selection stack
+without horizontal scrolling, validation remains announced, and the download
+action remains reachable by keyboard and touch.
 
 #### PocketBase and backend behavior
 
@@ -1033,49 +1207,52 @@ changes to `main`.
 **Milestone:** A tenant user can securely sign in through the correct
 subdomain.
 
-### Phase 3 - Tenant administration
+### Phase 3 - Shared application experience
 
-- F04 Organizational-unit administration.
+- F03.5 Authenticated application shell and navigation.
+
+**Milestone:** Authenticated destinations have a shared, responsive frame with
+role-aware navigation, user actions, and a route-owned content area.
+
+### Phase 4 - Tenant administration
+
+- F04 Groups administration.
 - F05 Resource administration and permanent archival.
 - F06 Tenant user administration and administrator protection.
 
-F04 and F05 may proceed in parallel after F03. F06 waits for F04.
+F04 and F05 may proceed in parallel after F03.5. F06 waits for F04.
 
-**Milestone:** Administrators can configure the tenant data needed for booking.
+**Milestone:** Administrators can configure the tenant data needed for booking
+on desktop and narrow screens.
 
-### Phase 4 - Calendar and regular bookings
+### Phase 5 - Calendar and complete booking workflows
 
 - F07 Calendar navigation and safe resource selection.
 - F08 Regular booking creation, snapshots, and visibility.
-
-**Milestone:** A regular user can select a resource and create a valid booking.
-
-### Phase 5 - Complete booking permissions
-
 - F09 Booking editing and permanent deletion.
 - F10 Administrative, training, and maintenance bookings.
 
-These may proceed in parallel after F08 if they share a stable booking backend
-contract.
+**Milestone:** Users can select resources and complete the permitted booking
+workflows on desktop and narrow screens.
 
-**Milestone:** All roles and booking types follow their required permissions.
+### Phase 6 - Invoicing and cross-feature experience validation
 
-### Phase 6 - Mobile and invoicing
-
-- F11 Mobile and accessible booking experience.
 - F12 Server-generated invoicing exports.
+- F11 Cross-feature mobile and accessibility validation.
 
-These may proceed in parallel once their dependencies are complete.
+F12 can proceed after the booking features. F11 is added incrementally during
+the earlier phases and completes after the responsive export surface exists.
 
-**Milestone:** Core workflows work on mobile and administrators can export
-billing data.
+**Milestone:** Administrators can export billing data, and the complete UI has
+consistent responsive and accessibility behavior.
 
 ### Phase 7 - Production hardening
 
 - F13 Production hardening and complete system validation.
 
 F13 validation should be added incrementally during every earlier feature, but
-this phase closes the remaining deployment, recovery, and full-system gaps.
+this phase closes the remaining deployment, recovery, security, and full-system
+gaps.
 
 **Milestone:** The MVP is ready for normal production operation.
 

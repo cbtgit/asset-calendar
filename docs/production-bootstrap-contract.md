@@ -26,9 +26,9 @@ Production onboarding is ready only after an operator has manually provisioned
 all of the following in the production PocketBase data:
 
 1. One tenant whose `subdomain` is `nejsumlab`.
-2. One organizational unit belonging to that tenant. Its `name` is the
-   operator-supplied stable organizational-unit name.
-3. One active user belonging to that tenant and organizational unit, with the
+2. One group belonging to that tenant. Its `name` is the operator-supplied
+   stable group name.
+3. One active user belonging to that tenant and group, with the
    operator-supplied stable email identity, `role=administrator`, and completed
    initial password setup.
 
@@ -41,9 +41,8 @@ administrator through the protected application flow.
 
 - Resolve the tenant by the exact normalized `tenants.subdomain` value
   `nejsumlab`, under the configured root domain.
-- Resolve the initial organizational unit by its `tenant` relation and the
-  exact operator-supplied `name`. Organizational-unit names are unique within a
-  tenant.
+- Resolve the initial group by its `tenant` relation and the exact
+  operator-supplied `name`. Group names are unique within a tenant.
 - Resolve the initial administrator by the tenant relation and the exact
   operator-supplied PocketBase email identity. Require `active=true` and
   `role=administrator`; do not select an administrator by position, creation
@@ -58,14 +57,14 @@ duplicate, or guess production records.
 
 - When the existing records and required relations are present, migrations
   preserve their IDs and intentional values while applying the versioned schema.
-- When the tenant, organizational unit, or administrator is missing, migrations
+- When the tenant, group, or administrator is missing, migrations
   may still apply the schema, but production is not bootstrap-ready. An
   operator must provision the missing record manually before production
   onboarding or an invitation smoke test.
 - When a missing relation cannot be assigned to exactly one existing tenant or
-  organizational unit, migration reconciliation fails rather than choosing a
-  record. Duplicate tenant subdomains and duplicate organizational-unit names
-  within a tenant are rejected by the schema's unique constraints.
+  group, migration reconciliation fails rather than choosing a record. Duplicate
+  tenant subdomains and duplicate group names within a tenant are rejected by
+  the schema's unique constraints.
 - Migrations never import production data into a release, local workspace, or
   CI fixture. Production records are preserved and never duplicated or guessed.
 

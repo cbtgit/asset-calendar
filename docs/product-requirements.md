@@ -1,7 +1,7 @@
 # Asset Calendar Product Requirements
 
 **Status:** Normative MVP requirements
-**Last updated:** 2026-09-09
+**Last updated:** 2026-09-10
 
 The non-secret operator boundary for the existing production tenant is defined
 in the [production bootstrap contract](./production-bootstrap-contract.md).
@@ -10,7 +10,7 @@ in the [production bootstrap contract](./production-bootstrap-contract.md).
 
 Asset Calendar is a multi-tenant resource booking system. Users select a
 resource and reserve a time period in a calendar. Tenant administrators manage
-resources, users, organizational units, bookings, and invoicing exports.
+resources, users, groups, bookings, and invoicing exports.
 
 The MVP is intended for deployment on a small VPS and must provide strict
 tenant isolation while remaining simple to operate and develop locally.
@@ -66,10 +66,10 @@ not part of the MVP.
 - Every tenant-owned record must contain a tenant reference.
 - A user authenticated for one tenant must not be able to read or modify
   another tenant's data.
-- Initial tenant, organizational-unit, and first-administrator provisioning is
+- Initial tenant, group, and first-administrator provisioning is
   outside the MVP product workflow. For production, the operator manually
   provisions exactly one tenant for `nejsumlab.frontend-freelance.dk`, one
-  organizational unit, and one active administrator in PocketBase. There is no
+  group, and one active administrator in PocketBase. There is no
   tenant onboarding or self-service provisioning UI in F03. The stable lookup
   rules and migration-preservation behavior are defined in the [production
   bootstrap contract](./production-bootstrap-contract.md).
@@ -92,7 +92,7 @@ Each user has one role within their tenant:
     future.
   - Create regular, training, and maintenance bookings.
   - Choose any active tenant user as the booker for a non-maintenance booking.
-  - Manage resources, organizational units, and users.
+  - Manage resources, groups, and users.
   - Export booking data as CSV or Excel.
   - May view booking type in booking details and administration forms.
   - May view and edit resource rates in the resource administration form.
@@ -124,7 +124,7 @@ Administrators cannot deactivate or demote the last active administrator.
   their resources unless an administrator edits or deletes an eligible booking.
 - A deactivated user cannot be selected as the booker for a new booking.
 - User display names are based on first name and last name.
-- A user must belong to exactly one organizational unit.
+- A user must belong to exactly one group.
 
 SMTP2GO credentials remain server-side in protected VPS/PocketBase
 configuration. The SPA never sends email or receives SMTP credentials. Local
@@ -213,7 +213,7 @@ A booking stores both:
 For stable historical exports, the booking also stores:
 
 - The booker's display-name snapshot.
-- The booker's organizational-unit snapshot.
+- The booker's group snapshot.
 - The booker's email snapshot.
 - The resource-name snapshot.
 - The hourly-rate snapshot.
@@ -236,7 +236,37 @@ cutoff, but cannot change its booking type.
 
 ## 6. Calendar and user experience
 
-### 6.1 Desktop layout
+### 6.1 Cross-feature responsive experience
+
+Mobile and narrow-screen behavior is part of the feature that introduces each
+workflow. It is not a later port of a desktop-only implementation. Every UI
+feature must define and accept its desktop and narrow-screen layout,
+interaction, loading, empty, error, validation, and destructive-action states
+before that feature is complete.
+
+The authenticated application uses a shared responsive shell. Public sign-in,
+password setup, and unavailable routes remain outside it. The shell owns
+product identity, primary navigation, current-user actions, sign-out, and page
+landmarks. Feature routes own their data layout, forms, actions, and
+feature-specific responsive behavior. The shell must not consume or duplicate
+the calendar's resource-list pane.
+
+Across viewport sizes:
+
+- Content must remain usable without horizontal scrolling.
+- Navigation, controls, forms, dialogs, and confirmation actions must remain
+  reachable by keyboard and touch.
+- Labels, validation messages, pending states, and errors must remain
+  programmatically associated with their controls.
+- Focus must be visible, placed predictably, and restored after a temporary
+  surface closes when the workflow requires it.
+- Role, tenant, ownership, privacy, and server-authoritative validation rules
+  must be identical on desktop and narrow screens.
+- Feature acceptance must include at least one supported narrow viewport; F11
+  validates cross-feature consistency but does not introduce mobile behavior
+  for the first time.
+
+### 6.2 Desktop calendar layout
 
 The desktop booking screen has:
 
@@ -251,7 +281,7 @@ user must choose one.
 
 The desktop week view starts on Monday and uses 24-hour time formatting.
 
-### 6.2 Mobile layout
+### 6.3 Mobile calendar layout
 
 Mobile uses:
 
@@ -263,7 +293,7 @@ Mobile uses:
 If there is exactly one active resource, it is selected automatically. With
 multiple resources, the user must select one.
 
-### 6.3 Creating bookings
+### 6.4 Creating bookings
 
 Bookings are created through a reusable form. On desktop, the form is shown in
 the right-hand content pane rather than in a modal or full-window view; the
@@ -282,7 +312,7 @@ resource pane remains available on the left. On mobile, the form is full-screen.
 - Maintenance bookings use the creating administrator as the booker.
 - The form does not show prices.
 
-### 6.4 Viewing, editing, and deleting bookings
+### 6.5 Viewing, editing, and deleting bookings
 
 Selecting an existing booking opens a detail view before any destructive
 action. The same desktop right-pane and mobile full-screen form behavior is
@@ -305,7 +335,7 @@ is not supported in the MVP.
 Deletion requires an explicit confirmation for every user type, including
 regular users and administrators.
 
-### 6.5 Calendar implementation
+### 6.6 Calendar implementation
 
 The frontend will use the Ilamy React calendar component with:
 
@@ -331,14 +361,14 @@ Administrators have access to an administration area for:
   - Archiving is immediate and permanent; resources cannot be unarchived.
   - Archived resources cannot receive new bookings but remain visible for
     existing and future bookings.
-- Organizational units.
+- Groups.
   - Create and edit a name.
-  - Organizational-unit names must be unique within a tenant.
-  - Assign every user to exactly one unit.
+  - Group names must be unique within a tenant.
+  - Assign every user to exactly one group.
   - Prevent deletion while users are assigned.
 - Users.
   - Create regular and administrator users.
-  - Assign an organizational unit.
+  - Assign a group.
   - Send an invitation email so the user can create a password.
   - Change role and deactivate users, subject to the last-admin rule.
 - Exports.
@@ -350,6 +380,15 @@ delete eligible future bookings. The administration area does not contain a
 separate booking management screen. From the regular booking area,
 administrators can create bookings for active users and create training or
 maintenance bookings.
+
+The administration area uses the shared authenticated shell and is responsive
+from the first administration feature. Groups administration
+must provide a readable single-column or stacked list and a full-width or
+full-screen create/edit surface on narrow screens. Resource and user
+administration must define equivalent narrow-screen list, form, confirmation,
+loading, empty, and error states when those features are delivered. No admin
+workflow may require horizontal scrolling or a separate mobile authorization
+path.
 
 ## 8. Invoicing exports
 
@@ -364,7 +403,7 @@ permanently deleted bookings.
 Each exported booking row contains:
 
 - Tenant
-- Organizational-unit snapshot
+- Group snapshot
 - Booker display-name snapshot
 - Booker email snapshot
 - Resource-name snapshot
@@ -395,11 +434,11 @@ The MVP data model should include at least:
 - Last name
 - Email
 - Role: regular or administrator
-- Organizational-unit ID
+- Group ID
 - Active/deactivated status
 - Invitation and password-setup state required to complete first-time access
 
-### OrganizationalUnit
+### Group
 
 - ID
 - Tenant ID
@@ -426,7 +465,7 @@ The MVP data model should include at least:
 - End timestamp
 - Hourly-rate snapshot
 - Booker display-name snapshot
-- Organizational-unit snapshot
+- Group snapshot
 - Booker email snapshot
 - Resource-name snapshot
 - Created and updated timestamps
@@ -463,6 +502,11 @@ To keep the MVP simple:
 - Ilamy calendar
 - PocketBase JavaScript SDK
 - Responsive SPA served as static files
+
+The frontend includes one shared authenticated application shell for all
+protected destinations. The shell provides the route outlet, primary
+navigation, current-user actions, and responsive landmarks; calendar,
+administration, booking, and export routes own their feature-specific layouts.
 
 TanStack Router is the application's routing authority. Route definitions must
 provide typed parameters and search state, enforce authentication before
@@ -533,6 +577,8 @@ Development and CI must never connect to production PocketBase data.
 
 - Support current Chrome, Edge, Firefox, and Safari on desktop and mobile.
 - Aim for WCAG 2.2 AA for core workflows.
+- Treat responsive behavior as a per-feature acceptance requirement rather than
+  a final adaptation phase.
 - Use accessible keyboard navigation, focus management, labels, validation
   messages, and sufficient color contrast.
 - Surface API and validation errors clearly; do not silently ignore failed
@@ -556,14 +602,18 @@ Automated tests must cover:
 - Training and maintenance booking permissions.
 - Resource archive behavior.
 - User deactivation and last-administrator protection.
-- Organizational-unit deletion protection.
-- Rate, booker name, booker email, resource name, and organizational-unit
+- Group deletion protection.
+- Rate, booker name, booker email, resource name, and group
   snapshots.
 - CSV and Excel export filtering and contents.
 - Tenant isolation for reads, writes, and exports.
+- Shared authenticated-shell navigation and role-aware destination visibility.
+- Narrow-screen layout and interaction for each feature as it is delivered,
+  including admin lists/forms, calendar selection, booking forms, and export
+  controls.
 
 Add a small end-to-end smoke test covering sign-in, resource selection, booking
-creation, and booking visibility.
+creation, and booking visibility on a supported desktop and narrow viewport.
 
 ## 14. MVP acceptance criteria
 
@@ -583,7 +633,7 @@ The MVP is ready when:
 10. Calendar behavior works in desktop day/week/month views and mobile daily
     view.
 11. Mobile uses a compact resource selector and no drag-and-drop.
-12. Administrators can manage resources, users, and organizational units.
+12. Administrators can manage resources, users, and groups.
 13. Administrators can export the selected booking interval as CSV and Excel.
 14. Exported rates and amounts use booking snapshots, actual elapsed duration,
     and decimal half-up DKK rounding.
@@ -593,7 +643,7 @@ The MVP is ready when:
 17. The existing production tenant is resolved from
     `nejsumlab.frontend-freelance.dk`; tenant identity is never client-selected.
 18. Production readiness requires the manually provisioned tenant,
-    organizational unit, and active administrator; F03 provides no tenant
+    group, and active administrator; F03 provides no tenant
     onboarding workflow.
 19. Invitation links are one-time and valid for 30 days; authenticated
     sessions last one workday and survive reloads.
@@ -603,6 +653,13 @@ The MVP is ready when:
     user, bookings, and already-issued tokens until normal expiry.
 22. Production uses SMTP2GO through protected server configuration, while local
     development and CI use non-network capture/test sinks.
+23. Every UI feature defines and satisfies its desktop and narrow-screen
+    workflow, including loading, empty, error, validation, focus, and
+    destructive-action states; no core workflow is deferred to a later mobile
+    port.
+24. Authenticated destinations use a shared responsive application shell with
+    role-aware navigation and current-user actions, while feature routes retain
+    ownership of their domain-specific layouts.
 
 ## 15. Future considerations
 
