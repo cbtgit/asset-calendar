@@ -73,6 +73,23 @@ it("shows the administration module and rail for administrators", () => {
   expect(screen.getByRole("link", { name: "Groups" }).getAttribute("data-active")).toBe("true");
 });
 
+it("hides the administration destination from regular users", () => {
+  vi.mocked(useNavigate).mockReturnValue(vi.fn() as never);
+  vi.mocked(useRouterState).mockImplementation(() => "/calendar" as never);
+  pocketbase.authStore.save("token", {
+    id: "user-1",
+    collectionId: "users",
+    collectionName: "users",
+    email: "user@example.test",
+    role: "regular",
+  });
+
+  render(<AppShell />);
+
+  expect(screen.queryByRole("link", { name: "Administration" })).toBeNull();
+  expect(screen.queryByRole("navigation", { name: "Administration navigation" })).toBeNull();
+});
+
 it("signs out and replaces history with sign-in", () => {
   const navigate = vi.fn();
   const user = {

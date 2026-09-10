@@ -52,6 +52,17 @@ it("allows administrators through the groups guard", async () => {
   await expect(runBeforeLoad(GroupsRoute)).resolves.toBeUndefined();
 });
 
+it("does not treat users without an administrator role as administrators", async () => {
+  vi.spyOn(auth, "getAuthSnapshot").mockReturnValue({
+    status: "authenticated",
+    user: {} as auth.AuthUser,
+  });
+
+  await expect(runBeforeLoad(GroupsRoute)).rejects.toMatchObject({
+    options: { to: "/calendar" },
+  });
+});
+
 it("redirects the authenticated index to the calendar", async () => {
   await expect(
     Promise.resolve().then(() => runBeforeLoad(AuthenticatedIndexRoute)),

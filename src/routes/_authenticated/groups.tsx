@@ -1,9 +1,9 @@
 import { createFileRoute, redirect } from "@tanstack/react-router";
-import { getAuthSnapshot } from "@/api/auth";
+import { getAuthSnapshot, isAdministrator } from "@/api/auth";
 
 export const Route = createFileRoute("/_authenticated/groups")({
   beforeLoad: async () => {
-    if (getAuthSnapshot().user?.role !== "administrator") {
+    if (!isAdministrator(getAuthSnapshot().user)) {
       throw redirect({ to: "/calendar" });
     }
   },
