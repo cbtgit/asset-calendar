@@ -77,6 +77,12 @@ it("shows the administration module and rail for administrators", () => {
   expect(screen.getByRole("link", { name: "Administration" })).toBeTruthy();
   expect(screen.getByRole("navigation", { name: "Administration navigation" })).toBeTruthy();
   expect(screen.getByRole("link", { name: "Groups" }).getAttribute("data-active")).toBe("true");
+  expect(screen.getAllByRole("link").map((link) => link.textContent)).toEqual([
+    "ACAsset Calendar",
+    "Calendar",
+    "Administration",
+    "Groups",
+  ]);
 });
 
 it("hides the administration destination from regular users", () => {
