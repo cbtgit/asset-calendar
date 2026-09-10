@@ -53,4 +53,9 @@ it("fails migration explicitly when legacy names collide after normalization", a
   expect(migrationSource).toMatch(
     /normalization conflict: tenant \$\{tenant\}, records \$\{conflict\} and \$\{record\.id\} share normalized name/,
   );
+  expect(migrationSource).toContain('record.set("name_normalized", normalized)');
+  expect(migrationSource).toContain(
+    "CREATE UNIQUE INDEX idx_organizational_units_tenant_name_normalized ON organizational_units (tenant, name_normalized)",
+  );
+  expect(migrationSource).not.toMatch(/name\s*=\s*`\$\{name\} \(\d+\)`/);
 });

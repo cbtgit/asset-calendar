@@ -105,3 +105,18 @@ it("replaces the history entry with groups after a successful create", async () 
   router.history.back();
   await waitFor(() => expect(router.state.location.pathname).toBe("/calendar"));
 });
+
+it("replaces the history entry with groups after a successful rename", async () => {
+  vi.spyOn(pocketbase, "send").mockResolvedValue({ ...group, name: "Renamed" });
+  const update = vi.fn().mockResolvedValue({});
+  vi.spyOn(pocketbase, "collection").mockReturnValue({ update } as never);
+  const router = await renderGroups(["/calendar", "/groups/group-1/edit"]);
+
+  const input = await screen.findByRole("textbox", { name: "Group name" });
+  fireEvent.change(input, { target: { value: "Renamed" } });
+  fireEvent.click(screen.getByRole("button", { name: "Save changes" }));
+  await waitFor(() => expect(router.state.location.pathname).toBe("/groups"));
+
+  router.history.back();
+  await waitFor(() => expect(router.state.location.pathname).toBe("/calendar"));
+});

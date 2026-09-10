@@ -49,6 +49,7 @@ async function createSeededMigrations(): Promise<string> {
     { email: "regular-a@example.test", tenant: tenantA.id, unit: unitA.id, role: "regular", active: true },
     { email: "admin-b@example.test", tenant: tenantB.id, unit: unitB.id, role: "administrator", active: true },
     { email: "inactive-a@example.test", tenant: tenantA.id, unit: unitA.id, role: "regular", active: false },
+    { email: "pending-a@example.test", tenant: tenantA.id, unit: unitA.id, role: "regular", active: true, pending: true },
   ]) {
     const user = new Record(users);
     user.set("email", data.email);
@@ -58,7 +59,7 @@ async function createSeededMigrations(): Promise<string> {
     user.set("organizational_unit", data.unit);
     user.set("role", data.role);
     user.set("active", data.active);
-    user.set("password_setup_pending", false);
+    user.set("password_setup_pending", data.pending === true);
     app.save(user);
   }
 }, () => {});`,
@@ -118,6 +119,7 @@ afterAll(async () => {
   }
 });
 
+// oxlint-disable-next-line eslint(max-lines-per-function)
 it("enforces the resolved tenant and role boundary on direct requests", async () => {
   const admin = new PocketBase(harness.baseUrl);
   await authenticate(admin, "admin-a@example.test");
@@ -128,7 +130,7 @@ it("enforces the resolved tenant and role boundary on direct requests", async ()
     items: [
       {
         name: "Unit A",
-        member_count: 3,
+        member_count: 4,
       },
     ],
   });
@@ -146,7 +148,7 @@ it("enforces the resolved tenant and role boundary on direct requests", async ()
 
   const directGroup = await request(admin, `/api/groups/${groupId}`, { host: "tenant.localhost" });
   expect(directGroup.status).toBe(200);
-  expect(await directGroup.json()).toMatchObject({ id: groupId, name: "Unit A", member_count: 3 });
+  expect(await directGroup.json()).toMatchObject({ id: groupId, name: "Unit A", member_count: 4 });
 
   const duplicateGroup = await request(admin, "/api/collections/organizational_units/records", {
     method: "POST",
@@ -223,7 +225,7 @@ it("enforces the resolved tenant and role boundary on direct requests", async ()
   });
   expect(usersResponse.status).toBe(200);
   const users = await usersResponse.json();
-  expect(users.items).toHaveLength(3);
+  expect(users.items).toHaveLength(4);
 
   const foreignFilter = await request(
     admin,
