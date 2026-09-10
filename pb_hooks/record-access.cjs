@@ -130,10 +130,14 @@ function normalizeOrganizationalUnit(info, record, tenantId) {
 function memberCount(record) {
   return $app.findRecordsByFilter(
     USER_COLLECTION,
-    `tenant = '${record.get(TENANT_FIELD)}' && organizational_unit = '${record.id}'`,
+    "tenant = {:tenant} && organizational_unit = {:group}",
     "",
     0,
     0,
+    {
+      tenant: record.get(TENANT_FIELD),
+      group: record.id,
+    },
   ).length;
 }
 
@@ -151,14 +155,33 @@ function groupsProjectionRoute(event) {
       fields: [{ name: TENANT_FIELD }],
     },
   });
+  // This route always requires a tenant-scoped authenticated administrator.
   if (!context) deny();
   if (context.auth.get("role") !== "administrator") deny();
 
   const groupId = event.request.pathValue("id");
-  const filter = groupId
-    ? `tenant = '${context.context.tenant.id}' && id = '${groupId}'`
-    : `tenant = '${context.context.tenant.id}'`;
-  const groups = $app.findRecordsByFilter(ORGANIZATIONAL_UNIT_COLLECTION, filter, "name", 0, 0);
+  let groups;
+  if (groupId) {
+    try {
+      const group = $app.findRecordById(ORGANIZATIONAL_UNIT_COLLECTION, groupId);
+      if (group.get(TENANT_FIELD) !== context.context.tenant.id) {
+        throw new NotFoundError("group_not_found");
+      }
+      groups = [group];
+    } catch (error) {
+      if (error instanceof NotFoundError) throw error;
+      throw new NotFoundError("group_not_found");
+    }
+  } else {
+    groups = $app.findRecordsByFilter(
+      ORGANIZATIONAL_UNIT_COLLECTION,
+      "tenant = {:tenant}",
+      "name",
+      0,
+      0,
+      { tenant: context.context.tenant.id },
+    );
+  }
   const items = groups.map((record) => ({
     id: record.id,
     name: record.get("name"),
@@ -166,9 +189,6 @@ function groupsProjectionRoute(event) {
     updated: record.get("updated"),
     member_count: memberCount(record),
   }));
-  if (groupId && items.length === 0) {
-    throw new NotFoundError("group_not_found");
-  }
   return event.json(200, groupId ? items[0] : { items });
 }
 

@@ -8,6 +8,38 @@ function records(app, collection) {
   return app.findRecordsByFilter(collection, "id != ''", "", 0, 0);
 }
 
+function ensureField(collection, definition) {
+  const existing = collection.fields.find((field) => field.name === definition.name);
+  if (!existing) {
+    collection.fields.push(
+      new TextField({
+        id: definition.id,
+        name: definition.name,
+        required: definition.required === true,
+        min: definition.min,
+        max: definition.max,
+        pattern: definition.pattern,
+      }),
+    );
+    return collection.fields.at(-1);
+  }
+  return existing;
+}
+
+function ensureUniqueIndex(collection, index) {
+  collection.indexes ??= [];
+  const indexName = /INDEX\s+`?([^`\s]+)`?/i.exec(index)?.[1];
+  if (
+    !collection.indexes.some((existing) =>
+      indexName
+        ? new RegExp(`INDEX\\s+\`?${indexName}\`?`, "i").test(existing)
+        : existing === index,
+    )
+  ) {
+    collection.indexes.push(index);
+  }
+}
+
 migrate(
   (app) => {
     const organizationalUnits = app.findCollectionByNameOrId(ORGANIZATIONAL_UNIT_COLLECTION);
@@ -34,34 +66,23 @@ migrate(
       record.set("name_normalized", normalized);
     }
 
-    const tenantField = organizationalUnits.fields.find((field) => field.name === "tenant");
-    if (tenantField) tenantField.hidden = false;
     const nameField = organizationalUnits.fields.find((field) => field.name === "name");
     if (nameField) {
       nameField.min = 1;
       nameField.max = 200;
       nameField.pattern = "^.*\\S.*$";
     }
-    const fieldFactory = new Collection({
-      id: "f04_t01_field_factory",
-      name: "f04_t01_field_factory",
-      type: "base",
-      fields: [
-        {
-          id: "organizational_unit_name_normalized",
-          name: "name_normalized",
-          type: "text",
-          required: true,
-          min: 1,
-          max: 200,
-          pattern: "^.*\\S.*$",
-          hidden: true,
-        },
-      ],
+    const normalizedField = ensureField(organizationalUnits, {
+      id: "organizational_unit_name_normalized",
+      name: "name_normalized",
+      required: true,
+      min: 1,
+      max: 200,
+      pattern: "^.*\\S.*$",
     });
-    const normalizedField = fieldFactory.fields.find((field) => field.name === "name_normalized");
-    organizationalUnits.fields.push(normalizedField);
-    organizationalUnits.indexes.push(
+    normalizedField.hidden = true;
+    ensureUniqueIndex(
+      organizationalUnits,
       "CREATE UNIQUE INDEX idx_organizational_units_tenant_name_normalized ON organizational_units (tenant, name_normalized)",
     );
     organizationalUnits.listRule =
