@@ -17,6 +17,8 @@ import { Route as UnavailableRouteImport } from './routes/unavailable'
 import { Route as AuthenticatedIndexRouteImport } from './routes/_authenticated/index'
 import { Route as AuthenticatedCalendarRouteImport } from './routes/_authenticated/calendar'
 import { Route as AuthenticatedGroupsRouteImport } from './routes/_authenticated/groups'
+import { Route as AuthenticatedGroupsNewRouteImport } from './routes/_authenticated/groups.new'
+import { Route as AuthenticatedGroupsGroupIdEditRouteImport } from './routes/_authenticated/groups.$groupId.edit'
 
 const AuthenticatedRoute = AuthenticatedRouteImport.update({
   id: '/_authenticated',
@@ -57,6 +59,17 @@ const AuthenticatedGroupsRoute = AuthenticatedGroupsRouteImport.update({
   path: '/groups',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
+const AuthenticatedGroupsNewRoute = AuthenticatedGroupsNewRouteImport.update({
+  id: '/new',
+  path: '/new',
+  getParentRoute: () => AuthenticatedGroupsRoute,
+} as any)
+const AuthenticatedGroupsGroupIdEditRoute =
+  AuthenticatedGroupsGroupIdEditRouteImport.update({
+    id: '/$groupId/edit',
+    path: '/$groupId/edit',
+    getParentRoute: () => AuthenticatedGroupsRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof AuthenticatedIndexRoute
@@ -65,7 +78,9 @@ export interface FileRoutesByFullPath {
   '/sign-in': typeof SignInRoute
   '/unavailable': typeof UnavailableRoute
   '/calendar': typeof AuthenticatedCalendarRoute
-  '/groups': typeof AuthenticatedGroupsRoute
+  '/groups': typeof AuthenticatedGroupsRouteWithChildren
+  '/groups/new': typeof AuthenticatedGroupsNewRoute
+  '/groups/$groupId/edit': typeof AuthenticatedGroupsGroupIdEditRoute
 }
 export interface FileRoutesByTo {
   '/setup': typeof SetupRoute
@@ -73,8 +88,10 @@ export interface FileRoutesByTo {
   '/sign-in': typeof SignInRoute
   '/unavailable': typeof UnavailableRoute
   '/calendar': typeof AuthenticatedCalendarRoute
-  '/groups': typeof AuthenticatedGroupsRoute
+  '/groups': typeof AuthenticatedGroupsRouteWithChildren
   '/': typeof AuthenticatedIndexRoute
+  '/groups/new': typeof AuthenticatedGroupsNewRoute
+  '/groups/$groupId/edit': typeof AuthenticatedGroupsGroupIdEditRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -84,8 +101,10 @@ export interface FileRoutesById {
   '/sign-in': typeof SignInRoute
   '/unavailable': typeof UnavailableRoute
   '/_authenticated/calendar': typeof AuthenticatedCalendarRoute
-  '/_authenticated/groups': typeof AuthenticatedGroupsRoute
+  '/_authenticated/groups': typeof AuthenticatedGroupsRouteWithChildren
   '/_authenticated/': typeof AuthenticatedIndexRoute
+  '/_authenticated/groups/new': typeof AuthenticatedGroupsNewRoute
+  '/_authenticated/groups/$groupId/edit': typeof AuthenticatedGroupsGroupIdEditRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -97,6 +116,8 @@ export interface FileRouteTypes {
     | '/unavailable'
     | '/calendar'
     | '/groups'
+    | '/groups/new'
+    | '/groups/$groupId/edit'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/setup'
@@ -106,6 +127,8 @@ export interface FileRouteTypes {
     | '/calendar'
     | '/groups'
     | '/'
+    | '/groups/new'
+    | '/groups/$groupId/edit'
   id:
     | '__root__'
     | '/_authenticated'
@@ -116,6 +139,8 @@ export interface FileRouteTypes {
     | '/_authenticated/calendar'
     | '/_authenticated/groups'
     | '/_authenticated/'
+    | '/_authenticated/groups/new'
+    | '/_authenticated/groups/$groupId/edit'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -184,18 +209,45 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedGroupsRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_authenticated/groups/new': {
+      id: '/_authenticated/groups/new'
+      path: '/new'
+      fullPath: '/groups/new'
+      preLoaderRoute: typeof AuthenticatedGroupsNewRouteImport
+      parentRoute: typeof AuthenticatedGroupsRoute
+    }
+    '/_authenticated/groups/$groupId/edit': {
+      id: '/_authenticated/groups/$groupId/edit'
+      path: '/$groupId/edit'
+      fullPath: '/groups/$groupId/edit'
+      preLoaderRoute: typeof AuthenticatedGroupsGroupIdEditRouteImport
+      parentRoute: typeof AuthenticatedGroupsRoute
+    }
   }
 }
 
+interface AuthenticatedGroupsRouteChildren {
+  AuthenticatedGroupsNewRoute: typeof AuthenticatedGroupsNewRoute
+  AuthenticatedGroupsGroupIdEditRoute: typeof AuthenticatedGroupsGroupIdEditRoute
+}
+
+const AuthenticatedGroupsRouteChildren: AuthenticatedGroupsRouteChildren = {
+  AuthenticatedGroupsNewRoute: AuthenticatedGroupsNewRoute,
+  AuthenticatedGroupsGroupIdEditRoute: AuthenticatedGroupsGroupIdEditRoute,
+}
+
+const AuthenticatedGroupsRouteWithChildren =
+  AuthenticatedGroupsRoute._addFileChildren(AuthenticatedGroupsRouteChildren)
+
 interface AuthenticatedRouteChildren {
   AuthenticatedCalendarRoute: typeof AuthenticatedCalendarRoute
-  AuthenticatedGroupsRoute: typeof AuthenticatedGroupsRoute
+  AuthenticatedGroupsRoute: typeof AuthenticatedGroupsRouteWithChildren
   AuthenticatedIndexRoute: typeof AuthenticatedIndexRoute
 }
 
 const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedCalendarRoute: AuthenticatedCalendarRoute,
-  AuthenticatedGroupsRoute: AuthenticatedGroupsRoute,
+  AuthenticatedGroupsRoute: AuthenticatedGroupsRouteWithChildren,
   AuthenticatedIndexRoute: AuthenticatedIndexRoute,
 }
 

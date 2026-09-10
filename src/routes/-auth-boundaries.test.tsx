@@ -2,6 +2,8 @@ import { afterEach, expect, it, vi } from "vite-plus/test";
 import * as auth from "@/api/auth";
 import { Route as AuthenticatedRoute } from "./_authenticated";
 import { Route as GroupsRoute } from "./_authenticated/groups";
+import { Route as NewGroupRoute } from "./_authenticated/groups.new";
+import { Route as EditGroupRoute } from "./_authenticated/groups.$groupId.edit";
 import { Route as AuthenticatedIndexRoute } from "./_authenticated/index";
 import { Route as SignInRoute } from "./sign-in";
 
@@ -50,6 +52,20 @@ it("allows administrators through the groups guard", async () => {
   });
 
   await expect(runBeforeLoad(GroupsRoute)).resolves.toBeUndefined();
+});
+
+it("protects group create and edit routes for administrators", async () => {
+  vi.spyOn(auth, "getAuthSnapshot").mockReturnValue({
+    status: "authenticated",
+    user: { role: "regular" } as auth.AuthUser,
+  });
+
+  await expect(runBeforeLoad(NewGroupRoute)).rejects.toMatchObject({
+    options: { to: "/calendar" },
+  });
+  await expect(runBeforeLoad(EditGroupRoute)).rejects.toMatchObject({
+    options: { to: "/calendar" },
+  });
 });
 
 it("does not treat users without an administrator role as administrators", async () => {
