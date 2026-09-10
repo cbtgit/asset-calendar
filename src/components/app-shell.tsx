@@ -29,7 +29,11 @@ export function AppShell() {
       data-active-destination={activeDestination}
       data-active-module={activeModule}
     >
-      <ShellHeader activeModule={activeModule} isAdministrator={administrator} />
+      <ShellHeader
+        activeModule={activeModule}
+        isAdministrator={administrator}
+        navigationKey={pathname}
+      />
       <div className="shell-body">
         {administrator && activeModule === "administration" ? (
           <AdministrationRail activeDestination={activeDestination} />

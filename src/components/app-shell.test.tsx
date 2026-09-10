@@ -1,4 +1,4 @@
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { afterEach, expect, it, vi } from "vite-plus/test";
 import { pocketbase } from "@/api/client";
@@ -90,7 +90,7 @@ it("hides the administration destination from regular users", () => {
   expect(screen.queryByRole("navigation", { name: "Administration navigation" })).toBeNull();
 });
 
-it("signs out and replaces history with sign-in", () => {
+it("logs out and replaces history with sign-in", () => {
   const navigate = vi.fn();
   const user = {
     id: "user-1",
@@ -104,7 +104,8 @@ it("signs out and replaces history with sign-in", () => {
   pocketbase.authStore.save("token", user);
 
   render(<AppShell />);
-  screen.getByRole("button", { name: "Sign out" }).click();
+  fireEvent.click(screen.getByRole("button", { name: "person@example.test" }));
+  screen.getByRole("menuitem", { name: "Log out" }).click();
 
   expect(pocketbase.authStore.isValid).toBe(false);
   expect(pocketbase.authStore.model).toBeNull();
