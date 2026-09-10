@@ -33,24 +33,28 @@ function responseStatus(cause: unknown): number | undefined {
   return undefined;
 }
 
+const statusKinds: Partial<Record<number, AppErrorKind>> = {
+  400: "validation",
+  401: "unauthorized",
+  403: "unauthorized",
+  404: "not-found",
+  409: "conflict",
+  422: "validation",
+};
+
+function errorKind(cause: unknown, status: number | undefined): AppErrorKind {
+  const statusKind = status === undefined ? undefined : statusKinds[status];
+  if (statusKind) return statusKind;
+  if (status !== undefined && status >= 500) return "server";
+  if (cause instanceof TypeError || status === 0) return "network";
+  return "server";
+}
+
 export function toAppError(cause: unknown): ApplicationError {
   if (cause instanceof ApplicationError) return cause;
 
   const status = responseStatus(cause);
-  const kind: AppErrorKind =
-    status === 400 || status === 422
-      ? "validation"
-      : status === 401 || status === 403
-        ? "unauthorized"
-        : status === 404
-          ? "not-found"
-          : status === 409
-            ? "conflict"
-            : status !== undefined && status >= 500
-              ? "server"
-              : cause instanceof TypeError || status === 0
-                ? "network"
-                : "server";
+  const kind = errorKind(cause, status);
 
   const message =
     cause instanceof Error && cause.message

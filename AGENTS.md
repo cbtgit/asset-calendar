@@ -18,3 +18,19 @@ Mutation implementations must:
 
 Keep PocketBase as the source of truth. Optimistic updates improve interaction
 latency but must not weaken backend validation or authorization. Leave business logic checks to the backend
+
+## React component length
+
+Keep `max-lines-per-function` enabled for React source files, including arrow-function
+components. When a component's length is primarily declarative JSX and splitting it
+would reduce clarity, suppress the rule only on that component declaration:
+
+```tsx
+// oxlint-disable-next-line eslint(max-lines-per-function)
+export const ExampleComponent = () => {
+  return <section>...</section>;
+};
+```
+
+Do not use a file-level disable. Nested handlers, callbacks, and helper functions must
+remain subject to `max-lines-per-function`.
