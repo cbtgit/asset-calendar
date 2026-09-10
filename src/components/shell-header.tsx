@@ -1,13 +1,14 @@
 import { Link } from "@tanstack/react-router";
 import type { ActiveModule } from "./app-shell";
-import { ShellSignOut } from "./shell-sign-out";
+import { ShellAccountMenu } from "./shell-account-menu";
 
 type ShellHeaderProps = {
   activeModule: ActiveModule;
   isAdministrator: boolean;
+  navigationKey: string;
 };
 
-export function ShellHeader({ activeModule, isAdministrator }: ShellHeaderProps) {
+export function ShellHeader({ activeModule, isAdministrator, navigationKey }: ShellHeaderProps) {
   return (
     <header className="shell-header">
       <Link className="shell-brand" to="/calendar" aria-label="Asset Calendar home">
@@ -34,7 +35,7 @@ export function ShellHeader({ activeModule, isAdministrator }: ShellHeaderProps)
           </Link>
         ) : null}
       </nav>
-      <ShellSignOut />
+      <ShellAccountMenu key={navigationKey} />
     </header>
   );
 }

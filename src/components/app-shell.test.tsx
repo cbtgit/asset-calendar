@@ -1,4 +1,4 @@
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { afterEach, expect, it, vi } from "vite-plus/test";
 import { pocketbase } from "@/api/client";
@@ -26,6 +26,12 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
+function mockRouterLocation(location: { pathname: string; href: string }) {
+  vi.mocked(useRouterState).mockImplementation(((options?: {
+    select?: (state: unknown) => unknown;
+  }) => options?.select?.({ location })) as never);
+}
+
 it.each([
   ["/calendar", "calendar"],
   ["/groups", "groups"],
@@ -44,7 +50,7 @@ it.each([
 
 it("provides the shared authenticated page landmarks and outlet state", () => {
   vi.mocked(useNavigate).mockReturnValue(vi.fn() as never);
-  vi.mocked(useRouterState).mockImplementation(() => "/calendar" as never);
+  mockRouterLocation({ pathname: "/calendar", href: "/calendar" });
 
   render(<AppShell />);
 
@@ -57,7 +63,7 @@ it("provides the shared authenticated page landmarks and outlet state", () => {
 
 it("shows the administration module and rail for administrators", () => {
   vi.mocked(useNavigate).mockReturnValue(vi.fn() as never);
-  vi.mocked(useRouterState).mockImplementation(() => "/groups" as never);
+  mockRouterLocation({ pathname: "/groups", href: "/groups" });
   pocketbase.authStore.save("token", {
     id: "admin-1",
     collectionId: "users",
@@ -75,7 +81,7 @@ it("shows the administration module and rail for administrators", () => {
 
 it("hides the administration destination from regular users", () => {
   vi.mocked(useNavigate).mockReturnValue(vi.fn() as never);
-  vi.mocked(useRouterState).mockImplementation(() => "/calendar" as never);
+  mockRouterLocation({ pathname: "/calendar", href: "/calendar" });
   pocketbase.authStore.save("token", {
     id: "user-1",
     collectionId: "users",
@@ -90,7 +96,7 @@ it("hides the administration destination from regular users", () => {
   expect(screen.queryByRole("navigation", { name: "Administration navigation" })).toBeNull();
 });
 
-it("signs out and replaces history with sign-in", () => {
+it("logs out and replaces history with sign-in", () => {
   const navigate = vi.fn();
   const user = {
     id: "user-1",
@@ -100,14 +106,30 @@ it("signs out and replaces history with sign-in", () => {
   };
 
   vi.mocked(useNavigate).mockReturnValue(navigate as never);
-  vi.mocked(useRouterState).mockImplementation(() => "/calendar" as never);
+  mockRouterLocation({ pathname: "/calendar", href: "/calendar" });
   pocketbase.authStore.save("token", user);
 
   render(<AppShell />);
-  screen.getByRole("button", { name: "Sign out" }).click();
+  fireEvent.click(screen.getByRole("button", { name: "person@example.test" }));
+  screen.getByRole("menuitem", { name: "Log out" }).click();
 
   expect(pocketbase.authStore.isValid).toBe(false);
   expect(pocketbase.authStore.model).toBeNull();
   expect(pocketbase.authStore.token).toBe("");
   expect(navigate).toHaveBeenCalledWith({ to: "/sign-in", replace: true });
+});
+
+it("closes the account menu when search or hash changes on the current route", () => {
+  const location = { pathname: "/calendar", href: "/calendar" };
+  vi.mocked(useNavigate).mockReturnValue(vi.fn() as never);
+  mockRouterLocation(location);
+
+  const view = render(<AppShell />);
+  fireEvent.click(screen.getByRole("button", { name: "Current user" }));
+  expect(screen.getByRole("menu")).toBeTruthy();
+
+  location.href = "/calendar?view=week#today";
+  view.rerender(<AppShell />);
+
+  expect(screen.queryByRole("menu")).toBeNull();
 });
