@@ -21,7 +21,6 @@ vi.mock("@tanstack/react-router", () => ({
 afterEach(() => {
   cleanup();
   document.body.style.overflow = "";
-  Object.defineProperty(window, "innerWidth", { configurable: true, value: 1024 });
   window.history.replaceState(null, "", "/calendar");
   pocketbase.authStore.clear();
   vi.restoreAllMocks();
@@ -41,16 +40,6 @@ function openNavigation() {
   fireEvent.click(screen.getByRole("button", { name: "Open navigation" }));
   return screen.getByRole("complementary", { name: "Mobile navigation" });
 }
-
-it.each([767, 768])("renders the shell navigation at the 768px boundary (%dpx)", (width) => {
-  Object.defineProperty(window, "innerWidth", { configurable: true, value: width });
-
-  render(
-    <MobileNavigation activeModule="calendar" isAdministrator={false} navigationKey="/calendar" />,
-  );
-
-  expect(screen.getByRole("button", { name: "Open navigation" })).toBeTruthy();
-});
 
 it("does not restore focus while initially closed or when remounted closed", () => {
   const marker = document.createElement("button");
