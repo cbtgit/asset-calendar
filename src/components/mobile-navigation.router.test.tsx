@@ -1,5 +1,7 @@
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
+  createBrowserHistory,
   createMemoryHistory,
   createRootRoute,
   createRoute,
@@ -8,8 +10,10 @@ import {
   RouterProvider,
   useRouterState,
 } from "@tanstack/react-router";
-import { afterEach, expect, it } from "vite-plus/test";
+import { afterEach, expect, it, vi } from "vite-plus/test";
+import * as auth from "@/api/auth";
 import { pocketbase } from "@/api/client";
+import { routeTree as actualRouteTree } from "@/routeTree.gen";
 import { ShellHeader } from "./shell-header";
 
 const rootRoute = createRootRoute({
@@ -47,7 +51,8 @@ const routeTree = rootRoute.addChildren([signInRoute, calendarRoute, groupsRoute
 afterEach(() => {
   cleanup();
   pocketbase.authStore.clear();
-  window.history.replaceState(null, "", "/calendar");
+  window.history.replaceState(null, "", "/sign-in");
+  vi.restoreAllMocks();
 });
 
 function saveAdministrator() {
@@ -84,19 +89,35 @@ it("restores hamburger focus when route selection remounts the mobile navigation
   });
 });
 
-it("logs out without traversing drawer history and keeps Back on sign-in", async () => {
+it("logs out without traversing drawer history or revisiting guarded content", async () => {
+  vi.spyOn(auth, "ensureAuthContextReady").mockResolvedValue();
+  window.history.replaceState(null, "", "/sign-in");
+  const router = createRouter({
+    routeTree: actualRouteTree,
+    history: createBrowserHistory(),
+  });
+  await router.load();
   saveAdministrator();
-  const router = await renderRouter(["/sign-in"]);
   await router.navigate({ to: "/calendar" });
+  render(
+    <QueryClientProvider client={new QueryClient()}>
+      <RouterProvider router={router} />
+    </QueryClientProvider>,
+  );
 
   fireEvent.click(await screen.findByRole("button", { name: "Open navigation" }));
+  expect(window.history.state?.mobileNavigation).toBe(true);
   fireEvent.click(screen.getByRole("button", { name: "Log out" }));
 
   await waitFor(() => {
     expect(router.state.location.pathname).toBe("/sign-in");
-    expect(screen.getByText("Sign in")).toBeTruthy();
+    expect(screen.getByRole("heading", { name: "Sign in" })).toBeTruthy();
+    expect(window.history.state?.mobileNavigation).toBeUndefined();
   });
   window.history.back();
-  await new Promise((resolve) => setTimeout(resolve, 0));
-  expect(router.state.location.pathname).toBe("/sign-in");
+  await waitFor(() => {
+    expect(window.location.pathname).toBe("/sign-in");
+    expect(router.state.location.pathname).toBe("/sign-in");
+    expect(screen.getByRole("heading", { name: "Sign in" })).toBeTruthy();
+  });
 });
