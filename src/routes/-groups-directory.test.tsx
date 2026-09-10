@@ -88,3 +88,23 @@ it("can retry a failed groups request", async () => {
   expect(await screen.findByText("Operations")).toBeTruthy();
   expect(send).toHaveBeenCalledTimes(2);
 });
+
+it("renders a loading status while the directory request is pending", async () => {
+  vi.spyOn(pocketbase, "send").mockReturnValue(new Promise(() => {}) as never);
+  await renderGroups();
+
+  expect(screen.getByRole("status").textContent).toBe("Loading groups…");
+});
+
+it("shows a mutation error when deletion is rejected", async () => {
+  vi.spyOn(pocketbase, "send").mockResolvedValue({ items: [group] });
+  vi.spyOn(pocketbase, "collection").mockReturnValue({
+    delete: vi.fn().mockRejectedValue(new Error("assigned members")),
+  } as never);
+  await renderGroups();
+
+  fireEvent.click(await screen.findByRole("button", { name: "Delete" }));
+  fireEvent.click(screen.getByRole("button", { name: "Delete group" }));
+
+  expect((await screen.findByRole("alert")).textContent).toContain("assigned members");
+});

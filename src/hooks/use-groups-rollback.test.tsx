@@ -4,7 +4,11 @@ import type { ReactNode } from "react";
 import { afterEach, expect, it, vi } from "vite-plus/test";
 import { pocketbase } from "@/api/client";
 import { groupsKeys } from "@/api/query-keys";
-import { useCreateGroupMutation, useDeleteGroupMutation } from "./use-groups";
+import {
+  useCreateGroupMutation,
+  useDeleteGroupMutation,
+  useRenameGroupMutation,
+} from "./use-groups";
 import type { Group } from "@/api/groups";
 
 const group: Group = {
@@ -72,4 +76,35 @@ it("rolls back a failed delete", async () => {
   rejectDelete(error);
   await expect(mutation).rejects.toMatchObject({ kind: "server" });
   expect(queryClient.getQueryData<Group[]>(groupsKeys.list())).toEqual([group]);
+});
+
+it("invalidates the directory after a failed rename", async () => {
+  const error = Object.assign(new Error("Duplicate"), { status: 409 });
+  vi.spyOn(pocketbase, "collection").mockReturnValue({
+    update: vi.fn().mockRejectedValue(error),
+  } as never);
+  const { queryClient, wrapper } = setup();
+  const invalidate = vi.spyOn(queryClient, "invalidateQueries");
+  const { result } = renderHook(() => useRenameGroupMutation(), { wrapper });
+
+  await expect(
+    act(() => result.current.mutateAsync({ id: group.id, input: { name: "Renamed" } })),
+  ).rejects.toMatchObject({ kind: "conflict" });
+  expect(invalidate).toHaveBeenCalledWith({ queryKey: groupsKeys.list() });
+});
+
+it("surfaces an assigned-group deletion failure and reconciles the cache", async () => {
+  const error = Object.assign(new Error("assigned members"), { status: 400 });
+  vi.spyOn(pocketbase, "collection").mockReturnValue({
+    delete: vi.fn().mockRejectedValue(error),
+  } as never);
+  const { queryClient, wrapper } = setup();
+  const invalidate = vi.spyOn(queryClient, "invalidateQueries");
+  const { result } = renderHook(() => useDeleteGroupMutation(), { wrapper });
+
+  await expect(act(() => result.current.mutateAsync(group.id))).rejects.toMatchObject({
+    kind: "validation",
+  });
+  expect(queryClient.getQueryData<Group[]>(groupsKeys.list())).toEqual([group]);
+  expect(invalidate).toHaveBeenCalledWith({ queryKey: groupsKeys.list() });
 });
