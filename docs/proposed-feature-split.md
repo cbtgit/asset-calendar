@@ -478,6 +478,28 @@ sign-out, page landmarks, and the responsive frame. Route content owns its own
 title, data layout, actions, loading states, forms, and domain-specific
 navigation.
 
+#### Visual references
+
+F03.5 uses the supplied Groups administration screens as visual references:
+
+- [groups-administration-desktop.jpg](./groups-administration-desktop.jpg) shows
+  the wide authenticated frame: a
+  branded header with Calendar and Administration module navigation, the
+  current-user action, an Administration navigation rail, and a generous
+  content workspace.
+- [groups-administration-mobile.jpg](./groups-administration-mobile.jpg) shows
+  the narrow frame: a compact branded
+  header with the user action and menu trigger, a single-column content area,
+  full-width primary actions, and stacked content surfaces that remain readable
+  without horizontal scrolling.
+
+These references establish composition, hierarchy, density, control sizing,
+and responsive behavior. They are not a requirement for F03.5 to render the
+sample group records, member counts, status data, filters, directory table, or
+create action shown in the screens. Those are F04-owned Groups workflow
+concerns. Where the supplied screenshots use older unit wording, the product
+contract and implementation copy use `Groups`.
+
 The visual direction is the focused operations workbench shown in the supplied
 Calendar and Administration references rather than a dashboard. At viewport
 widths of 768px and above, the shared shell uses a horizontal header with the
@@ -492,6 +514,13 @@ calendar workspace. Administration owns its child-navigation pane and content
 workspace. Desktop module tabs navigate to each module's default route. The
 Administration module is visible only to administrators. Regular users do not
 see it in either desktop or mobile navigation.
+
+Within Administration, the desktop frame may reserve a secondary navigation
+rail for implemented administration destinations. The rail is hidden on narrow
+screens, where the hamburger drawer is the sole navigation surface. F03.5
+establishes the rail's spacing, active-state treatment, and content offset, but
+does not add future destination links solely because they appear in a visual
+reference.
 
 The shell is responsive from its first implementation. Below 768px, it uses a
 compact authenticated header with a hamburger trigger. The navigation surface
@@ -520,11 +549,13 @@ states. It does not implement F04-specific data presentation components.
 
 F03.5 adds an administrator-only Administration > Groups route so the module
 has a real first destination. That route is intentionally a placeholder: it
-shows a Groups heading and short placeholder text only. It does not load or
-mutate group data and has no list, filters, create button, form, edit, or
-delete actions. F04 replaces this placeholder with the actual Groups list and
-management workflow. Resource Registry, Users & Roles, Billing, and other
-administration destinations remain absent until their routes are implemented.
+follows the reference screens' page-heading and introductory-copy hierarchy,
+but shows a Groups heading and short placeholder text only. It does not load or
+mutate group data and has no directory surface, filters, member/status data,
+create button, form, edit, or delete actions. F04 replaces this placeholder
+with the actual Groups list and management workflow. Resource Registry, Users &
+Roles, Billing, and other administration destinations remain absent until
+their routes are implemented.
 
 Error classification remains defined by F01, authentication error handling by
 F03, and domain error representation by the feature that introduces the
@@ -553,12 +584,13 @@ routes.
    visibility, module default routes, current-user popover, immediate logout,
    and history-replacing sign-in redirect.
 3. Define desktop and narrow-screen shell behavior, including the 768px
-   breakpoint, full-viewport right-side drawer, X close control, accordion
-   groups, focus restoration, browser Back handling, no-Escape behavior, and
-   no-horizontal-scroll constraints.
+   breakpoint, Administration navigation rail, full-viewport right-side
+   drawer, X close control, accordion groups, focus restoration, browser Back
+   handling, no-Escape behavior, and no-horizontal-scroll constraints.
 4. Establish and apply the shared design-token foundation from the supplied
-   Calendar and Administration references.
-5. Add the administrator-only Groups placeholder route and ensure it contains
+   Calendar and Groups administration references.
+5. Add the administrator-only Groups placeholder route using the reference
+   heading hierarchy and responsive content frame, while ensuring it contains
    no group data access or management controls.
 6. Verify that the shell has no ownership of calendar panes, group data,
    administration data operations, or feature-specific forms and error UI.
