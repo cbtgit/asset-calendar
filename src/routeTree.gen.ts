@@ -17,6 +17,7 @@ import { Route as UnavailableRouteImport } from './routes/unavailable'
 import { Route as AuthenticatedIndexRouteImport } from './routes/_authenticated/index'
 import { Route as AuthenticatedCalendarRouteImport } from './routes/_authenticated/calendar'
 import { Route as AuthenticatedGroupsRouteImport } from './routes/_authenticated/groups'
+import { Route as AuthenticatedGroupsIndexRouteImport } from './routes/_authenticated/groups.index'
 import { Route as AuthenticatedGroupsNewRouteImport } from './routes/_authenticated/groups.new'
 import { Route as AuthenticatedGroupsGroupIdEditRouteImport } from './routes/_authenticated/groups.$groupId.edit'
 
@@ -59,6 +60,12 @@ const AuthenticatedGroupsRoute = AuthenticatedGroupsRouteImport.update({
   path: '/groups',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
+const AuthenticatedGroupsIndexRoute =
+  AuthenticatedGroupsIndexRouteImport.update({
+    id: '/',
+    path: '/',
+    getParentRoute: () => AuthenticatedGroupsRoute,
+  } as any)
 const AuthenticatedGroupsNewRoute = AuthenticatedGroupsNewRouteImport.update({
   id: '/new',
   path: '/new',
@@ -80,6 +87,7 @@ export interface FileRoutesByFullPath {
   '/calendar': typeof AuthenticatedCalendarRoute
   '/groups': typeof AuthenticatedGroupsRouteWithChildren
   '/groups/new': typeof AuthenticatedGroupsNewRoute
+  '/groups/': typeof AuthenticatedGroupsIndexRoute
   '/groups/$groupId/edit': typeof AuthenticatedGroupsGroupIdEditRoute
 }
 export interface FileRoutesByTo {
@@ -88,9 +96,9 @@ export interface FileRoutesByTo {
   '/sign-in': typeof SignInRoute
   '/unavailable': typeof UnavailableRoute
   '/calendar': typeof AuthenticatedCalendarRoute
-  '/groups': typeof AuthenticatedGroupsRouteWithChildren
   '/': typeof AuthenticatedIndexRoute
   '/groups/new': typeof AuthenticatedGroupsNewRoute
+  '/groups': typeof AuthenticatedGroupsIndexRoute
   '/groups/$groupId/edit': typeof AuthenticatedGroupsGroupIdEditRoute
 }
 export interface FileRoutesById {
@@ -104,6 +112,7 @@ export interface FileRoutesById {
   '/_authenticated/groups': typeof AuthenticatedGroupsRouteWithChildren
   '/_authenticated/': typeof AuthenticatedIndexRoute
   '/_authenticated/groups/new': typeof AuthenticatedGroupsNewRoute
+  '/_authenticated/groups/': typeof AuthenticatedGroupsIndexRoute
   '/_authenticated/groups/$groupId/edit': typeof AuthenticatedGroupsGroupIdEditRoute
 }
 export interface FileRouteTypes {
@@ -117,6 +126,7 @@ export interface FileRouteTypes {
     | '/calendar'
     | '/groups'
     | '/groups/new'
+    | '/groups/'
     | '/groups/$groupId/edit'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -125,9 +135,9 @@ export interface FileRouteTypes {
     | '/sign-in'
     | '/unavailable'
     | '/calendar'
-    | '/groups'
     | '/'
     | '/groups/new'
+    | '/groups'
     | '/groups/$groupId/edit'
   id:
     | '__root__'
@@ -140,6 +150,7 @@ export interface FileRouteTypes {
     | '/_authenticated/groups'
     | '/_authenticated/'
     | '/_authenticated/groups/new'
+    | '/_authenticated/groups/'
     | '/_authenticated/groups/$groupId/edit'
   fileRoutesById: FileRoutesById
 }
@@ -209,6 +220,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedGroupsRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_authenticated/groups/': {
+      id: '/_authenticated/groups/'
+      path: '/'
+      fullPath: '/groups/'
+      preLoaderRoute: typeof AuthenticatedGroupsIndexRouteImport
+      parentRoute: typeof AuthenticatedGroupsRoute
+    }
     '/_authenticated/groups/new': {
       id: '/_authenticated/groups/new'
       path: '/new'
@@ -228,11 +246,13 @@ declare module '@tanstack/react-router' {
 
 interface AuthenticatedGroupsRouteChildren {
   AuthenticatedGroupsNewRoute: typeof AuthenticatedGroupsNewRoute
+  AuthenticatedGroupsIndexRoute: typeof AuthenticatedGroupsIndexRoute
   AuthenticatedGroupsGroupIdEditRoute: typeof AuthenticatedGroupsGroupIdEditRoute
 }
 
 const AuthenticatedGroupsRouteChildren: AuthenticatedGroupsRouteChildren = {
   AuthenticatedGroupsNewRoute: AuthenticatedGroupsNewRoute,
+  AuthenticatedGroupsIndexRoute: AuthenticatedGroupsIndexRoute,
   AuthenticatedGroupsGroupIdEditRoute: AuthenticatedGroupsGroupIdEditRoute,
 }
 

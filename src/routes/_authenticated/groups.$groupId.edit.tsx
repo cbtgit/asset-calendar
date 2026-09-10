@@ -1,15 +1,9 @@
-import { createFileRoute, redirect, useNavigate } from "@tanstack/react-router";
-import { getAuthSnapshot, isAdministrator } from "@/api/auth";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { getGroup } from "@/api/groups";
 import { GroupForm } from "@/components/group-form";
 import { GroupEditError } from "@/components/group-edit-error";
 
 export const Route = createFileRoute("/_authenticated/groups/$groupId/edit")({
-  beforeLoad: async () => {
-    if (!isAdministrator(getAuthSnapshot().user)) {
-      throw redirect({ to: "/calendar" });
-    }
-  },
   loader: ({ params }) => getGroup(params.groupId),
   errorComponent: GroupEditError,
   component: GroupEditPage,

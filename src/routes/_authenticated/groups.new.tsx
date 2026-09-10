@@ -1,13 +1,7 @@
-import { createFileRoute, redirect, useNavigate } from "@tanstack/react-router";
-import { getAuthSnapshot, isAdministrator } from "@/api/auth";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { GroupForm } from "@/components/group-form";
 
 export const Route = createFileRoute("/_authenticated/groups/new")({
-  beforeLoad: async () => {
-    if (!isAdministrator(getAuthSnapshot().user)) {
-      throw redirect({ to: "/calendar" });
-    }
-  },
   component: NewGroupPage,
 });
 
