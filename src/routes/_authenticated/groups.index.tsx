@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useRef } from "react";
+import { GroupsDirectory } from "@/components/groups-directory";
 
 export const Route = createFileRoute("/_authenticated/groups/")({
   component: GroupsIndexPage,
@@ -18,7 +19,7 @@ function GroupsIndexPage() {
       <h1 ref={headingRef} tabIndex={-1}>
         Groups
       </h1>
-      <p>Group administration will be available here.</p>
+      <GroupsDirectory />
     </>
   );
 }

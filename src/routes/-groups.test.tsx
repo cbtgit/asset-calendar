@@ -37,18 +37,26 @@ async function renderGroups(initialEntries: string[]) {
   });
   await router.load();
   render(
-    <QueryClientProvider client={new QueryClient()}>
+    <QueryClientProvider
+      client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}
+    >
       <RouterProvider router={router} />
     </QueryClientProvider>,
   );
   return router;
 }
 
-it("renders the placeholder only at the groups index", async () => {
+it("renders the directory at the groups index", async () => {
+  vi.spyOn(pocketbase, "send").mockResolvedValue({
+    items: [group, { ...group, id: "group-2", name: "Finance", member_count: 3 }],
+  });
   await renderGroups(["/groups"]);
 
   expect(await screen.findByRole("heading", { name: "Groups" })).toBeTruthy();
-  expect(screen.getByText("Group administration will be available here.")).toBeTruthy();
+  expect(await screen.findByText("2 groups")).toBeTruthy();
+  expect(screen.getByText("Operations")).toBeTruthy();
+  expect(screen.getByText("3 members")).toBeTruthy();
+  expect(screen.getByRole("link", { name: "Add Group" }).getAttribute("href")).toBe("/groups/new");
   expect(screen.queryByRole("textbox", { name: "Group name" })).toBeNull();
 });
 
@@ -56,7 +64,7 @@ it("renders only the create form at the new group route", async () => {
   await renderGroups(["/groups/new"]);
 
   expect(await screen.findByRole("textbox", { name: "Group name" })).toBeTruthy();
-  expect(screen.queryByText("Group administration will be available here.")).toBeNull();
+  expect(screen.queryByText("No groups have been created yet.")).toBeNull();
   expect(screen.queryByRole("heading", { name: "Groups" })).toBeNull();
 });
 
@@ -67,7 +75,7 @@ it("renders only the edit form for an accessible group", async () => {
   expect(
     ((await screen.findByRole("textbox", { name: "Group name" })) as HTMLInputElement).value,
   ).toBe("Operations");
-  expect(screen.queryByText("Group administration will be available here.")).toBeNull();
+  expect(screen.queryByText("No groups have been created yet.")).toBeNull();
   expect(screen.queryByRole("heading", { name: "Groups" })).toBeNull();
 });
 
