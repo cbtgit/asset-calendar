@@ -1,4 +1,4 @@
-import { createFileRoute, redirect } from "@tanstack/react-router";
+import { createFileRoute, Outlet, redirect } from "@tanstack/react-router";
 import { useEffect, useRef } from "react";
 import { getAuthSnapshot, isAdministrator } from "@/api/auth";
 
@@ -25,6 +25,7 @@ function GroupsPage() {
         Groups
       </h1>
       <p>Group administration will be available here.</p>
+      <Outlet />
     </>
   );
 }
