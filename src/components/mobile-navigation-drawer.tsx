@@ -1,10 +1,8 @@
 import { forwardRef } from "react";
 import type { ActiveModule } from "./app-shell";
-import {
-  renderDrawerFooter,
-  renderDrawerHeader,
-  renderDrawerLinks,
-} from "./mobile-navigation-drawer-parts";
+import { MobileNavigationDrawerFooter } from "./mobile-navigation-drawer-footer";
+import { MobileNavigationDrawerHeader } from "./mobile-navigation-drawer-header";
+import { MobileNavigationLinks } from "./mobile-navigation-links";
 
 type MobileNavigationDrawerProps = {
   expandedModule: ActiveModule | null;
@@ -44,14 +42,14 @@ export const MobileNavigationDrawer = forwardRef<HTMLElement, MobileNavigationDr
           aria-label="Mobile navigation"
           tabIndex={-1}
         >
-          {renderDrawerHeader(onClose)}
-          {renderDrawerLinks({
-            expandedModule,
-            isAdministrator,
-            onSelectRoute,
-            onToggleModule,
-          })}
-          {renderDrawerFooter(onLogOut)}
+          <MobileNavigationDrawerHeader onClose={onClose} />
+          <MobileNavigationLinks
+            expandedModule={expandedModule}
+            isAdministrator={isAdministrator}
+            onSelectRoute={onSelectRoute}
+            onToggleModule={onToggleModule}
+          />
+          <MobileNavigationDrawerFooter onLogOut={onLogOut} />
         </aside>
       </div>
     );

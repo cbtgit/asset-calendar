@@ -1,10 +1,16 @@
 import type { RefObject } from "react";
 
-export function renderMobileTrigger(
-  isOpen: boolean,
-  openerRef: RefObject<HTMLButtonElement | null>,
-  onClick: () => void,
-) {
+type MobileNavigationTriggerProps = {
+  isOpen: boolean;
+  openerRef: RefObject<HTMLButtonElement | null>;
+  onClick: () => void;
+};
+
+export function MobileNavigationTrigger({
+  isOpen,
+  openerRef,
+  onClick,
+}: MobileNavigationTriggerProps) {
   return (
     <button
       ref={openerRef}

@@ -109,8 +109,8 @@ export default defineConfig(({ mode }) => {
     },
     server: {
       proxy: {
-        "/api/": pocketbaseTarget,
-        "/_/": pocketbaseTarget,
+        "/api/": { target: pocketbaseTarget, changeOrigin: false },
+        "/_/": { target: pocketbaseTarget, changeOrigin: false },
       },
     },
     resolve: {

@@ -58,6 +58,10 @@ export type PocketBaseStartOptions = {
   paths?: RuntimePaths;
   migrationsDir?: string;
   hooksDir?: string;
+  superuser?: {
+    email: string;
+    password: string;
+  };
 };
 
 export type ParsedArguments = {
@@ -454,6 +458,18 @@ async function runMigrations(
   );
 }
 
+function upsertSuperuser(
+  binaryPath: string,
+  paths: RuntimePaths,
+  superuser: NonNullable<PocketBaseStartOptions["superuser"]>,
+): void {
+  execFileSync(
+    binaryPath,
+    ["superuser", "upsert", superuser.email, superuser.password, `--dir=${paths.dataDir}`],
+    { cwd: paths.worktreeRoot, stdio: "ignore" },
+  );
+}
+
 async function waitForHealth(child: ChildProcess, healthUrl: string): Promise<void> {
   let exited: Error | undefined;
   child.once("exit", (code, signal) => {
@@ -517,10 +533,12 @@ export async function startPocketBase(
   await assertNoSymlinkInPath(dataRoot, paths.dataDir);
   await assertPortAvailable(config.host, config.port);
   await mkdir(paths.dataDir, { recursive: true });
-  await runMigrations(await ensurePocketBaseBinary(paths), paths, migrationsDir);
+  const binaryPath = await ensurePocketBaseBinary(paths);
+  await runMigrations(binaryPath, paths, migrationsDir);
+  if (options.superuser) upsertSuperuser(binaryPath, paths, options.superuser);
 
   const child = spawn(
-    paths.binaryPath,
+    binaryPath,
     [
       "serve",
       `--http=${pocketBaseAddress(config.host, config.port)}`,

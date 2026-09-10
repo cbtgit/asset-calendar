@@ -9,7 +9,9 @@ type AuthErrorMessageProps = {
 };
 
 export function AuthErrorMessage({ error, message, operation }: AuthErrorMessageProps) {
-  const content = message ?? (error === undefined ? undefined : authErrorMessage(error, operation));
+  const content =
+    message ??
+    (error === undefined || error === null ? undefined : authErrorMessage(error, operation));
   if (content === undefined) return null;
 
   return (

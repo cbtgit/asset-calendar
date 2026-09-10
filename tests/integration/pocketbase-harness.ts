@@ -1,5 +1,6 @@
 /// <reference types="node" />
 
+import { randomBytes } from "node:crypto";
 import type { ChildProcess } from "node:child_process";
 import { mkdtemp, mkdir, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
@@ -41,6 +42,10 @@ export async function startPocketBaseIntegrationHarness(
           config: { host: "127.0.0.1", port },
           paths,
           migrationsDir: options.migrationsDir ?? migrationsDir,
+          superuser: {
+            email: "integration-superuser@example.test",
+            password: randomBytes(32).toString("base64url"),
+          },
         });
         break;
       } catch (error) {

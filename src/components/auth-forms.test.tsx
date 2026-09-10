@@ -21,6 +21,12 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
+it("does not show an error before sign-in is attempted", () => {
+  renderWithQueryClient(<SignInForm onSuccess={vi.fn()} />);
+
+  expect(screen.queryByRole("alert")).toBeNull();
+});
+
 it("submits sign-in with labeled fields and disables the form while pending", async () => {
   let resolve: (value: AuthUser) => void = () => {};
   vi.spyOn(auth, "signIn").mockReturnValue(
