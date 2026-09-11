@@ -7,6 +7,8 @@ export const Route = createFileRoute("/_authenticated/groups/$groupId/edit")({
   loader: ({ params }) => getGroup(params.groupId),
   errorComponent: GroupEditError,
   component: GroupEditPage,
+  shouldReload: true,
+  gcTime: 0,
 });
 
 function GroupEditPage() {
