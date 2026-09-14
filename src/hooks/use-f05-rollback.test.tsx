@@ -22,6 +22,7 @@ const bookingType: BookingType = {
   resource_blocking: true,
   archived: false,
 };
+const secondBookingType: BookingType = { ...bookingType, id: "type-2", name: "Morning" };
 
 const settings: TenantSettings = { id: "tenant-1", currency: "DKK", locale: "da-DK" };
 
@@ -30,8 +31,8 @@ function setup() {
   const wrapper = ({ children }: { children: ReactNode }) => (
     <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
   );
-  queryClient.setQueryData(bookingTypesKeys.list(), [bookingType]);
-  queryClient.setQueryData(bookingTypesKeys.selection(), [bookingType]);
+  queryClient.setQueryData(bookingTypesKeys.list(), [bookingType, secondBookingType]);
+  queryClient.setQueryData(bookingTypesKeys.selection(), [bookingType, secondBookingType]);
   queryClient.setQueryData(tenantSettingsKeys.current(), settings);
   return { queryClient, wrapper };
 }
@@ -57,11 +58,19 @@ it("optimistically archives booking types and rolls back on failure", async () =
   expect(queryClient.getQueryData<BookingType[]>(bookingTypesKeys.list())?.[0]?.archived).toBe(
     true,
   );
-  expect(queryClient.getQueryData<BookingType[]>(bookingTypesKeys.selection())).toEqual([]);
+  expect(queryClient.getQueryData<BookingType[]>(bookingTypesKeys.selection())).toEqual([
+    secondBookingType,
+  ]);
   rejectArchive(new Error("conflict"));
   await expect(mutation).rejects.toThrow("conflict");
-  expect(queryClient.getQueryData(bookingTypesKeys.list())).toEqual([bookingType]);
-  expect(queryClient.getQueryData(bookingTypesKeys.selection())).toEqual([bookingType]);
+  expect(queryClient.getQueryData(bookingTypesKeys.list())).toEqual([
+    bookingType,
+    secondBookingType,
+  ]);
+  expect(queryClient.getQueryData(bookingTypesKeys.selection())).toEqual([
+    bookingType,
+    secondBookingType,
+  ]);
 });
 
 it("adds a safe custom booking type to the cached selection optimistically", async () => {
@@ -128,4 +137,46 @@ it("optimistically updates booking-type rates and reconciles after success", asy
     surcharge_minor_units: 1500,
   });
   expect(invalidate).toHaveBeenCalledWith({ queryKey: bookingTypesKeys.all });
+});
+
+it("rolls back only the failed booking type during overlapping updates", async () => {
+  const rejecters = new Map<string, (reason: unknown) => void>();
+  vi.spyOn(pocketbase, "collection").mockReturnValue({
+    update: vi.fn().mockImplementation(
+      (id: string) =>
+        new Promise((_resolve, reject) => {
+          rejecters.set(id, reject);
+        }),
+    ),
+  } as never);
+  vi.spyOn(pocketbase, "send").mockResolvedValue(bookingType);
+  const { queryClient, wrapper } = setup();
+  const { result } = renderHook(() => useUpdateBookingTypeMutation(), { wrapper });
+
+  let first!: Promise<unknown>;
+  let second!: Promise<unknown>;
+  await act(async () => {
+    first = result.current.mutateAsync({
+      id: bookingType.id,
+      input: { surcharge_minor_units: 200 },
+    });
+    second = result.current.mutateAsync({
+      id: secondBookingType.id,
+      input: { surcharge_minor_units: 300 },
+    });
+    await Promise.resolve();
+  });
+
+  expect(queryClient.getQueryData<BookingType[]>(bookingTypesKeys.list())).toEqual([
+    { ...bookingType, surcharge_minor_units: 200 },
+    { ...secondBookingType, surcharge_minor_units: 300 },
+  ]);
+  rejecters.get(bookingType.id)?.(new Error("first conflict"));
+  await expect(first).rejects.toThrow("first conflict");
+  expect(queryClient.getQueryData<BookingType[]>(bookingTypesKeys.list())).toEqual([
+    bookingType,
+    { ...secondBookingType, surcharge_minor_units: 300 },
+  ]);
+  rejecters.get(secondBookingType.id)?.(new Error("second conflict"));
+  await expect(second).rejects.toThrow("second conflict");
 });

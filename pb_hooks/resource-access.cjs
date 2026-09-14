@@ -27,6 +27,9 @@ function normalizeResource(event, info, record, tenantId, isCreate = false) {
     throw new BadRequestError("resource_name_too_long");
   }
   const rate = resourceValue(info, record, "base_rate_minor_units");
+  if (isCreate && !Object.prototype.hasOwnProperty.call(info.body, "base_rate_minor_units")) {
+    throw new BadRequestError("resource_base_rate_invalid");
+  }
   if (typeof rate !== "number" || !Number.isSafeInteger(rate) || rate < 0) {
     throw new BadRequestError("resource_base_rate_invalid");
   }

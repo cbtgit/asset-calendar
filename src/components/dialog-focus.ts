@@ -56,7 +56,7 @@ export function useDialogLifecycle({
       }
       if (event.key !== "Tab") return;
       const focusableElements = [cancelRef.current, confirmRef.current].filter(
-        (element): element is HTMLButtonElement => element !== null,
+        (element): element is HTMLButtonElement => element !== null && !element.disabled,
       );
       trapDialogTabNavigation(event, dialog, focusableElements);
     }

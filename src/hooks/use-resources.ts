@@ -13,10 +13,12 @@ import {
 } from "@/api/resources";
 import { resourcesKeys } from "@/api/query-keys";
 
-type ResourceSnapshots = {
-  list: Resource[] | undefined;
-  active: ActiveResource[] | undefined;
+type ResourceSnapshot = {
+  id: string;
+  list: Resource | undefined;
+  active: ActiveResource | undefined;
   detail: Resource | undefined;
+  removeIfMissing: boolean;
 };
 
 function optimisticResource(input: ResourceCreate): Resource {
@@ -37,20 +39,44 @@ function sorted(resources: Resource[]): Resource[] {
   );
 }
 
-async function snapshot(queryClient: ReturnType<typeof useQueryClient>, id?: string) {
+async function snapshot(queryClient: ReturnType<typeof useQueryClient>, id: string) {
   await queryClient.cancelQueries({ queryKey: resourcesKeys.all });
   return {
-    list: queryClient.getQueryData<Resource[]>(resourcesKeys.list()),
-    active: queryClient.getQueryData<ActiveResource[]>(resourcesKeys.active()),
-    detail: id ? queryClient.getQueryData<Resource>(resourcesKeys.detail(id)) : undefined,
+    id,
+    list: queryClient
+      .getQueryData<Resource[]>(resourcesKeys.list())
+      ?.find((item) => item.id === id),
+    active: queryClient
+      .getQueryData<ActiveResource[]>(resourcesKeys.active())
+      ?.find((item) => item.id === id),
+    detail: queryClient.getQueryData<Resource>(resourcesKeys.detail(id)),
+    removeIfMissing: false,
   };
 }
 
-function restore(queryClient: ReturnType<typeof useQueryClient>, previous: ResourceSnapshots) {
-  queryClient.setQueryData(resourcesKeys.list(), previous.list);
-  queryClient.setQueryData(resourcesKeys.active(), previous.active);
+function restore(queryClient: ReturnType<typeof useQueryClient>, previous: ResourceSnapshot) {
+  const previousList = previous.list;
+  const previousActive = previous.active;
+  queryClient.setQueryData<Resource[]>(resourcesKeys.list(), (items) => {
+    if (previousList) {
+      if (!items) return items;
+      return items.some((item) => item.id === previous.id)
+        ? items.map((item) => (item.id === previous.id ? previousList : item))
+        : sorted([...items, previousList]);
+    }
+    return previous.removeIfMissing ? items?.filter((item) => item.id !== previous.id) : items;
+  });
+  queryClient.setQueryData<ActiveResource[]>(resourcesKeys.active(), (items) => {
+    if (previousActive) {
+      if (!items) return items;
+      return items.some((item) => item.id === previous.id)
+        ? items.map((item) => (item.id === previous.id ? previousActive : item))
+        : [...items, previousActive];
+    }
+    return previous.removeIfMissing ? items?.filter((item) => item.id !== previous.id) : items;
+  });
   if (previous.detail) {
-    queryClient.setQueryData(resourcesKeys.detail(previous.detail.id), previous.detail);
+    queryClient.setQueryData(resourcesKeys.detail(previous.id), previous.detail);
   }
 }
 
@@ -74,9 +100,10 @@ export function useCreateResourceMutation() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: createResource,
-    onMutate: async (input): Promise<ResourceSnapshots> => {
-      const previous = await snapshot(queryClient);
+    onMutate: async (input): Promise<ResourceSnapshot> => {
       const resource = optimisticResource(input);
+      const previous = await snapshot(queryClient, resource.id);
+      previous.removeIfMissing = true;
       queryClient.setQueryData<Resource[]>(resourcesKeys.list(), (items) =>
         items ? sorted([...items, resource]) : items,
       );
@@ -105,7 +132,7 @@ export function useUpdateResourceMutation() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: ({ id, input }: { id: string; input: ResourceUpdate }) => updateResource(id, input),
-    onMutate: async ({ id, input }): Promise<ResourceSnapshots> => {
+    onMutate: async ({ id, input }): Promise<ResourceSnapshot> => {
       const previous = await snapshot(queryClient, id);
       const patch = { name: input.name.trim(), base_rate_minor_units: input.base_rate_minor_units };
       queryClient.setQueryData<Resource[]>(resourcesKeys.list(), (items) =>
@@ -130,7 +157,7 @@ export function useArchiveResourceMutation() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: archiveResource,
-    onMutate: async (id): Promise<ResourceSnapshots> => {
+    onMutate: async (id): Promise<ResourceSnapshot> => {
       const previous = await snapshot(queryClient, id);
       queryClient.setQueryData<Resource[]>(resourcesKeys.list(), (items) =>
         items?.map((item) => (item.id === id ? { ...item, archived: true } : item)),

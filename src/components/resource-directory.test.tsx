@@ -60,6 +60,7 @@ function renderDirectory() {
 
 afterEach(() => {
   cleanup();
+  mocks.archive.isPending = false;
   vi.clearAllMocks();
 });
 
@@ -125,4 +126,23 @@ it("moves focus to the stable resource count after successful archive", async ()
   fireEvent.click(screen.getByRole("button", { name: "Archive" }));
   fireEvent.click(screen.getByRole("button", { name: "Archive resource" }));
   await waitFor(() => expect(document.activeElement?.textContent).toContain("1 resource"));
+});
+
+it("keeps a focusable dialog target while archive controls are disabled", async () => {
+  mocks.resources.data = [
+    {
+      id: "resource-1",
+      name: "Room",
+      base_rate_minor_units: 1000,
+      archived: false,
+      created: "now",
+      updated: "now",
+    },
+  ];
+  renderDirectory();
+  fireEvent.click(screen.getByRole("button", { name: "Archive" }));
+  (screen.getByRole("button", { name: "Cancel" }) as HTMLButtonElement).disabled = true;
+  (screen.getByRole("button", { name: "Archive resource" }) as HTMLButtonElement).disabled = true;
+  fireEvent.keyDown(screen.getByRole("dialog"), { key: "Tab" });
+  expect(document.activeElement).toBe(screen.getByRole("dialog"));
 });

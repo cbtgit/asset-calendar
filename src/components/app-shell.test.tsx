@@ -36,6 +36,12 @@ it.each([
   ["/calendar", "calendar"],
   ["/groups", "groups"],
   ["/groups/new", "groups"],
+  ["/resources", "resources"],
+  ["/resources/new", "resources"],
+  ["/settings", "settings"],
+  ["/settings/profile", "settings"],
+  ["/booking-types", "booking-types"],
+  ["/booking-types/custom", "booking-types"],
 ] as const)("derives the active destination from %s", (pathname, destination) => {
   expect(getActiveDestination(pathname)).toBe(destination);
 });
@@ -44,6 +50,12 @@ it.each([
   ["/calendar", "calendar"],
   ["/groups", "administration"],
   ["/groups/new", "administration"],
+  ["/resources", "administration"],
+  ["/resources/new", "administration"],
+  ["/settings", "administration"],
+  ["/settings/profile", "administration"],
+  ["/booking-types", "administration"],
+  ["/booking-types/custom", "administration"],
 ] as const)("derives the active module from %s", (pathname, module) => {
   expect(getActiveModule(pathname)).toBe(module);
 });
@@ -86,6 +98,28 @@ it("shows the administration module and rail for administrators", () => {
     "Settings",
     "Booking types",
   ]);
+});
+
+it.each([
+  ["/resources", "Resources"],
+  ["/resources/new", "Resources"],
+  ["/settings", "Settings"],
+  ["/settings/profile", "Settings"],
+  ["/booking-types", "Booking types"],
+  ["/booking-types/custom", "Booking types"],
+] as const)("marks the active administration destination for %s", (pathname, destination) => {
+  vi.mocked(useNavigate).mockReturnValue(vi.fn() as never);
+  mockRouterLocation({ pathname, href: pathname });
+  pocketbase.authStore.save("token", {
+    id: "admin-1",
+    collectionId: "users",
+    collectionName: "users",
+    role: "administrator",
+  });
+
+  render(<AppShell />);
+
+  expect(screen.getByRole("link", { name: destination }).getAttribute("data-active")).toBe("true");
 });
 
 it("hides the administration destination from regular users", () => {

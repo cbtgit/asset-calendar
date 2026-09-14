@@ -11,10 +11,12 @@ import {
 } from "@/api/booking-types";
 import { bookingTypesKeys } from "@/api/query-keys";
 
-type BookingTypeSnapshots = {
-  list: BookingType[] | undefined;
-  selection: BookingType[] | undefined;
+type BookingTypeSnapshot = {
+  id: string;
+  list: BookingType | undefined;
+  selection: BookingType | undefined;
   detail: BookingType | undefined;
+  removeIfMissing: boolean;
 };
 
 function sorted(items: BookingType[]): BookingType[] {
@@ -23,20 +25,44 @@ function sorted(items: BookingType[]): BookingType[] {
   );
 }
 
-async function snapshot(queryClient: ReturnType<typeof useQueryClient>, id?: string) {
+async function snapshot(queryClient: ReturnType<typeof useQueryClient>, id: string) {
   await queryClient.cancelQueries({ queryKey: bookingTypesKeys.all });
   return {
-    list: queryClient.getQueryData<BookingType[]>(bookingTypesKeys.list()),
-    selection: queryClient.getQueryData<BookingType[]>(bookingTypesKeys.selection()),
-    detail: id ? queryClient.getQueryData<BookingType>(bookingTypesKeys.detail(id)) : undefined,
+    id,
+    list: queryClient
+      .getQueryData<BookingType[]>(bookingTypesKeys.list())
+      ?.find((item) => item.id === id),
+    selection: queryClient
+      .getQueryData<BookingType[]>(bookingTypesKeys.selection())
+      ?.find((item) => item.id === id),
+    detail: queryClient.getQueryData<BookingType>(bookingTypesKeys.detail(id)),
+    removeIfMissing: false,
   };
 }
 
-function restore(queryClient: ReturnType<typeof useQueryClient>, previous: BookingTypeSnapshots) {
-  queryClient.setQueryData(bookingTypesKeys.list(), previous.list);
-  queryClient.setQueryData(bookingTypesKeys.selection(), previous.selection);
+function restore(queryClient: ReturnType<typeof useQueryClient>, previous: BookingTypeSnapshot) {
+  const previousList = previous.list;
+  const previousSelection = previous.selection;
+  queryClient.setQueryData<BookingType[]>(bookingTypesKeys.list(), (items) => {
+    if (previousList) {
+      if (!items) return items;
+      return items.some((item) => item.id === previous.id)
+        ? items.map((item) => (item.id === previous.id ? previousList : item))
+        : sorted([...items, previousList]);
+    }
+    return previous.removeIfMissing ? items?.filter((item) => item.id !== previous.id) : items;
+  });
+  queryClient.setQueryData<BookingType[]>(bookingTypesKeys.selection(), (items) => {
+    if (previousSelection) {
+      if (!items) return items;
+      return items.some((item) => item.id === previous.id)
+        ? items.map((item) => (item.id === previous.id ? previousSelection : item))
+        : sorted([...items, previousSelection]);
+    }
+    return previous.removeIfMissing ? items?.filter((item) => item.id !== previous.id) : items;
+  });
   if (previous.detail) {
-    queryClient.setQueryData(bookingTypesKeys.detail(previous.detail.id), previous.detail);
+    queryClient.setQueryData(bookingTypesKeys.detail(previous.id), previous.detail);
   }
 }
 
@@ -56,11 +82,13 @@ export function useCreateBookingTypeMutation() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: createBookingType,
-    onMutate: async (input): Promise<BookingTypeSnapshots> => {
-      const previous = await snapshot(queryClient);
+    onMutate: async (input): Promise<BookingTypeSnapshot> => {
+      const optimisticId = `optimistic-${crypto.randomUUID()}`;
+      const previous = await snapshot(queryClient, optimisticId);
+      previous.removeIfMissing = true;
       const now = new Date().toISOString();
       const item: BookingType = {
-        id: `optimistic-${crypto.randomUUID()}`,
+        id: optimisticId,
         name: input.name.trim(),
         surcharge_minor_units: input.surcharge_minor_units,
         system_kind: input.system_kind,
@@ -86,7 +114,7 @@ export function useUpdateBookingTypeMutation() {
   return useMutation({
     mutationFn: ({ id, input }: { id: string; input: BookingTypeUpdate }) =>
       updateBookingType(id, input),
-    onMutate: async ({ id, input }): Promise<BookingTypeSnapshots> => {
+    onMutate: async ({ id, input }): Promise<BookingTypeSnapshot> => {
       const previous = await snapshot(queryClient, id);
       const patch = { ...input, ...(input.name ? { name: input.name.trim() } : {}) };
       queryClient.setQueryData<BookingType[]>(bookingTypesKeys.list(), (items) =>
@@ -113,7 +141,7 @@ export function useArchiveBookingTypeMutation() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: archiveBookingType,
-    onMutate: async (id): Promise<BookingTypeSnapshots> => {
+    onMutate: async (id): Promise<BookingTypeSnapshot> => {
       const previous = await snapshot(queryClient, id);
       queryClient.setQueryData<BookingType[]>(bookingTypesKeys.list(), (items) =>
         items?.map((item) => (item.id === id ? { ...item, archived: true } : item)),

@@ -66,6 +66,11 @@ it("shows protected system types and localized custom surcharges", async () => {
 
   expect((await screen.findAllByText(/12,50/)).length).toBeGreaterThan(0);
   expect(screen.getByText("Protected")).toBeTruthy();
+  expect(
+    screen.getByText(
+      "Regular and Maintenance are protected. Training and custom types can be edited; custom types can be archived.",
+    ),
+  ).toBeTruthy();
   expect(screen.getByRole("textbox", { name: "Name for Training" })).toBeTruthy();
   expect(screen.getAllByRole("button", { name: "Archive" })).toHaveLength(1);
   expect(screen.getByRole("textbox", { name: "Name for Training" })).toBeTruthy();
@@ -104,7 +109,7 @@ it("moves focus to the stable directory status after successful archive", async 
   fireEvent.click(await screen.findByRole("button", { name: "Archive" }));
   fireEvent.click(screen.getByRole("button", { name: "Archive booking type" }));
   await waitFor(() =>
-    expect(document.activeElement?.textContent).toContain("System booking types are protected"),
+    expect(document.activeElement?.textContent).toContain("Regular and Maintenance are protected"),
   );
 });
 
@@ -129,6 +134,23 @@ it("traps archive dialog focus and closes on Escape", async () => {
   fireEvent.keyDown(dialog, { key: "Escape" });
   expect(screen.queryByRole("dialog")).toBeNull();
   expect(document.activeElement).toBe(trigger);
+});
+
+it("keeps a focusable dialog target while archive controls are disabled", async () => {
+  vi.spyOn(pocketbase, "send")
+    .mockResolvedValueOnce({ items: [custom] })
+    .mockResolvedValueOnce({ id: "tenant-1", currency: "USD", locale: "en-US" });
+  vi.spyOn(pocketbase, "collection").mockReturnValue({
+    getOne: vi.fn().mockResolvedValue({ id: "tenant-1", currency: "USD", locale: "en-US" }),
+  } as never);
+
+  renderDirectory();
+  fireEvent.click(await screen.findByRole("button", { name: "Archive" }));
+  (screen.getByRole("button", { name: "Cancel" }) as HTMLButtonElement).disabled = true;
+  (screen.getByRole("button", { name: "Archive booking type" }) as HTMLButtonElement).disabled =
+    true;
+  fireEvent.keyDown(screen.getByRole("dialog"), { key: "Tab" });
+  expect(document.activeElement).toBe(screen.getByRole("dialog"));
 });
 
 it("renders loading, empty, and retryable error states", async () => {

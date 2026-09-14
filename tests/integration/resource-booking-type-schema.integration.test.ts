@@ -199,14 +199,14 @@ it("locks raw collections and reconciles legacy numeric fields before indexing",
   expect(
     resourcesCollection!.fields.find((field) => field.name === "base_rate_minor_units"),
   ).toMatchObject({
-    required: true,
+    required: false,
     min: 0,
     max: Number.MAX_SAFE_INTEGER,
   });
   expect(
     bookingTypesCollection.fields.find((field) => field.name === "surcharge_minor_units"),
   ).toMatchObject({
-    required: true,
+    required: false,
     min: 0,
     max: Number.MAX_SAFE_INTEGER,
   });
@@ -244,20 +244,20 @@ it("enforces currency, locale, safe rates, and normalized tenant uniqueness", as
     archived: false,
   });
   expect(resource.base_rate_minor_units).toBe(1250);
+  const zeroResource = await pocketbase.collection("resources").create({
+    tenant: tenant.id,
+    name: "Free room",
+    name_normalized: "free room",
+    base_rate_minor_units: 0,
+    archived: false,
+  });
+  expect(zeroResource.base_rate_minor_units).toBe(0);
   await expect(
     pocketbase.collection("resources").create({
       tenant: tenant.id,
       name: " meeting room ",
       name_normalized: "meeting room",
       base_rate_minor_units: 0,
-      archived: false,
-    }),
-  ).rejects.toThrow();
-  await expect(
-    pocketbase.collection("resources").create({
-      tenant: tenant.id,
-      name: "Missing rate",
-      name_normalized: "missing rate",
       archived: false,
     }),
   ).rejects.toThrow();
@@ -279,17 +279,17 @@ it("enforces currency, locale, safe rates, and normalized tenant uniqueness", as
       archived: false,
     }),
   ).rejects.toThrow();
-  await expect(
-    pocketbase.collection("booking_types").create({
-      tenant: tenant.id,
-      name: "Custom missing surcharge",
-      name_normalized: "custom missing surcharge",
-      system_kind: "custom",
-      billable: true,
-      resource_blocking: true,
-      archived: false,
-    }),
-  ).rejects.toThrow();
+  const zeroCustom = await pocketbase.collection("booking_types").create({
+    tenant: tenant.id,
+    name: "Free custom",
+    name_normalized: "free custom",
+    surcharge_minor_units: 0,
+    system_kind: "custom",
+    billable: true,
+    resource_blocking: true,
+    archived: false,
+  });
+  expect(zeroCustom.surcharge_minor_units).toBe(0);
   await expect(
     pocketbase.collection("booking_types").create({
       tenant: tenant.id,

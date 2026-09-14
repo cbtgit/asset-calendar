@@ -148,6 +148,9 @@ function normalizeBookingType(event, { info, record, tenantId, isCreate }) {
     throw new BadRequestError("booking_type_name_protected");
   }
   const surcharge = bookingTypeValue(info, record, "surcharge_minor_units");
+  if (isCreate && !Object.prototype.hasOwnProperty.call(info.body, "surcharge_minor_units")) {
+    throw new BadRequestError("booking_type_surcharge_invalid");
+  }
   if (!BOOKING_TYPE_SYSTEM_KINDS.includes(kind)) {
     throw new BadRequestError("booking_type_system_kind_invalid");
   }

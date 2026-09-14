@@ -1,5 +1,5 @@
 import { Link } from "@tanstack/react-router";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { Resource } from "@/api/resources";
 import { useArchiveResourceMutation, useResourcesQuery } from "@/hooks/use-resources";
 import { useTenantSettingsQuery } from "@/hooks/use-tenant-settings";
@@ -24,6 +24,9 @@ export function ResourceDirectory() {
     onCancel: () => setPending(null),
     active: pending !== null,
   });
+  useEffect(() => {
+    if (archive.isPending) dialogRef.current?.focus();
+  }, [archive.isPending]);
 
   if (resources.isPending || settings.isPending) return <p role="status">Loading resources…</p>;
   if (resources.isError || settings.isError) {

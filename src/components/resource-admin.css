@@ -144,6 +144,7 @@
 }
 .resource-dialog {
   width: min(100%, 30rem);
+  box-sizing: border-box;
   padding: var(--space-6);
   border-radius: var(--radius-md);
   background: var(--color-surface);

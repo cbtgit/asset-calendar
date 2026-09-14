@@ -57,6 +57,11 @@
 .booking-types-row {
   grid-template-columns: minmax(10rem, 1fr) minmax(7rem, auto) minmax(15rem, 1.5fr);
   align-items: center;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.booking-types-row > * {
+  min-width: 0;
 }
 .booking-types-meta,
 .booking-types-protected {
@@ -93,6 +98,7 @@
 }
 .booking-types-dialog {
   width: min(100%, 28rem);
+  box-sizing: border-box;
   padding: var(--space-6);
   border-radius: var(--radius-md);
   background: var(--color-surface);

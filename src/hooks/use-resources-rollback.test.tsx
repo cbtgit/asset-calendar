@@ -19,6 +19,7 @@ const resource: Resource = {
   created: "2026-01-01T00:00:00Z",
   updated: "2026-01-01T00:00:00Z",
 };
+const secondResource: Resource = { ...resource, id: "resource-2", name: "Office" };
 
 function setup() {
   pocketbase.authStore.save("token", {
@@ -32,7 +33,7 @@ function setup() {
   const wrapper = ({ children }: { children: ReactNode }) => (
     <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
   );
-  queryClient.setQueryData(resourcesKeys.list(), [resource]);
+  queryClient.setQueryData(resourcesKeys.list(), [resource, secondResource]);
   queryClient.setQueryData(resourcesKeys.active(), [
     {
       id: resource.id,
@@ -40,6 +41,13 @@ function setup() {
       archived: false,
       created: resource.created,
       updated: resource.updated,
+    },
+    {
+      id: secondResource.id,
+      name: secondResource.name,
+      archived: false,
+      created: secondResource.created,
+      updated: secondResource.updated,
     },
   ]);
   return { queryClient, wrapper };
@@ -69,10 +77,14 @@ it("cancels, updates immediately, and rolls back resource updates", async () => 
     await Promise.resolve();
   });
   expect(cancel).toHaveBeenCalledWith({ queryKey: resourcesKeys.all });
-  expect(queryClient.getQueryData<Resource[]>(resourcesKeys.list())?.[0]?.name).toBe("Updated");
+  expect(
+    queryClient
+      .getQueryData<Resource[]>(resourcesKeys.list())
+      ?.find((item) => item.id === resource.id)?.name,
+  ).toBe("Updated");
   rejectUpdate(Object.assign(new Error("conflict"), { status: 409 }));
   await expect(mutation).rejects.toMatchObject({ kind: "conflict" });
-  expect(queryClient.getQueryData(resourcesKeys.list())).toEqual([resource]);
+  expect(queryClient.getQueryData(resourcesKeys.list())).toEqual([secondResource, resource]);
 });
 
 it("adds a non-priced resource to the cached active projection optimistically", async () => {
@@ -104,6 +116,50 @@ it("removes archived resources from active selection and invalidates after settl
 
   await act(() => result.current.mutateAsync(resource.id));
 
-  expect(queryClient.getQueryData(resourcesKeys.active())).toEqual([]);
+  expect(queryClient.getQueryData(resourcesKeys.active())).toEqual([
+    expect.objectContaining({ id: secondResource.id, name: secondResource.name }),
+  ]);
   expect(invalidate).toHaveBeenCalledWith({ queryKey: resourcesKeys.all });
+});
+
+it("rolls back only the failed resource during overlapping updates", async () => {
+  const rejecters = new Map<string, (reason: unknown) => void>();
+  vi.spyOn(pocketbase, "collection").mockReturnValue({
+    update: vi.fn().mockImplementation(
+      (id: string) =>
+        new Promise((_resolve, reject) => {
+          rejecters.set(id, reject);
+        }),
+    ),
+  } as never);
+  vi.spyOn(pocketbase, "send").mockResolvedValue(resource);
+  const { queryClient, wrapper } = setup();
+  const { result } = renderHook(() => useUpdateResourceMutation(), { wrapper });
+
+  let first!: Promise<unknown>;
+  let second!: Promise<unknown>;
+  await act(async () => {
+    first = result.current.mutateAsync({
+      id: resource.id,
+      input: { name: "Updated room", base_rate_minor_units: 200 },
+    });
+    second = result.current.mutateAsync({
+      id: secondResource.id,
+      input: { name: "Updated office", base_rate_minor_units: 300 },
+    });
+    await Promise.resolve();
+  });
+
+  expect(queryClient.getQueryData<Resource[]>(resourcesKeys.list())).toEqual([
+    { ...secondResource, name: "Updated office", base_rate_minor_units: 300 },
+    { ...resource, name: "Updated room", base_rate_minor_units: 200 },
+  ]);
+  rejecters.get(resource.id)?.(new Error("first conflict"));
+  await expect(first).rejects.toThrow("first conflict");
+  expect(queryClient.getQueryData<Resource[]>(resourcesKeys.list())).toEqual([
+    { ...secondResource, name: "Updated office", base_rate_minor_units: 300 },
+    resource,
+  ]);
+  rejecters.get(secondResource.id)?.(new Error("second conflict"));
+  await expect(second).rejects.toThrow("second conflict");
 });

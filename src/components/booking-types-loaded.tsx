@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { BookingType } from "@/api/booking-types";
 import { useArchiveBookingTypeMutation } from "@/hooks/use-booking-types";
 import { BookingTypeRow } from "./booking-type-row";
@@ -27,6 +27,9 @@ export function BookingTypesLoaded({
     onCancel: () => setPending(null),
     active: pending !== null,
   });
+  useEffect(() => {
+    if (archive.isPending) dialogRef.current?.focus();
+  }, [archive.isPending]);
   const confirmArchive = () => {
     if (!pending) return;
     archive.mutate(pending.id, {
@@ -40,7 +43,8 @@ export function BookingTypesLoaded({
   return (
     <section className="booking-types-directory" aria-label="Booking types directory">
       <p ref={statusRef} tabIndex={-1}>
-        System booking types are protected. Custom types can be edited until they are archived.
+        Regular and Maintenance are protected. Training and custom types can be edited; custom types
+        can be archived.
       </p>
       <CreateBookingTypeForm locale={locale} />
       {archive.isError ? <p role="alert">{archive.error.message}</p> : null}

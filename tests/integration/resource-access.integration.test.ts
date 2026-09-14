@@ -173,6 +173,13 @@ it("enforces administrator tenant authorization and resource validation", async 
   expect(created.status).toBe(200);
   const resource = await created.json();
   expect(resource).toMatchObject({ name: "Meeting Room" });
+  const zeroRate = await request(adminA, "/api/collections/resources/records", {
+    method: "POST",
+    host: "tenant.localhost",
+    body: { name: "Free Room", base_rate_minor_units: 0, archived: false },
+  });
+  expect(zeroRate.status).toBe(200);
+  expect((await zeroRate.json()).base_rate_minor_units).toBe(0);
   const archivedOnCreate = await request(adminA, "/api/collections/resources/records", {
     method: "POST",
     host: "tenant.localhost",
@@ -280,6 +287,17 @@ it("protects seeded booking-type surcharges on direct updates", async () => {
   );
   expect(trainingUpdate.status).toBe(200);
   expect((await trainingUpdate.json()).surcharge_minor_units).toBe(25);
+  const trainingReset = await request(
+    admin,
+    `/api/collections/booking_types/records/${training.id}`,
+    {
+      method: "PATCH",
+      host: "tenant.localhost",
+      body: { surcharge_minor_units: 0 },
+    },
+  );
+  expect(trainingReset.status).toBe(200);
+  expect((await trainingReset.json()).surcharge_minor_units).toBe(0);
 
   const customCreate = await request(admin, "/api/collections/booking_types/records", {
     method: "POST",
@@ -293,6 +311,16 @@ it("protects seeded booking-type surcharges on direct updates", async () => {
   });
   expect(customCreate.status).toBe(200);
   const custom = await customCreate.json();
+  const missingSurcharge = await request(admin, "/api/collections/booking_types/records", {
+    method: "POST",
+    host: "tenant.localhost",
+    body: {
+      name: "Custom missing surcharge",
+      system_kind: "custom",
+      archived: false,
+    },
+  });
+  expect(missingSurcharge.status).toBe(400);
   const customUpdate = await request(admin, `/api/collections/booking_types/records/${custom.id}`, {
     method: "PATCH",
     host: "tenant.localhost",

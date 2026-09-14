@@ -207,7 +207,7 @@ function ensureResourceSchema(app, tenants) {
     id: "resource_base_rate_minor_units",
     name: "base_rate_minor_units",
     type: "number",
-    required: true,
+    required: false,
     min: 0,
     max: MAX_SAFE_MINOR_UNITS,
   });
@@ -260,7 +260,7 @@ function ensureBookingTypeSchema(app, tenants) {
     id: "booking_type_surcharge_minor_units",
     name: "surcharge_minor_units",
     type: "number",
-    required: true,
+    required: false,
     min: 0,
     max: MAX_SAFE_MINOR_UNITS,
   });
