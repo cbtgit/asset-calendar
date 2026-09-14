@@ -283,16 +283,26 @@ function seedBookingTypes(app, collection, tenant) {
   ];
   for (const definition of definitions) {
     if (existing.some((record) => record.get("system_kind") === definition.kind)) continue;
+    const normalizedName = definition.name.toLowerCase();
+    const conflictingName = existing.find(
+      (record) => record.get("name_normalized") === normalizedName,
+    );
+    if (conflictingName) {
+      throw new Error(
+        `Booking type seed conflict: tenant ${tenant.id}, record ${conflictingName.id} already uses normalized name "${normalizedName}".`,
+      );
+    }
     const record = new Record(collection);
     record.set("tenant", tenant.id);
     record.set("name", definition.name);
-    record.set("name_normalized", definition.name.toLowerCase());
+    record.set("name_normalized", normalizedName);
     record.set("surcharge_minor_units", String(definition.surcharge));
     record.set("system_kind", definition.kind);
     record.set("billable", definition.billable);
     record.set("resource_blocking", definition.blocking);
     record.set("archived", false);
     app.saveNoValidate(record);
+    existing.push(record);
   }
 }
 
@@ -336,12 +346,12 @@ migrate(
     const existingBookingTypes = records(app, bookingTypes);
     normalizeNames(existingBookingTypes, "Booking type");
     for (const record of existingBookingTypes) app.save(record);
+    for (const tenant of records(app, tenants)) seedBookingTypes(app, bookingTypes, tenant);
     ensureUniqueIndex(
       bookingTypes,
       "CREATE UNIQUE INDEX idx_booking_types_tenant_name_normalized ON booking_types (tenant, name_normalized)",
     );
     app.save(bookingTypes);
-    for (const tenant of records(app, tenants)) seedBookingTypes(app, bookingTypes, tenant);
   },
   () => {},
 );
