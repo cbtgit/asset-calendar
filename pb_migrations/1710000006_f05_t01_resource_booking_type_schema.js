@@ -34,6 +34,7 @@ function createField(definition) {
         required: definition.required === true,
         min: definition.min,
         max: definition.max,
+        onlyInt: true,
         noDecimal: true,
       });
     case "relation":
@@ -96,6 +97,7 @@ function ensureField(collection, definition) {
     existing.required = definition.required === true;
     existing.min = definition.min;
     existing.max = definition.max;
+    existing.onlyInt = true;
     existing.noDecimal = true;
   } else if (definition.required) {
     existing.required = true;
@@ -153,6 +155,14 @@ function createCollection(name, id) {
   });
 }
 
+function lockCollectionRules(collection) {
+  collection.listRule = null;
+  collection.viewRule = null;
+  collection.createRule = null;
+  collection.updateRule = null;
+  collection.deleteRule = null;
+}
+
 function ensureResourceSchema(app, tenants) {
   let resources;
   try {
@@ -197,10 +207,7 @@ function ensureResourceSchema(app, tenants) {
   ensureField(resources, { id: "resource_archived", name: "archived", type: "bool" });
   ensureField(resources, { id: "resource_archived_at", name: "archived_at", type: "date" });
   resources.fields.find((field) => field.name === "name_normalized").hidden = true;
-  ensureUniqueIndex(
-    resources,
-    "CREATE UNIQUE INDEX idx_resources_tenant_name_normalized ON resources (tenant, name_normalized)",
-  );
+  lockCollectionRules(resources);
   app.save(resources);
   return resources;
 }
@@ -262,10 +269,7 @@ function ensureBookingTypeSchema(app, tenants) {
   ensureField(bookingTypes, { id: "booking_type_archived", name: "archived", type: "bool" });
   ensureField(bookingTypes, { id: "booking_type_archived_at", name: "archived_at", type: "date" });
   bookingTypes.fields.find((field) => field.name === "name_normalized").hidden = true;
-  ensureUniqueIndex(
-    bookingTypes,
-    "CREATE UNIQUE INDEX idx_booking_types_tenant_name_normalized ON booking_types (tenant, name_normalized)",
-  );
+  lockCollectionRules(bookingTypes);
   app.save(bookingTypes);
   return bookingTypes;
 }
@@ -322,11 +326,21 @@ migrate(
     const existingResources = records(app, resources);
     normalizeNames(existingResources, "Resource");
     for (const record of existingResources) app.save(record);
+    ensureUniqueIndex(
+      resources,
+      "CREATE UNIQUE INDEX idx_resources_tenant_name_normalized ON resources (tenant, name_normalized)",
+    );
+    app.save(resources);
 
     const bookingTypes = ensureBookingTypeSchema(app, tenants);
     const existingBookingTypes = records(app, bookingTypes);
     normalizeNames(existingBookingTypes, "Booking type");
     for (const record of existingBookingTypes) app.save(record);
+    ensureUniqueIndex(
+      bookingTypes,
+      "CREATE UNIQUE INDEX idx_booking_types_tenant_name_normalized ON booking_types (tenant, name_normalized)",
+    );
+    app.save(bookingTypes);
     for (const tenant of records(app, tenants)) seedBookingTypes(app, bookingTypes, tenant);
   },
   () => {},
