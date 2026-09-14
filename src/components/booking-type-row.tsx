@@ -4,7 +4,6 @@ import { useUpdateBookingTypeMutation } from "@/hooks/use-booking-types";
 import { formatMoney, formatMoneyInput, parseMoney } from "@/lib/money";
 import { mutationErrorMessage } from "@/lib/error-messages";
 
-// oxlint-disable-next-line complexity, max-lines-per-function
 export function BookingTypeRow({
   type,
   locale,
@@ -16,6 +15,56 @@ export function BookingTypeRow({
   currency: string;
   onArchive: (type: BookingType) => void;
 }) {
+  const form = useBookingTypeRowState(type, locale);
+  const editable = isEditable(type);
+  const formId = `booking-type-actions-${type.id}`;
+  return (
+    <li className="booking-types-row">
+      <div>
+        {editable ? (
+          <input
+            form={formId}
+            aria-label={`Name for ${type.name}`}
+            value={form.name}
+            onChange={(event) => form.onNameChange(event.target.value)}
+            disabled={form.update.isPending}
+            aria-invalid={form.validationField === "name" || Boolean(form.mutationError)}
+            aria-describedby={form.nameDescribedBy || undefined}
+          />
+        ) : (
+          <strong>{type.name}</strong>
+        )}
+        <span className="booking-types-meta">
+          {type.system_kind === "custom" ? "Custom" : "System"}
+          {type.archived ? " · Archived" : ""}
+        </span>
+      </div>
+      <span>{formatMoney(type.surcharge_minor_units, locale, currency)}</span>
+      {renderActions({
+        type,
+        formId,
+        value: form.value,
+        editable,
+        archivable: editable && type.system_kind === "custom",
+        pending: form.update.isPending,
+        validationError: form.validationError,
+        validationField: form.validationField,
+        surchargeErrorId: form.surchargeErrorId,
+        mutationErrorId: form.mutationErrorId,
+        mutationError: form.mutationError,
+        onSubmit: form.save,
+        onChange: form.onValueChange,
+        onArchive,
+      })}
+    </li>
+  );
+}
+
+function isEditable(type: BookingType) {
+  return (type.system_kind === "custom" || type.system_kind === "training") && !type.archived;
+}
+
+function useBookingTypeRowState(type: BookingType, locale: string) {
   const update = useUpdateBookingTypeMutation();
   const [name, setName] = useState(type.name);
   const [value, setValue] = useState(() => formatMoneyInput(type.surcharge_minor_units, locale));
@@ -30,11 +79,12 @@ export function BookingTypeRow({
     archived: type.archived,
   });
   useEffect(() => {
+    const previous = previousTypeRef.current;
     const authoritativeTypeChanged =
-      previousTypeRef.current.id !== type.id ||
-      previousTypeRef.current.name !== type.name ||
-      previousTypeRef.current.surcharge !== type.surcharge_minor_units ||
-      previousTypeRef.current.archived !== type.archived;
+      previous.id !== type.id ||
+      previous.name !== type.name ||
+      previous.surcharge !== type.surcharge_minor_units ||
+      previous.archived !== type.archived;
     previousTypeRef.current = {
       id: type.id,
       name: type.name,
@@ -48,8 +98,6 @@ export function BookingTypeRow({
       if (authoritativeTypeChanged) setDirty(false);
     }
   }, [dirty, locale, type]);
-  const editable =
-    (type.system_kind === "custom" || type.system_kind === "training") && !type.archived;
   const save = (event: FormEvent) => {
     event.preventDefault();
     if (!name.trim()) {
@@ -70,69 +118,40 @@ export function BookingTypeRow({
       input: { name: name.trim(), surcharge_minor_units: parsed.value },
     });
   };
-  const formId = `booking-type-actions-${type.id}`;
-  const nameErrorId = `booking-type-name-error-${type.id}`;
   const surchargeErrorId = `booking-type-surcharge-error-${type.id}`;
   const mutationErrorId = `booking-type-mutation-error-${type.id}`;
   const mutationError = update.isError
     ? mutationErrorMessage(update.error, "booking-type-save")
     : "";
-  const nameDescribedBy = [
-    validationField === "name" ? nameErrorId : "",
-    mutationError ? mutationErrorId : "",
-  ]
-    .filter(Boolean)
-    .join(" ");
-  return (
-    <li className="booking-types-row">
-      <div>
-        {editable ? (
-          <input
-            form={formId}
-            aria-label={`Name for ${type.name}`}
-            value={name}
-            onChange={(event) => {
-              setDirty(true);
-              setName(event.target.value);
-              setValidationError("");
-              setValidationField(null);
-            }}
-            disabled={update.isPending}
-            aria-invalid={validationField === "name" || Boolean(mutationError)}
-            aria-describedby={nameDescribedBy || undefined}
-          />
-        ) : (
-          <strong>{type.name}</strong>
-        )}
-        <span className="booking-types-meta">
-          {type.system_kind === "custom" ? "Custom" : "System"}
-          {type.archived ? " · Archived" : ""}
-        </span>
-      </div>
-      <span>{formatMoney(type.surcharge_minor_units, locale, currency)}</span>
-      {renderActions({
-        type,
-        formId,
-        value,
-        editable,
-        archivable: editable && type.system_kind === "custom",
-        pending: update.isPending,
-        validationError,
-        validationField,
-        surchargeErrorId,
-        mutationErrorId,
-        mutationError,
-        onSubmit: save,
-        onChange: (nextValue) => {
-          setDirty(true);
-          setValue(nextValue);
-          setValidationError("");
-          setValidationField(null);
-        },
-        onArchive,
-      })}
-    </li>
-  );
+  return {
+    update,
+    name,
+    value,
+    validationError,
+    validationField,
+    surchargeErrorId,
+    mutationErrorId,
+    mutationError,
+    nameDescribedBy: [
+      validationField === "name" ? `booking-type-name-error-${type.id}` : "",
+      mutationError ? mutationErrorId : "",
+    ]
+      .filter(Boolean)
+      .join(" "),
+    save,
+    onNameChange: (nextName: string) => {
+      setDirty(true);
+      setName(nextName);
+      setValidationError("");
+      setValidationField(null);
+    },
+    onValueChange: (nextValue: string) => {
+      setDirty(true);
+      setValue(nextValue);
+      setValidationError("");
+      setValidationField(null);
+    },
+  };
 }
 
 // oxlint-disable-next-line complexity

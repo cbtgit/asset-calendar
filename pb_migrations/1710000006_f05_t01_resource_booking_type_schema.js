@@ -114,13 +114,20 @@ function ensureField(collection, definition) {
 function ensureUniqueIndex(collection, index) {
   collection.indexes ??= [];
   const indexName = /INDEX\s+`?([^`\s]+)`?/i.exec(index)?.[1];
-  if (
-    !collection.indexes.some((existing) =>
-      indexName
-        ? new RegExp(`INDEX\\s+\`?${indexName}\`?`, "i").test(existing)
-        : existing === index,
-    )
-  ) {
+  const normalize = (value) => value.replaceAll("`", "").replace(/\s+/g, " ").trim().toLowerCase();
+  const normalizedIndex = normalize(index);
+  const existing = collection.indexes.find((value) =>
+    indexName ? new RegExp(`INDEX\\s+\`?${indexName}\`?`, "i").test(value) : false,
+  );
+  if (existing) {
+    if (normalize(existing) !== normalizedIndex) {
+      throw new Error(
+        `Collection ${collection.name} has an incompatible index named ${indexName}.`,
+      );
+    }
+    return;
+  }
+  if (!collection.indexes.some((value) => normalize(value) === normalizedIndex)) {
     collection.indexes.push(index);
   }
 }
