@@ -3,7 +3,12 @@ import * as auth from "@/api/auth";
 import { Route as AuthenticatedRoute } from "./_authenticated";
 import { Route as GroupsRoute } from "./_authenticated/groups";
 import { Route as AuthenticatedIndexRoute } from "./_authenticated/index";
+import { Route as BookingTypesRoute } from "./_authenticated/booking-types";
+import { Route as ResourcesRoute } from "./_authenticated/resources";
+import { Route as SettingsRoute } from "./_authenticated/settings";
 import { Route as SignInRoute } from "./sign-in";
+
+const administratorOnlyRoutes = [ResourcesRoute, SettingsRoute, BookingTypesRoute];
 
 const runBeforeLoad = (route: { options: { beforeLoad?: unknown } }) => {
   if (typeof route.options.beforeLoad !== "function") {
@@ -72,6 +77,30 @@ it("does not treat users without an administrator role as administrators", async
   await expect(runBeforeLoad(GroupsRoute)).rejects.toMatchObject({
     options: { to: "/calendar" },
   });
+});
+
+it("redirects regular users from administrator-only routes", async () => {
+  vi.spyOn(auth, "getAuthSnapshot").mockReturnValue({
+    status: "authenticated",
+    user: { role: "regular" } as auth.AuthUser,
+  });
+
+  for (const route of administratorOnlyRoutes) {
+    await expect(Promise.resolve().then(() => runBeforeLoad(route))).rejects.toMatchObject({
+      options: { to: "/calendar" },
+    });
+  }
+});
+
+it("allows administrators through administrator-only routes", async () => {
+  vi.spyOn(auth, "getAuthSnapshot").mockReturnValue({
+    status: "authenticated",
+    user: { role: "administrator" } as auth.AuthUser,
+  });
+
+  for (const route of administratorOnlyRoutes) {
+    expect(runBeforeLoad(route)).toBeUndefined();
+  }
 });
 
 it("redirects the authenticated index to the calendar", async () => {

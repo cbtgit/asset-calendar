@@ -163,6 +163,9 @@ function normalizeBookingType(event, { info, record, tenantId, isCreate }) {
   if (kind === "regular" && surcharge !== 0) {
     throw new BadRequestError("booking_type_regular_surcharge_protected");
   }
+  if (!isCreate && kind === "maintenance" && surcharge > 0) {
+    throw new BadRequestError("booking_type_maintenance_surcharge_protected");
+  }
   if (kind === "regular" || kind === "training") {
     if (bookingTypeValue(info, record, "billable") !== true) {
       throw new BadRequestError("booking_type_billable_protected");

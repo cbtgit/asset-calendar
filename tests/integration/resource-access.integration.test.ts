@@ -68,6 +68,23 @@ beforeAll(async () => {
   tenantB.set("currency", "DKK");
   tenantB.set("locale", "da-DK");
   app.save(tenantB);
+  const bookingTypes = app.findCollectionByNameOrId("booking_types");
+  for (const definition of [
+    { name: "Regular", kind: "regular", surcharge: "0", billable: true },
+    { name: "Training", kind: "training", surcharge: "0", billable: true },
+    { name: "Maintenance", kind: "maintenance", surcharge: "0", billable: false },
+  ]) {
+    const bookingType = new Record(bookingTypes);
+    bookingType.set("tenant", tenantA.id);
+    bookingType.set("name", definition.name);
+    bookingType.set("name_normalized", definition.name.toLowerCase());
+    bookingType.set("system_kind", definition.kind);
+    bookingType.set("surcharge_minor_units", definition.surcharge);
+    bookingType.set("billable", definition.billable);
+    bookingType.set("resource_blocking", true);
+    bookingType.set("archived", false);
+    app.saveNoValidate(bookingType);
+  }
   const unitA = new Record(units);
   unitA.set("tenant", tenantA.id);
   unitA.set("name", "Unit A");
@@ -203,6 +220,81 @@ it("enforces administrator tenant authorization and resource validation", async 
     },
   );
   expect(crossTenantUpdate.status).toBeGreaterThanOrEqual(400);
+});
+
+it("protects seeded booking-type surcharges on direct updates", async () => {
+  const admin = await authenticate("admin-a@example.test", "tenant.localhost");
+  const bookingTypesResponse = await request(admin, "/api/booking-types", {
+    host: "tenant.localhost",
+  });
+  expect(bookingTypesResponse.status).toBe(200);
+  const bookingTypes = (await bookingTypesResponse.json()).items as Array<{
+    id: string;
+    system_kind: string;
+    surcharge_minor_units: number;
+  }>;
+  const bookingType = (systemKind: string) => {
+    const match = bookingTypes.find((type) => type.system_kind === systemKind);
+    if (!match) throw new Error(`Expected seeded ${systemKind} booking type.`);
+    return match;
+  };
+
+  const maintenance = bookingType("maintenance");
+  const maintenanceUpdate = await request(
+    admin,
+    `/api/collections/booking_types/records/${maintenance.id}`,
+    {
+      method: "PATCH",
+      host: "tenant.localhost",
+      body: { surcharge_minor_units: 1 },
+    },
+  );
+  expect(maintenanceUpdate.status).toBe(400);
+
+  const regular = bookingType("regular");
+  const regularUpdate = await request(
+    admin,
+    `/api/collections/booking_types/records/${regular.id}`,
+    {
+      method: "PATCH",
+      host: "tenant.localhost",
+      body: { surcharge_minor_units: 1 },
+    },
+  );
+  expect(regularUpdate.status).toBe(400);
+
+  const training = bookingType("training");
+  const trainingUpdate = await request(
+    admin,
+    `/api/collections/booking_types/records/${training.id}`,
+    {
+      method: "PATCH",
+      host: "tenant.localhost",
+      body: { surcharge_minor_units: 25 },
+    },
+  );
+  expect(trainingUpdate.status).toBe(200);
+  expect((await trainingUpdate.json()).surcharge_minor_units).toBe(25);
+
+  const customCreate = await request(admin, "/api/collections/booking_types/records", {
+    method: "POST",
+    host: "tenant.localhost",
+    body: {
+      name: "Custom direct update",
+      system_kind: "custom",
+      surcharge_minor_units: 10,
+      archived: false,
+    },
+  });
+  expect(customCreate.status).toBe(200);
+  const custom = await customCreate.json();
+  const customUpdate = await request(admin, `/api/collections/booking_types/records/${custom.id}`, {
+    method: "PATCH",
+    host: "tenant.localhost",
+    body: { surcharge_minor_units: 20 },
+  });
+  expect(customUpdate.status).toBe(200);
+  expect((await customUpdate.json()).surcharge_minor_units).toBe(20);
 });
 
 it("archives resources one way and projects rates only to administrators", async () => {
