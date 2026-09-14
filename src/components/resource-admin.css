@@ -1,0 +1,185 @@
+.resource-admin {
+  display: grid;
+  gap: var(--space-5);
+  max-width: 64rem;
+}
+.resource-admin-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+}
+.resource-admin-header p {
+  margin: 0;
+  color: var(--color-muted);
+}
+.resource-primary-action,
+.resource-action,
+.resource-form button,
+.resource-dialog button,
+.resource-state button {
+  display: inline-flex;
+  min-height: 2.75rem;
+  align-items: center;
+  justify-content: center;
+  padding: 0 var(--space-4);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  color: var(--color-brand-dark);
+  background: var(--color-surface);
+  cursor: pointer;
+  font: inherit;
+  font-weight: 650;
+  text-decoration: none;
+}
+.resource-primary-action,
+.resource-form button[type="submit"] {
+  border-color: var(--color-brand);
+  color: var(--color-surface);
+  background: var(--color-brand);
+}
+.resource-list {
+  display: grid;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.resource-row {
+  display: grid;
+  grid-template-columns: minmax(10rem, 1fr) minmax(8rem, 0.6fr) minmax(14rem, 1fr);
+  gap: var(--space-4);
+  align-items: center;
+  padding: var(--space-4);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  overflow-wrap: anywhere;
+}
+.resource-badge {
+  display: inline-block;
+  margin-left: var(--space-2);
+  padding: 0.2rem 0.4rem;
+  border-radius: 0.25rem;
+  color: var(--color-muted);
+  background: var(--color-surface-subtle);
+  font-size: 0.75rem;
+}
+.resource-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: var(--space-2);
+}
+.resource-danger {
+  border-color: #b42318 !important;
+  color: #b42318 !important;
+}
+.resource-muted,
+.resource-empty,
+.resource-state,
+.resource-error {
+  color: var(--color-muted);
+}
+.resource-empty,
+.resource-state {
+  margin: 0;
+  padding: var(--space-5);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+}
+.resource-error {
+  color: #b42318;
+}
+.resource-form-surface {
+  width: min(100%, 40rem);
+  padding: var(--space-7);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-header);
+}
+.resource-form {
+  display: grid;
+  gap: var(--space-3);
+  margin-top: var(--space-6);
+}
+.resource-form label {
+  color: var(--color-ink);
+  font-weight: 650;
+}
+.resource-form input {
+  min-height: 2.75rem;
+  padding: 0 var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  color: var(--color-ink);
+  background: var(--color-surface);
+  font: inherit;
+}
+.resource-form input[aria-invalid="true"] {
+  border-color: #b42318;
+}
+.resource-form p {
+  margin: 0;
+  font-size: 0.9rem;
+}
+.resource-form-actions,
+.resource-dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  margin-top: var(--space-3);
+}
+.resource-dialog-backdrop {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: var(--space-5);
+  background: rgb(23 32 51 / 35%);
+}
+.resource-dialog {
+  width: min(100%, 30rem);
+  padding: var(--space-6);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-header);
+}
+.resource-dialog h2 {
+  margin-top: 0;
+}
+.resource-dialog p {
+  color: var(--color-muted);
+  line-height: 1.6;
+}
+.resource-form button:disabled,
+.resource-dialog button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+@media (max-width: 767px) {
+  .resource-admin-header {
+    align-items: stretch;
+    flex-direction: column;
+  }
+  .resource-primary-action {
+    width: 100%;
+  }
+  .resource-row {
+    grid-template-columns: 1fr;
+  }
+  .resource-actions {
+    justify-content: flex-start;
+  }
+  .resource-form-surface {
+    width: auto;
+    min-height: calc(100vh - var(--shell-header-height) - (2 * var(--space-5)));
+    padding: var(--space-5);
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+  }
+}

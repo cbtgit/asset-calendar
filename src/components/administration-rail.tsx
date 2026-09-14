@@ -16,6 +16,20 @@ export function AdministrationRail({ activeDestination }: AdministrationRailProp
       >
         Groups
       </Link>
+      <Link
+        className="shell-rail-link"
+        data-active={activeDestination === "resources" ? "true" : undefined}
+        to="/resources"
+      >
+        Resources
+      </Link>
+      <Link
+        className="shell-rail-link"
+        data-active={activeDestination === "settings" ? "true" : undefined}
+        to="/settings"
+      >
+        Settings
+      </Link>
     </nav>
   );
 }
