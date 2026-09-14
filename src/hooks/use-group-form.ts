@@ -19,6 +19,19 @@ function validateName(value: string): string | undefined {
   return undefined;
 }
 
+function duplicateNameCode(error: ApplicationError): string | undefined {
+  if (typeof error.cause !== "object" || error.cause === null) return undefined;
+
+  const data = Reflect.get(error.cause, "data");
+  if (typeof data !== "object" || data === null) return undefined;
+
+  const field = Reflect.get(data, "name_normalized");
+  if (typeof field !== "object" || field === null) return undefined;
+
+  const code = Reflect.get(field, "code");
+  return typeof code === "string" ? code : undefined;
+}
+
 export function useGroupForm(props: GroupFormProps) {
   const [name, setName] = useState(props.initialName ?? "");
   const [validationError, setValidationError] = useState<string>();
@@ -28,7 +41,10 @@ export function useGroupForm(props: GroupFormProps) {
   const renameMutation = useRenameGroupMutation();
   const mutation = props.mode === "create" ? createMutation : renameMutation;
   const conflictError =
-    mutation.error instanceof ApplicationError && mutation.error.kind === "conflict"
+    mutation.error instanceof ApplicationError &&
+    (mutation.error.kind === "conflict" ||
+      (mutation.error.kind === "validation" &&
+        duplicateNameCode(mutation.error) === "validation_not_unique"))
       ? "A group with this name already exists."
       : undefined;
 

@@ -36,7 +36,15 @@ it("focuses the name field and returns focus after validation failure", () => {
 });
 
 it("preserves the entered name and maps a conflict to the field", async () => {
-  const conflict = Object.assign(new Error("Duplicate"), { status: 409 });
+  const conflict = Object.assign(new Error("Duplicate"), {
+    status: 400,
+    data: {
+      name_normalized: {
+        code: "validation_not_unique",
+        message: "Value must be unique.",
+      },
+    },
+  });
   vi.spyOn(pocketbase, "collection").mockReturnValue({
     create: vi.fn().mockRejectedValue(conflict),
   } as never);
