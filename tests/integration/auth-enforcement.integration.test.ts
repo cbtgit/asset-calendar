@@ -192,8 +192,11 @@ it("enforces the resolved tenant and role boundary on direct requests", async ()
     host: "tenant.localhost",
     body: { name: "Override", name_normalized: "unit a" },
   });
-  expect(normalizedOverride.status).toBe(200);
-  expect((await normalizedOverride.json()).name).toBe("Override");
+  expect(normalizedOverride.status).toBe(403);
+  const groupsAfterOverride = await request(admin, "/api/groups", { host: "tenant.localhost" });
+  expect((await groupsAfterOverride.json()).items).not.toContainEqual(
+    expect.objectContaining({ name: "Override" }),
+  );
 
   const blankGroup = await request(admin, "/api/collections/organizational_units/records", {
     method: "POST",

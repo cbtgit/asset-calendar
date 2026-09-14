@@ -105,7 +105,11 @@ function applyServerTenant(info, record, tenantId) {
   }
 }
 
-function normalizeOrganizationalUnit(info, record, tenantId) {
+function normalizeOrganizationalUnit(event, info, record, tenantId) {
+  const missing = String(Math.random());
+  const raw = new DynamicModel({ name_normalized: missing });
+  event.bindBody(raw);
+  if (raw.name_normalized !== missing) deny();
   if (Object.prototype.hasOwnProperty.call(info.body, TENANT_FIELD)) deny();
   if (Object.prototype.hasOwnProperty.call(info.body, "name_normalized")) deny();
 
@@ -233,7 +237,7 @@ function createRecord(event) {
   if (!context) return event.next();
 
   if (collectionName({ record: event.record }) === ORGANIZATIONAL_UNIT_COLLECTION) {
-    normalizeOrganizationalUnit(context.info, event.record, context.context.tenant.id);
+    normalizeOrganizationalUnit(event, context.info, event.record, context.context.tenant.id);
   } else {
     applyServerTenant(context.info, event.record, context.context.tenant.id);
   }
@@ -248,7 +252,7 @@ function updateRecord(event) {
   ensureRecordTenant(event.record, context.context.tenant.id);
   protectUserFields(context, event.record);
   if (collectionName({ record: event.record }) === ORGANIZATIONAL_UNIT_COLLECTION) {
-    normalizeOrganizationalUnit(context.info, event.record, context.context.tenant.id);
+    normalizeOrganizationalUnit(event, context.info, event.record, context.context.tenant.id);
   } else {
     applyServerTenant(context.info, event.record, context.context.tenant.id);
   }
