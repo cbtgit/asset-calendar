@@ -119,6 +119,29 @@ it("enforces administrator tenant authorization and resource validation", async 
     body: { currency: "EUR" },
   });
   expect(currencyChange.status).toBe(403);
+  const localeChange = await request(adminA, `/api/collections/tenants/records/${tenantId}`, {
+    method: "PATCH",
+    host: "tenant.localhost",
+    body: { locale: "en-GB" },
+  });
+  expect(localeChange.status).toBe(200);
+  expect((await localeChange.json()).locale).toBe("en-GB");
+  const regularLocaleChange = await request(
+    regularA,
+    `/api/collections/tenants/records/${tenantId}`,
+    {
+      method: "PATCH",
+      host: "tenant.localhost",
+      body: { locale: "fr-FR" },
+    },
+  );
+  expect([403, 404]).toContain(regularLocaleChange.status);
+  const directLocaleChange = await request(adminA, `/api/collections/tenants/records/${tenantId}`, {
+    method: "PATCH",
+    host: "other.localhost",
+    body: { locale: "de-DE" },
+  });
+  expect([403, 404]).toContain(directLocaleChange.status);
 
   const created = await request(adminA, "/api/collections/resources/records", {
     method: "POST",

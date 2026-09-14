@@ -71,6 +71,9 @@ export function useCreateBookingTypeMutation() {
       queryClient.setQueryData<BookingType[]>(bookingTypesKeys.list(), (items) =>
         items ? sorted([...items, { ...item, updated: now } as BookingType]) : items,
       );
+      queryClient.setQueryData<BookingType[]>(bookingTypesKeys.selection(), (items) =>
+        items ? sorted([...items, item]) : items,
+      );
       return previous;
     },
     onError: (_error, _input, previous) => previous && restore(queryClient, previous),

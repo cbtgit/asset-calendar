@@ -6,7 +6,11 @@ import { pocketbase } from "@/api/client";
 import { bookingTypesKeys, tenantSettingsKeys } from "@/api/query-keys";
 import type { BookingType } from "@/api/booking-types";
 import type { TenantSettings } from "@/api/tenant-settings";
-import { useArchiveBookingTypeMutation, useUpdateBookingTypeMutation } from "./use-booking-types";
+import {
+  useArchiveBookingTypeMutation,
+  useCreateBookingTypeMutation,
+  useUpdateBookingTypeMutation,
+} from "./use-booking-types";
 import { useUpdateTenantSettingsMutation } from "./use-tenant-settings";
 
 const bookingType: BookingType = {
@@ -55,6 +59,29 @@ it("optimistically archives booking types and rolls back on failure", async () =
   await expect(mutation).rejects.toThrow("conflict");
   expect(queryClient.getQueryData(bookingTypesKeys.list())).toEqual([bookingType]);
   expect(queryClient.getQueryData(bookingTypesKeys.selection())).toEqual([bookingType]);
+});
+
+it("adds a safe custom booking type to the cached selection optimistically", async () => {
+  vi.spyOn(pocketbase, "collection").mockReturnValue({
+    create: vi.fn().mockResolvedValue({ id: "type-2" }),
+  } as never);
+  vi.spyOn(pocketbase, "send").mockResolvedValue({ ...bookingType, id: "type-2" });
+  const { queryClient, wrapper } = setup();
+  const { result } = renderHook(() => useCreateBookingTypeMutation(), { wrapper });
+
+  await act(() =>
+    result.current.mutateAsync({
+      name: "Weekend",
+      surcharge_minor_units: 500,
+      system_kind: "custom",
+    }),
+  );
+
+  expect(queryClient.getQueryData(bookingTypesKeys.selection())).toEqual(
+    expect.arrayContaining([
+      expect.objectContaining({ name: "Weekend", system_kind: "custom", archived: false }),
+    ]),
+  );
 });
 
 it("optimistically updates settings and restores the locale on failure", async () => {

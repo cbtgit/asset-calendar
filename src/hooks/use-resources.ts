@@ -80,6 +80,20 @@ export function useCreateResourceMutation() {
       queryClient.setQueryData<Resource[]>(resourcesKeys.list(), (items) =>
         items ? sorted([...items, resource]) : items,
       );
+      queryClient.setQueryData<ActiveResource[]>(resourcesKeys.active(), (items) =>
+        items
+          ? [
+              ...items,
+              {
+                id: resource.id,
+                name: resource.name,
+                archived: false,
+                created: resource.created,
+                updated: resource.updated,
+              },
+            ]
+          : items,
+      );
       return previous;
     },
     onError: (_error, _input, previous) => previous && restore(queryClient, previous),

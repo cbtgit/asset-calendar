@@ -4,8 +4,12 @@ import type { ReactNode } from "react";
 import { afterEach, expect, it, vi } from "vite-plus/test";
 import { pocketbase } from "@/api/client";
 import { resourcesKeys } from "@/api/query-keys";
-import type { Resource } from "@/api/resources";
-import { useArchiveResourceMutation, useUpdateResourceMutation } from "./use-resources";
+import type { ActiveResource, Resource } from "@/api/resources";
+import {
+  useArchiveResourceMutation,
+  useCreateResourceMutation,
+  useUpdateResourceMutation,
+} from "./use-resources";
 
 const resource: Resource = {
   id: "resource-1",
@@ -59,6 +63,24 @@ it("cancels, updates immediately, and rolls back resource updates", async () => 
   rejectUpdate(Object.assign(new Error("conflict"), { status: 409 }));
   await expect(mutation).rejects.toMatchObject({ kind: "conflict" });
   expect(queryClient.getQueryData(resourcesKeys.list())).toEqual([resource]);
+});
+
+it("adds a non-priced resource to the cached active projection optimistically", async () => {
+  vi.spyOn(pocketbase, "collection").mockReturnValue({
+    create: vi.fn().mockResolvedValue({ id: "resource-2" }),
+  } as never);
+  vi.spyOn(pocketbase, "send").mockResolvedValue({ ...resource, id: "resource-2", name: "Office" });
+  const { queryClient, wrapper } = setup();
+  const { result } = renderHook(() => useCreateResourceMutation(), { wrapper });
+
+  await act(() => result.current.mutateAsync({ name: "Office", base_rate_minor_units: 300 }));
+
+  expect(queryClient.getQueryData(resourcesKeys.active())).toEqual(
+    expect.arrayContaining([expect.objectContaining({ name: "Office", archived: false })]),
+  );
+  expect(
+    queryClient.getQueryData<ActiveResource[]>(resourcesKeys.active())?.[1],
+  ).not.toHaveProperty("base_rate_minor_units");
 });
 
 it("removes archived resources from active selection and invalidates after settlement", async () => {

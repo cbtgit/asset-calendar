@@ -43,10 +43,9 @@ export async function getResources(): Promise<Resource[]> {
 }
 
 export async function getActiveResources(): Promise<ActiveResource[]> {
-  const response = await getProjection<ResourceListResponse<Resource>>("/api/resources/active");
-  return response.items.map(
-    ({ base_rate_minor_units: _rate, archived_at: _archivedAt, ...item }) => item,
-  );
+  const response =
+    await getProjection<ResourceListResponse<ActiveResource>>("/api/resources/active");
+  return response.items;
 }
 
 export async function getResource(id: string): Promise<Resource> {

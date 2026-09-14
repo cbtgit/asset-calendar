@@ -338,6 +338,9 @@ migrate(
       pattern: LOCALE_PATTERN,
     });
     app.saveNoValidate(tenants);
+    tenants.updateRule =
+      '@request.auth.id != "" && @request.auth.active = true && @request.auth.role = "administrator" && @request.auth.tenant = id';
+    app.saveNoValidate(tenants);
     for (const tenant of records(app, tenants)) {
       if (!tenant.get("currency")) tenant.set("currency", "DKK");
       if (!tenant.get("locale")) tenant.set("locale", "da-DK");

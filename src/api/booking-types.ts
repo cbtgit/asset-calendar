@@ -21,7 +21,7 @@ export type BookingType = {
 export type BookingTypeCreate = {
   name: string;
   surcharge_minor_units: number;
-  system_kind: SystemKind;
+  system_kind: "custom";
   billable?: boolean;
   resource_blocking?: boolean;
 };
