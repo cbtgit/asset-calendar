@@ -4,7 +4,8 @@ const BOOKING_TYPE_COLLECTION = "booking_types";
 const CURRENCY_VALUES = ["DKK", "EUR", "USD", "GBP"];
 const SYSTEM_KIND_VALUES = ["regular", "training", "maintenance", "custom"];
 const NAME_PATTERN = "^.*\\S.*$";
-const LOCALE_PATTERN = "^[A-Za-z]{2,8}(?:-[A-Za-z0-9]{1,8})*$";
+const LOCALE_PATTERN =
+  "^(?:(?:[A-Za-z]{2,8}(?:-[A-Za-z]{4})?(?:-(?:[A-Za-z]{2}|[0-9]{3}))?(?:-(?:[A-Za-z0-9]{5,8}|[0-9][A-Za-z0-9]{3}))*(?:-(?:[0-9A-WY-Za-wy-z](?:-[A-Za-z0-9]{2,8})+))*|x(?:-[A-Za-z0-9]{1,8})+))(?:-x(?:-[A-Za-z0-9]{1,8})+)?$";
 const MAX_SAFE_MINOR_UNITS = Number.MAX_SAFE_INTEGER;
 
 function records(app, collection) {
@@ -273,8 +274,7 @@ function ensureBookingTypeSchema(app, tenants) {
   ensureField(bookingTypes, { id: "booking_type_archived", name: "archived", type: "bool" });
   ensureField(bookingTypes, { id: "booking_type_archived_at", name: "archived_at", type: "date" });
   bookingTypes.fields.find((field) => field.name === "name_normalized").hidden = true;
-  bookingTypes.listRule =
-    '@request.auth.id != "" && @request.auth.active = true && @request.auth.role = "administrator" && @request.auth.tenant = tenant';
+  bookingTypes.listRule = '@request.auth.id = ""';
   bookingTypes.viewRule = bookingTypes.listRule;
   bookingTypes.createRule =
     '@request.auth.id != "" && @request.auth.active = true && @request.auth.role = "administrator"';

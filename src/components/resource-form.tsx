@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, type FormEvent } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import type { Resource } from "@/api/resources";
 import { useCreateResourceMutation, useUpdateResourceMutation } from "@/hooks/use-resources";
-import { parseMoney } from "@/lib/money";
+import { formatMoneyInput, parseMoney } from "@/lib/money";
 import "./resource-admin.css";
 
 // oxlint-disable-next-line complexity
@@ -18,12 +18,7 @@ export function ResourceForm({
   const navigate = useNavigate();
   const [name, setName] = useState(resource?.name ?? "");
   const [rate, setRate] = useState(
-    resource
-      ? new Intl.NumberFormat(locale, {
-          minimumFractionDigits: 2,
-          maximumFractionDigits: 2,
-        }).format(resource.base_rate_minor_units / 100)
-      : "",
+    resource ? formatMoneyInput(resource.base_rate_minor_units, locale) : "",
   );
   const [error, setError] = useState("");
   const nameRef = useRef<HTMLInputElement>(null);
@@ -89,7 +84,7 @@ export function ResourceForm({
           disabled={mutation.isPending || Boolean(resource?.archived)}
         />
         <p id="resource-rate-help">
-          Use the locale format, for example {locale === "da-DK" ? "1.234,50" : "1,234.50"}.
+          Use the locale format, for example {formatMoneyInput(123450, locale)}.
         </p>
         {error ? (
           <p className="resource-error" role="alert">

@@ -49,6 +49,12 @@ it("shows protected system types and localized custom surcharges", async () => {
           system_kind: "regular",
           surcharge_minor_units: 0,
         },
+        {
+          ...custom,
+          id: "training-1",
+          name: "Training",
+          system_kind: "training",
+        },
       ],
     })
     .mockResolvedValueOnce({ id: "tenant-1", currency: "EUR", locale: "de-DE" });
@@ -58,9 +64,10 @@ it("shows protected system types and localized custom surcharges", async () => {
 
   renderDirectory();
 
-  expect(await screen.findByText(/12,50/)).toBeTruthy();
+  expect((await screen.findAllByText(/12,50/)).length).toBeGreaterThan(0);
   expect(screen.getByText("Protected")).toBeTruthy();
-  expect(screen.getByRole("button", { name: "Archive" })).toBeTruthy();
+  expect(screen.getByRole("textbox", { name: "Name for Training" })).toBeTruthy();
+  expect(screen.getAllByRole("button", { name: "Archive" }).length).toBeGreaterThan(0);
 });
 
 it("requires archive confirmation and archives only custom types", async () => {
@@ -80,6 +87,29 @@ it("requires archive confirmation and archives only custom types", async () => {
   expect(screen.getByRole("dialog").textContent).toContain("permanent");
   fireEvent.click(screen.getByRole("button", { name: "Archive booking type" }));
   await waitFor(() => expect(update).toHaveBeenCalledWith("custom-1", { archived: true }));
+});
+
+it("traps archive dialog focus and closes on Escape", async () => {
+  vi.spyOn(pocketbase, "send")
+    .mockResolvedValueOnce({ items: [custom] })
+    .mockResolvedValueOnce({ id: "tenant-1", currency: "USD", locale: "en-US" });
+  vi.spyOn(pocketbase, "collection").mockReturnValue({
+    getOne: vi.fn().mockResolvedValue({ id: "tenant-1", currency: "USD", locale: "en-US" }),
+  } as never);
+
+  renderDirectory();
+  const trigger = await screen.findByRole("button", { name: "Archive" });
+  trigger.focus();
+  fireEvent.click(trigger);
+  const dialog = screen.getByRole("dialog");
+  const cancel = screen.getByRole("button", { name: "Cancel" });
+  const confirm = screen.getByRole("button", { name: "Archive booking type" });
+  expect(document.activeElement).toBe(cancel);
+  fireEvent.keyDown(dialog, { key: "Tab", shiftKey: true });
+  expect(document.activeElement).toBe(confirm);
+  fireEvent.keyDown(dialog, { key: "Escape" });
+  expect(screen.queryByRole("dialog")).toBeNull();
+  expect(document.activeElement).toBe(trigger);
 });
 
 it("renders loading, empty, and retryable error states", async () => {

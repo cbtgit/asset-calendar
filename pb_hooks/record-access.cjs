@@ -117,7 +117,8 @@ function bookingTypeValue(info, record, field) {
     : record.get(field);
 }
 
-// oxlint-disable-next-line eslint(complexity)
+// oxlint-disable-next-line complexity
+// oxlint-disable-next-line max-lines-per-function
 function normalizeBookingType(event, { info, record, tenantId, isCreate }) {
   if (
     Object.prototype.hasOwnProperty.call(info.body, TENANT_FIELD) ||
@@ -137,6 +138,15 @@ function normalizeBookingType(event, { info, record, tenantId, isCreate }) {
   }
 
   const kind = bookingTypeValue(info, record, "system_kind");
+  if (
+    !isCreate &&
+    (kind === "regular" || kind === "maintenance") &&
+    Object.prototype.hasOwnProperty.call(info.body, "name") &&
+    typeof info.body.name === "string" &&
+    info.body.name.trim() !== record.get("name")
+  ) {
+    throw new BadRequestError("booking_type_name_protected");
+  }
   const surcharge = bookingTypeValue(info, record, "surcharge_minor_units");
   if (!BOOKING_TYPE_SYSTEM_KINDS.includes(kind)) {
     throw new BadRequestError("booking_type_system_kind_invalid");
@@ -372,6 +382,10 @@ function protectUserFields(context, record) {
 }
 
 function protectTenantSettings(context) {
+  if (!isAdministrator(context)) deny();
+  for (const field of Object.keys(context.info.body)) {
+    if (field !== "locale") deny();
+  }
   if (Object.prototype.hasOwnProperty.call(context.info.body, "currency")) {
     deny();
   }

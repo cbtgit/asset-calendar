@@ -169,10 +169,8 @@ it("locks raw collections and reconciles legacy numeric fields before indexing",
     deleteRule: null,
   });
   expect(bookingTypesCollection).toMatchObject({
-    listRule:
-      '@request.auth.id != "" && @request.auth.active = true && @request.auth.role = "administrator" && @request.auth.tenant = tenant',
-    viewRule:
-      '@request.auth.id != "" && @request.auth.active = true && @request.auth.role = "administrator" && @request.auth.tenant = tenant',
+    listRule: '@request.auth.id = ""',
+    viewRule: '@request.auth.id = ""',
     createRule:
       '@request.auth.id != "" && @request.auth.active = true && @request.auth.role = "administrator"',
     updateRule:
@@ -213,6 +211,12 @@ it("enforces currency, locale, safe rates, and normalized tenant uniqueness", as
   ).rejects.toThrow();
   await expect(
     pocketbase.collection("tenants").update(tenant.id, { locale: "not a locale" }),
+  ).rejects.toThrow();
+  await expect(
+    pocketbase.collection("tenants").update(tenant.id, { locale: "en-1" }),
+  ).rejects.toThrow();
+  await expect(
+    pocketbase.collection("tenants").update(tenant.id, { locale: "en-u" }),
   ).rejects.toThrow();
   const resource = await pocketbase.collection("resources").create({
     tenant: tenant.id,

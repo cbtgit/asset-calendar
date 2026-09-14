@@ -1,20 +1,7 @@
 import { useState, type FormEvent } from "react";
 import type { BookingType } from "@/api/booking-types";
 import { useUpdateBookingTypeMutation } from "@/hooks/use-booking-types";
-
-function money(value: number, locale: string, currency: string) {
-  return new Intl.NumberFormat(locale, { style: "currency", currency }).format(value / 100);
-}
-
-function parseMinorUnits(value: string, locale: string): number | undefined {
-  const decimal =
-    new Intl.NumberFormat(locale).formatToParts(1.1).find((part) => part.type === "decimal")
-      ?.value ?? ".";
-  const normalized = value.trim().replace(/\s/g, "").replace(decimal, ".");
-  if (!/^\d+(?:\.\d{0,2})?$/.test(normalized)) return undefined;
-  const amount = Number(normalized);
-  return Number.isSafeInteger(Math.round(amount * 100)) ? Math.round(amount * 100) : undefined;
-}
+import { formatMoney, formatMoneyInput, parseMoney } from "@/lib/money";
 
 export function BookingTypeRow({
   type,
@@ -28,29 +15,47 @@ export function BookingTypeRow({
   onArchive: (type: BookingType) => void;
 }) {
   const update = useUpdateBookingTypeMutation();
-  const [value, setValue] = useState((type.surcharge_minor_units / 100).toFixed(2));
+  const [name, setName] = useState(type.name);
+  const [value, setValue] = useState(() => formatMoneyInput(type.surcharge_minor_units, locale));
   const [validationError, setValidationError] = useState("");
-  const editable = type.system_kind === "custom" && !type.archived;
+  const editable =
+    (type.system_kind === "custom" || type.system_kind === "training") && !type.archived;
   const save = (event: FormEvent) => {
     event.preventDefault();
-    const surcharge = parseMinorUnits(value, locale);
-    if (surcharge === undefined) {
+    if (!name.trim()) {
+      setValidationError("Enter a booking type name.");
+      return;
+    }
+    const parsed = parseMoney(value, locale);
+    if ("error" in parsed) {
       setValidationError("Enter a non-negative amount with up to two decimal places.");
       return;
     }
     setValidationError("");
-    update.mutate({ id: type.id, input: { surcharge_minor_units: surcharge } });
+    update.mutate({
+      id: type.id,
+      input: { name: name.trim(), surcharge_minor_units: parsed.value },
+    });
   };
   return (
     <li className="booking-types-row">
       <div>
-        <strong>{type.name}</strong>
+        {editable ? (
+          <input
+            aria-label={`Name for ${type.name}`}
+            value={name}
+            onChange={(event) => setName(event.target.value)}
+            disabled={update.isPending}
+          />
+        ) : (
+          <strong>{type.name}</strong>
+        )}
         <span className="booking-types-meta">
           {type.system_kind === "custom" ? "Custom" : "System"}
           {type.archived ? " · Archived" : ""}
         </span>
       </div>
-      <span>{money(type.surcharge_minor_units, locale, currency)}</span>
+      <span>{formatMoney(type.surcharge_minor_units, locale, currency)}</span>
       {renderActions({
         type,
         value,

@@ -4,9 +4,11 @@ import { formatMoney, parseMoney } from "./money";
 it("parses only unambiguous locale-specific money", () => {
   expect(parseMoney("1.234,50", "da-DK")).toEqual({ value: 123450 });
   expect(parseMoney("1,234.50", "en-US")).toEqual({ value: 123450 });
+  expect(parseMoney("12,34,567.00", "en-IN")).toEqual({ value: 123456700 });
   expect(parseMoney("1,234.50", "da-DK")).toHaveProperty("error");
   expect(parseMoney("1.234,50", "en-US")).toHaveProperty("error");
   expect(parseMoney("12,34,567.00", "en-US")).toHaveProperty("error");
+  expect(parseMoney("12.34.567,00", "en-IN")).toHaveProperty("error");
 });
 
 it("formats minor units with the tenant locale and currency", () => {

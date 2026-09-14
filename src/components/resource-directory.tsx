@@ -1,17 +1,29 @@
 import { Link } from "@tanstack/react-router";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import type { Resource } from "@/api/resources";
 import { useArchiveResourceMutation, useResourcesQuery } from "@/hooks/use-resources";
 import { useTenantSettingsQuery } from "@/hooks/use-tenant-settings";
 import { formatMoney } from "@/lib/money";
+import { useDialogLifecycle } from "./dialog-focus";
 import "./resource-admin.css";
 
-// oxlint-disable-next-line complexity
+// oxlint-disable complexity
+// oxlint-disable max-lines-per-function
 export function ResourceDirectory() {
   const resources = useResourcesQuery();
   const settings = useTenantSettingsQuery();
   const archive = useArchiveResourceMutation();
   const [pending, setPending] = useState<Resource | null>(null);
+  const dialogRef = useRef<HTMLElement>(null);
+  const cancelRef = useRef<HTMLButtonElement>(null);
+  const confirmRef = useRef<HTMLButtonElement>(null);
+  useDialogLifecycle({
+    dialogRef,
+    cancelRef,
+    confirmRef,
+    onCancel: () => setPending(null),
+    active: pending !== null,
+  });
 
   if (resources.isPending || settings.isPending) return <p role="status">Loading resources…</p>;
   if (resources.isError || settings.isError) {
@@ -98,10 +110,12 @@ export function ResourceDirectory() {
       {pending ? (
         <div className="resource-dialog-backdrop">
           <section
+            ref={dialogRef}
             className="resource-dialog"
             role="dialog"
             aria-modal="true"
             aria-labelledby="archive-resource-title"
+            tabIndex={-1}
           >
             <h2 id="archive-resource-title">Archive {pending.name}?</h2>
             <p>
@@ -109,10 +123,16 @@ export function ResourceDirectory() {
               receive new bookings.
             </p>
             <div className="resource-dialog-actions">
-              <button type="button" onClick={() => setPending(null)} disabled={archive.isPending}>
+              <button
+                ref={cancelRef}
+                type="button"
+                onClick={() => setPending(null)}
+                disabled={archive.isPending}
+              >
                 Cancel
               </button>
               <button
+                ref={confirmRef}
                 className="resource-danger"
                 type="button"
                 onClick={confirmArchive}
@@ -127,3 +147,5 @@ export function ResourceDirectory() {
     </section>
   );
 }
+// oxlint-enable max-lines-per-function
+// oxlint-enable complexity

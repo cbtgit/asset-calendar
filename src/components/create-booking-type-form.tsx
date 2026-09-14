@@ -1,35 +1,26 @@
 import { useState, type FormEvent } from "react";
 import { useCreateBookingTypeMutation } from "@/hooks/use-booking-types";
-
-function parseMinorUnits(value: string, locale: string): number | undefined {
-  const decimal =
-    new Intl.NumberFormat(locale).formatToParts(1.1).find((part) => part.type === "decimal")
-      ?.value ?? ".";
-  const normalized = value.trim().replace(/\s/g, "").replace(decimal, ".");
-  if (!/^\d+(?:\.\d{0,2})?$/.test(normalized)) return undefined;
-  const amount = Number(normalized);
-  return Number.isSafeInteger(Math.round(amount * 100)) ? Math.round(amount * 100) : undefined;
-}
+import { formatMoneyInput, parseMoney } from "@/lib/money";
 
 export function CreateBookingTypeForm({ locale }: { locale: string }) {
   const mutation = useCreateBookingTypeMutation();
   const [name, setName] = useState("");
-  const [surcharge, setSurcharge] = useState("0.00");
+  const [surcharge, setSurcharge] = useState(() => formatMoneyInput(0, locale));
   const [validationError, setValidationError] = useState("");
   const submit = (event: FormEvent) => {
     event.preventDefault();
-    const amount = parseMinorUnits(surcharge, locale);
-    if (!name.trim() || amount === undefined) {
+    const parsed = parseMoney(surcharge, locale);
+    if (!name.trim() || "error" in parsed) {
       setValidationError("Enter a name and a non-negative amount with up to two decimal places.");
       return;
     }
     setValidationError("");
     mutation.mutate(
-      { name, surcharge_minor_units: amount, system_kind: "custom" },
+      { name, surcharge_minor_units: parsed.value, system_kind: "custom" },
       {
         onSuccess: () => {
           setName("");
-          setSurcharge("0.00");
+          setSurcharge(formatMoneyInput(0, locale));
         },
       },
     );
