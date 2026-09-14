@@ -121,8 +121,13 @@ function bookingTypeValue(info, record, field) {
 
 // oxlint-disable-next-line eslint(complexity)
 function normalizeBookingType(event, { info, record, tenantId, isCreate }) {
-  if (Object.prototype.hasOwnProperty.call(info.body, TENANT_FIELD)) deny();
-  if (Object.prototype.hasOwnProperty.call(info.body, "name_normalized")) deny();
+  if (
+    Object.prototype.hasOwnProperty.call(info.body, TENANT_FIELD) ||
+    Object.prototype.hasOwnProperty.call(info.body, "name_normalized") ||
+    Object.prototype.hasOwnProperty.call(info.body, "archived_at")
+  ) {
+    deny();
+  }
 
   const name = bookingTypeValue(info, record, "name");
   if (typeof name !== "string" || name.trim() === "") {
@@ -173,10 +178,19 @@ function normalizeBookingType(event, { info, record, tenantId, isCreate }) {
     record.set("resource_blocking", true);
   }
 
-  const archived = bookingTypeValue(info, record, "archived") === true;
-  const wasArchived = Boolean(record.get("archived_at"));
-  if (!isCreate && wasArchived && !archived) {
-    throw new BadRequestError("booking_type_archival_irreversible");
+  const archived = bookingTypeValue(info, record, "archived");
+  if (typeof archived !== "boolean") {
+    throw new BadRequestError("booking_type_archived_invalid");
+  }
+  const original = typeof record.original === "function" ? record.original() : undefined;
+  const wasArchived = original
+    ? original.get("archived") === true
+    : record.get("archived") === true && Boolean(record.get("archived_at"));
+  if (wasArchived) {
+    deny();
+  }
+  if (archived && kind !== "custom") {
+    throw new BadRequestError("booking_type_archival_protected");
   }
   if (isCreate && archived) {
     throw new BadRequestError("booking_type_archival_irreversible");

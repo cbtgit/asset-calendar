@@ -401,7 +401,7 @@ it("enforces administrator-only booking-type rules and safe projections", async 
     host: "tenant.localhost",
     body: { archived: false },
   });
-  expect(unarchive.status).toBe(400);
+  expect(unarchive.status).toBe(403);
 
   const selection = await request(admin, "/api/booking-types/selection", {
     host: "tenant.localhost",
