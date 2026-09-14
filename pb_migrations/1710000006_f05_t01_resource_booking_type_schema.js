@@ -208,6 +208,10 @@ function ensureResourceSchema(app, tenants) {
   ensureField(resources, { id: "resource_archived_at", name: "archived_at", type: "date" });
   resources.fields.find((field) => field.name === "name_normalized").hidden = true;
   lockCollectionRules(resources);
+  resources.createRule =
+    '@request.auth.id != "" && @request.auth.active = true && @request.auth.role = "administrator"';
+  resources.updateRule =
+    '@request.auth.id != "" && @request.auth.active = true && @request.auth.role = "administrator" && @request.auth.tenant = tenant';
   app.save(resources);
   return resources;
 }
