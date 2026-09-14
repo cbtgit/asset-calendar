@@ -16,3 +16,12 @@ routerAdd("GET", "/api/groups", (event) =>
 routerAdd("GET", "/api/groups/{id}", (event) =>
   require(`${__hooks}/record-access.cjs`).groupsProjectionRoute(event),
 );
+routerAdd("GET", "/api/resources", (event) =>
+  require(`${__hooks}/resource-access.cjs`).resourcesProjectionRoute(event),
+);
+routerAdd("GET", "/api/resources/active", (event) =>
+  require(`${__hooks}/resource-access.cjs`).resourcesProjectionRoute(event, true),
+);
+routerAdd("GET", "/api/resources/{id}", (event) =>
+  require(`${__hooks}/resource-access.cjs`).resourcesProjectionRoute(event),
+);

@@ -162,8 +162,10 @@ it("locks raw collections and reconciles legacy numeric fields before indexing",
   expect(resourcesCollection).toMatchObject({
     listRule: null,
     viewRule: null,
-    createRule: null,
-    updateRule: null,
+    createRule:
+      '@request.auth.id != "" && @request.auth.active = true && @request.auth.role = "administrator"',
+    updateRule:
+      '@request.auth.id != "" && @request.auth.active = true && @request.auth.role = "administrator" && @request.auth.tenant = tenant',
     deleteRule: null,
   });
   expect(bookingTypesCollection).toMatchObject({
