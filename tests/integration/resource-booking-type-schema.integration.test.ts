@@ -41,6 +41,16 @@ beforeAll(async () => {
     name: "booking_types",
     type: "base",
     fields: [
+      new TextField({
+        id: "fixture_booking_type_name",
+        name: "name",
+        required: false,
+      }),
+      new TextField({
+        id: "fixture_booking_type_name_normalized",
+        name: "name_normalized",
+        required: false,
+      }),
       new NumberField({
         id: "fixture_booking_type_surcharge",
         name: "surcharge_minor_units",
@@ -169,8 +179,8 @@ it("locks raw collections and reconciles legacy numeric fields before indexing",
     deleteRule: null,
   });
   expect(bookingTypesCollection).toMatchObject({
-    listRule: '@request.auth.id = ""',
-    viewRule: '@request.auth.id = ""',
+    listRule: null,
+    viewRule: null,
     createRule:
       '@request.auth.id != "" && @request.auth.active = true && @request.auth.role = "administrator"',
     updateRule:
@@ -178,6 +188,14 @@ it("locks raw collections and reconciles legacy numeric fields before indexing",
     deleteRule:
       '@request.auth.id != "" && @request.auth.active = true && @request.auth.role = "administrator" && @request.auth.tenant = tenant',
   });
+  expect(bookingTypesCollection.fields.find((field) => field.name === "name")).toMatchObject({
+    required: true,
+    min: 1,
+    max: 200,
+  });
+  expect(
+    bookingTypesCollection.fields.find((field) => field.name === "name_normalized"),
+  ).toMatchObject({ required: true, min: 1, max: 200 });
   expect(
     resourcesCollection!.fields.find((field) => field.name === "base_rate_minor_units"),
   ).toMatchObject({

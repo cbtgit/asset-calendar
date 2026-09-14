@@ -60,6 +60,7 @@ export function BookingTypeRow({
         type,
         value,
         editable,
+        archivable: editable && type.system_kind === "custom",
         pending: update.isPending,
         error: update.isError ? update.error.message : undefined,
         validationError,
@@ -78,6 +79,7 @@ function renderActions({
   type,
   value,
   editable,
+  archivable,
   pending,
   error,
   validationError,
@@ -88,6 +90,7 @@ function renderActions({
   type: BookingType;
   value: string;
   editable: boolean;
+  archivable: boolean;
   pending: boolean;
   error?: string;
   validationError: string;
@@ -113,14 +116,16 @@ function renderActions({
           <button type="submit" disabled={pending}>
             {pending ? "Saving…" : "Save"}
           </button>
-          <button
-            type="button"
-            className="booking-types-danger"
-            onClick={() => onArchive(type)}
-            disabled={pending}
-          >
-            Archive
-          </button>
+          {archivable ? (
+            <button
+              type="button"
+              className="booking-types-danger"
+              onClick={() => onArchive(type)}
+              disabled={pending}
+            >
+              Archive
+            </button>
+          ) : null}
         </>
       ) : (
         <span className="booking-types-protected">{type.archived ? "Archived" : "Protected"}</span>

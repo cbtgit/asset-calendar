@@ -18,10 +18,16 @@ it("keeps the mobile navigation CSS contract below the 768px breakpoint", () => 
   expect(resourceStyles).toMatch(
     /@media \(max-width: 767px\)[\s\S]*?\.resource-row \{\s+grid-template-columns: 1fr;/,
   );
+  expect(resourceStyles).toMatch(
+    /@container resource-list \(max-width: 48rem\)[\s\S]*?\.resource-row \{\s+grid-template-columns: 1fr;/,
+  );
   expect(resourceStyles).toContain(".resource-dialog {");
   expect(resourceStyles).toContain("width: min(100%, 30rem);");
   expect(bookingTypeStyles).toMatch(
     /@media \(max-width: 767px\)[\s\S]*?\.booking-types-row \{\s+grid-template-columns: 1fr;/,
+  );
+  expect(bookingTypeStyles).toMatch(
+    /@container booking-types-list \(max-width: 48rem\)[\s\S]*?\.booking-types-row \{\s+grid-template-columns: 1fr;/,
   );
   expect(bookingTypeStyles).toContain(".booking-types-dialog {");
   expect(bookingTypeStyles).toContain("width: min(100%, 28rem);");

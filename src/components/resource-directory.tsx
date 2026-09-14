@@ -8,7 +8,7 @@ import { useDialogLifecycle } from "./dialog-focus";
 import "./resource-admin.css";
 
 // oxlint-disable complexity
-// oxlint-disable max-lines-per-function
+// oxlint-disable-next-line max-lines-per-function
 export function ResourceDirectory() {
   const resources = useResourcesQuery();
   const settings = useTenantSettingsQuery();
@@ -147,5 +147,4 @@ export function ResourceDirectory() {
     </section>
   );
 }
-// oxlint-enable max-lines-per-function
 // oxlint-enable complexity

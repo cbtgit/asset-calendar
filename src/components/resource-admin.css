@@ -44,6 +44,7 @@
   margin: 0;
   padding: 0;
   list-style: none;
+  container: resource-list / inline-size;
 }
 .resource-row {
   display: grid;
@@ -181,5 +182,13 @@
     border: 0;
     border-radius: 0;
     box-shadow: none;
+  }
+}
+@container resource-list (max-width: 48rem) {
+  .resource-row {
+    grid-template-columns: 1fr;
+  }
+  .resource-actions {
+    justify-content: flex-start;
   }
 }

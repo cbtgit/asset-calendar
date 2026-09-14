@@ -13,6 +13,16 @@ function separators(locale: string) {
   };
 }
 
+function normalizeDigits(value: string, locale: string): string {
+  const digits = new Intl.NumberFormat(locale, { useGrouping: false })
+    .formatToParts(1234567890)
+    .find((part) => part.type === "integer")?.value;
+  if (!digits) return value;
+  const nativeDigits = Array.from(digits);
+  const digitMap = new Map(nativeDigits.map((digit, index) => [digit, String((index + 1) % 10)]));
+  return Array.from(value, (character) => digitMap.get(character) ?? character).join("");
+}
+
 export function formatMoney(minorUnits: number, locale: string, currency: string): string {
   return new Intl.NumberFormat(locale, { style: "currency", currency }).format(minorUnits / 100);
 }
@@ -38,13 +48,14 @@ export function parseMoney(value: string, locale: string): MoneyParseResult {
     return { error: "Enter a valid base rate." };
   }
 
+  const normalizedInput = normalizeDigits(input, locale);
   const escapedGroup = group.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   const escapedDecimal = decimal.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   const groupedInteger = `\\d{1,${secondaryGroupSize}}(?:${escapedGroup}\\d{${secondaryGroupSize}})*${escapedGroup}\\d{${primaryGroupSize}}`;
   const pattern = new RegExp(`^(?:${groupedInteger}|\\d+)(?:${escapedDecimal}\\d{1,2})?$`);
-  if (!pattern.test(input)) return { error: "Use the format for the selected locale." };
+  if (!pattern.test(normalizedInput)) return { error: "Use the format for the selected locale." };
 
-  const normalized = input.split(group).join("").replace(decimal, ".");
+  const normalized = normalizedInput.split(group).join("").replace(decimal, ".");
   const amount = Number(normalized);
   const minorUnits = Math.round(amount * 100);
   if (!Number.isSafeInteger(minorUnits) || minorUnits < 0) {

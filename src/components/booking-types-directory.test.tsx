@@ -67,7 +67,8 @@ it("shows protected system types and localized custom surcharges", async () => {
   expect((await screen.findAllByText(/12,50/)).length).toBeGreaterThan(0);
   expect(screen.getByText("Protected")).toBeTruthy();
   expect(screen.getByRole("textbox", { name: "Name for Training" })).toBeTruthy();
-  expect(screen.getAllByRole("button", { name: "Archive" }).length).toBeGreaterThan(0);
+  expect(screen.getAllByRole("button", { name: "Archive" })).toHaveLength(1);
+  expect(screen.getByRole("textbox", { name: "Name for Training" })).toBeTruthy();
 });
 
 it("requires archive confirmation and archives only custom types", async () => {

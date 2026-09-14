@@ -52,6 +52,7 @@
   margin: 0;
   padding: 0;
   list-style: none;
+  container: booking-types-list / inline-size;
 }
 .booking-types-row {
   grid-template-columns: minmax(10rem, 1fr) minmax(7rem, auto) minmax(15rem, 1.5fr);
@@ -125,5 +126,13 @@
   .booking-types-actions input {
     flex: 1 1 8rem;
     min-width: 0;
+  }
+}
+@container booking-types-list (max-width: 48rem) {
+  .booking-types-row {
+    grid-template-columns: 1fr;
+  }
+  .booking-types-actions {
+    justify-content: flex-start;
   }
 }

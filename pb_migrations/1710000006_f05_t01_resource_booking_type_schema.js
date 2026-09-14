@@ -91,6 +91,7 @@ function ensureField(collection, definition) {
     );
   }
   if (definition.type === "text") {
+    existing.required = definition.required === true;
     existing.min = definition.min;
     existing.max = definition.max;
     existing.pattern = definition.pattern;
@@ -274,8 +275,8 @@ function ensureBookingTypeSchema(app, tenants) {
   ensureField(bookingTypes, { id: "booking_type_archived", name: "archived", type: "bool" });
   ensureField(bookingTypes, { id: "booking_type_archived_at", name: "archived_at", type: "date" });
   bookingTypes.fields.find((field) => field.name === "name_normalized").hidden = true;
-  bookingTypes.listRule = '@request.auth.id = ""';
-  bookingTypes.viewRule = bookingTypes.listRule;
+  bookingTypes.listRule = null;
+  bookingTypes.viewRule = null;
   bookingTypes.createRule =
     '@request.auth.id != "" && @request.auth.active = true && @request.auth.role = "administrator"';
   bookingTypes.updateRule =
