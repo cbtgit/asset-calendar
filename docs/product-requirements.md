@@ -1,7 +1,7 @@
 # Asset Calendar Product Requirements
 
 **Status:** Normative MVP requirements
-**Last updated:** 2026-09-10
+**Last updated:** 2026-09-14
 
 The non-secret operator boundary for the existing production tenant is defined
 in the [production bootstrap contract](./production-bootstrap-contract.md).
@@ -96,6 +96,7 @@ Each user has one role within their tenant:
   - Export booking data as CSV or Excel.
   - May view booking type in booking details and administration forms.
   - May view and edit resource rates in the resource administration form.
+  - May manage booking-type names and surcharges, and edit the tenant locale.
 
 The system must always retain at least one active administrator per tenant.
 Administrators cannot deactivate or demote the last active administrator.
@@ -133,25 +134,31 @@ messages.
 
 ## 5. Booking requirements
 
+the booker.
+
 ### 5.1 Booking types
 
-The MVP supports:
+Booking types are tenant-owned records. The MVP seeds these permanent types
+for every tenant:
 
-1. **Regular** - created by regular users or administrators.
-2. **Training** - created only by administrators.
-3. **Maintenance** - created only by administrators and used to block a
-   resource.
+1. **Regular** - the default type for regular users and administrators, with a
+   zero surcharge.
+2. **Training** - available only to administrators, with an administrator-
+   configurable name and surcharge.
+3. **Maintenance** - available only to administrators, always non-billable,
+   and used to block a resource.
 
-Regular users do not see a booking type field. Their bookings are assigned the
-regular type automatically.
+Administrators may create additional custom booking types. Custom types are
+billable, block the selected resource, and have an administrator-configurable
+name and surcharge. No booking type may be deleted. Custom types may be
+archived permanently; archived types cannot be used for new bookings but
+remain available for historical records. The built-in types remain permanent;
+regular and maintenance semantics cannot be changed.
 
-Training bookings have a separate resource rate. Training is normally
-intended to be more expensive, but the MVP does not enforce that the training
-rate is greater than the regular rate.
-
-Maintenance bookings are not billable and are excluded from invoicing
-exports. For a maintenance booking, the creating administrator is recorded as
-the booker.
+Regular users do not see a booking type field or the booking-type catalog. Their
+bookings are assigned the regular type automatically. Administrators may select
+any active type permitted for the workflow. Booking type cannot be changed
+after creation.
 
 ### 5.2 Time and availability
 
@@ -179,28 +186,41 @@ future-start rule in section 5.5.
 
 ### 5.3 Pricing
 
-- Currency is global for the application: DKK.
-- Each active resource has:
-  - A regular hourly rate.
-  - A training hourly rate.
-- Rates are required, non-negative, and limited to two decimal places.
+- Each tenant has one currency selected from the initial allowlist: `DKK`,
+  `EUR`, `USD`, or `GBP`. Currency is configured when the tenant is
+  provisioned and is immutable for the tenant lifetime. A tenant never mixes
+  currencies and the application performs no foreign-exchange conversion.
+- Each tenant has a BCP 47 display locale. The existing tenant defaults to
+  `da-DK`; administrators may edit the locale at any time. The current tenant
+  locale controls monetary display and money input parsing.
+- Each active resource has one non-negative base hourly rate stored as an exact
+  integer number of currency minor units.
+- Each active billable booking type has one non-negative surcharge stored as an
+  exact integer number of currency minor units. The effective hourly rate is
+  the resource base rate plus the selected booking-type surcharge.
+- User-facing rate fields display the tenant currency using `Intl.NumberFormat`.
+  Input accepts only the current tenant locale's unambiguous decimal and
+  grouping syntax; malformed, mixed-separator, negative, fractional-minor,
+  and unsafe values are rejected rather than guessed.
 - Billable amounts are prorated by actual duration. A 15-minute booking uses
-  0.25 of the hourly rate.
-- Each booking stores an hourly-rate snapshot. The calculated billable amount
-  is derived during export and is not stored on the booking.
-- The rate snapshot remains unchanged for the lifetime of the booking, even if
-  the resource rate changes or an administrator edits the booking.
-- Booking type cannot be changed after creation.
+  0.25 of the effective hourly rate.
+- Each booking stores the resource base-rate, booking-type surcharge, and
+  effective-rate snapshots in integer minor units. The calculated billable
+  amount is derived during export and is not stored on the booking.
+- Rate snapshots remain unchanged for the lifetime of the booking, even if the
+  resource or booking-type configuration changes or an administrator edits the
+  booking.
 - Exported amounts are calculated from the booking's final duration and stored
-  hourly-rate snapshot, then rounded to two decimal places using decimal
-  half-up rounding.
+  effective-rate snapshot, then rounded to the tenant currency's supported
+  number of fractional digits using exact decimal half-up arithmetic.
 - Duration and billing calculations use actual elapsed time between the stored
   UTC instants, including across daylight-saving transitions.
-- Maintenance bookings have no billable rate or amount.
+- Maintenance bookings have no billable rate or amount. Their stored rate
+  components are zero or absent according to the booking schema contract.
 - Prices must never appear in calendar views, booking details, or regular-user
   forms.
-- Resource rates are visible only in administrator resource forms and
-  administrator exports.
+- Resource base rates and booking-type surcharges are visible only in
+  administrator administration surfaces and administrator exports.
 
 ### 5.4 Ownership and historical snapshots
 
@@ -216,7 +236,14 @@ For stable historical exports, the booking also stores:
 - The booker's group snapshot.
 - The booker's email snapshot.
 - The resource-name snapshot.
-- The hourly-rate snapshot.
+- The booking-type name and system-kind snapshot.
+- The resource base-rate snapshot in integer minor units.
+- The booking-type surcharge snapshot in integer minor units.
+- The effective hourly-rate snapshot in integer minor units.
+
+Currency is not duplicated on each booking because tenant currency is
+immutable. The tenant currency is included in administrator export metadata
+and applies to every exported row.
 
 If an administrator creates a training booking for a regular user, ownership
 follows the selected user. That user may edit or delete it before the 24-hour
@@ -356,16 +383,33 @@ Administrators have access to an administration area for:
 
 - Resources.
   - Create, edit, and archive resources.
-  - Configure regular and training rates.
+  - Configure one base hourly rate per resource.
   - Resource names must be unique within a tenant.
   - Archiving is immediate and permanent; resources cannot be unarchived.
   - Archived resources cannot receive new bookings but remain visible for
     existing and future bookings.
+- Booking types.
+  - View seeded regular, training, and maintenance types.
+  - Configure the training name and surcharge.
+  - Create, edit, and permanently archive custom billable booking types.
+  - View archived types for administration and historical records; archived
+    types cannot be used for new bookings.
+  - Regular and maintenance semantics are protected, and no type can be
+    deleted.
+- Tenant settings.
+  - View the tenant currency and edit the tenant display locale.
+  - Currency is limited to `DKK`, `EUR`, `USD`, or `GBP` when provisioned and
+    cannot be changed afterward.
 - Groups.
-  - Create and edit a name.
-  - Group names must be unique within a tenant.
+  - Create and edit a name. Names are trimmed, must contain non-whitespace
+    content, and may be at most 200 characters.
+  - Group names must be unique within a tenant, case-insensitively after
+    trimming and lowercasing for comparison.
   - Assign every user to exactly one group.
   - Prevent deletion while users are assigned.
+  - The administrator directory uses the tenant-scoped `/api/groups`
+    projection, which includes member counts. The projection is unavailable to
+    regular users.
 - Users.
   - Create regular and administrator users.
   - Assign a group.
@@ -411,8 +455,12 @@ Each exported booking row contains:
 - Start time
 - End time
 - Duration
-- Hourly-rate snapshot
-- Amount in DKK calculated from the final duration and hourly-rate snapshot
+- Resource base-rate snapshot
+- Booking-type surcharge snapshot
+- Effective hourly-rate snapshot
+- Currency code
+- Amount in the tenant currency calculated from the final duration and
+  effective hourly-rate snapshot
 
 No VAT or other tax calculations are included.
 
@@ -449,8 +497,16 @@ The MVP data model should include at least:
 - ID
 - Tenant ID
 - Name
-- Regular hourly rate
-- Training hourly rate
+- Base hourly rate in integer currency minor units
+- Active/archived status
+
+### Booking type
+
+- ID
+- Tenant ID
+- Display name
+- System kind: regular, training, maintenance, or custom
+- Surcharge in integer currency minor units
 - Active/archived status
 
 ### Booking
@@ -463,7 +519,9 @@ The MVP data model should include at least:
 - Booking type
 - Start timestamp
 - End timestamp
-- Hourly-rate snapshot
+- Resource base-rate snapshot in integer currency minor units
+- Booking-type surcharge snapshot in integer currency minor units
+- Effective hourly-rate snapshot in integer currency minor units
 - Booker display-name snapshot
 - Group snapshot
 - Booker email snapshot
@@ -634,30 +692,33 @@ The MVP is ready when:
     view.
 11. Mobile uses a compact resource selector and no drag-and-drop.
 12. Administrators can manage resources, users, and groups.
-13. Administrators can export the selected booking interval as CSV and Excel.
-14. Exported rates and amounts use booking snapshots, actual elapsed duration,
-    and decimal half-up DKK rounding.
-15. Cross-tenant reads and writes are rejected by backend enforcement.
-16. The application can be built as static files and served by the existing
+13. Administrators can manage booking types and configure the tenant locale;
+    the tenant currency is one of `DKK`, `EUR`, `USD`, or `GBP` and is
+    immutable after provisioning.
+14. Administrators can export the selected booking interval as CSV and Excel.
+15. Exported rates and amounts use booking snapshots, actual elapsed duration,
+    the tenant currency, and exact decimal half-up rounding for that currency.
+16. Cross-tenant reads and writes are rejected by backend enforcement.
+17. The application can be built as static files and served by the existing
     Nginx installation.
-17. The existing production tenant is resolved from
+18. The existing production tenant is resolved from
     `nejsumlab.frontend-freelance.dk`; tenant identity is never client-selected.
-18. Production readiness requires the manually provisioned tenant,
+19. Production readiness requires the manually provisioned tenant,
     group, and active administrator; F03 provides no tenant
     onboarding workflow.
-19. Invitation links are one-time and valid for 30 days; authenticated
+20. Invitation links are one-time and valid for 30 days; authenticated
     sessions last one workday and survive reloads.
-20. PocketBase's built-in password validator is used without additional
+21. PocketBase's built-in password validator is used without additional
     composition rules, and roles are exactly `administrator` and `regular`.
-21. Deactivation blocks sign-in and new protected actions while preserving the
+22. Deactivation blocks sign-in and new protected actions while preserving the
     user, bookings, and already-issued tokens until normal expiry.
-22. Production uses SMTP2GO through protected server configuration, while local
+23. Production uses SMTP2GO through protected server configuration, while local
     development and CI use non-network capture/test sinks.
-23. Every UI feature defines and satisfies its desktop and narrow-screen
+24. Every UI feature defines and satisfies its desktop and narrow-screen
     workflow, including loading, empty, error, validation, focus, and
     destructive-action states; no core workflow is deferred to a later mobile
     port.
-24. Authenticated destinations use a shared responsive application shell with
+25. Authenticated destinations use a shared responsive application shell with
     role-aware navigation and current-user actions, while feature routes retain
     ownership of their domain-specific layouts.
 

@@ -80,6 +80,23 @@ substitute for a GitHub blocked-by relationship.
 GitHub's relationship APIs require the internal numeric issue ID for writes,
 not the human-facing issue number.
 
+When using `gh api`, pass numeric IDs with `-F`, not `-f`. The lowercase form
+serializes the value as a string and GitHub rejects it with a 422 type error:
+
+```text
+gh api --method POST \
+  repos/{owner}/{repo}/issues/{blocked_number}/dependencies/blocked_by \
+  -F issue_id=<blocking_internal_id>
+```
+
+Prefer narrow `--jq` projections for relationship read-backs instead of
+printing full issue objects. For example, compare blocker numbers directly:
+
+```text
+gh api repos/{owner}/{repo}/issues/{blocked_number}/dependencies/blocked_by \
+  --jq '[.[].number] | sort'
+```
+
 ### 4. Create the child issues
 
 Create child issues in dependency order when practical. For every child, record
@@ -100,6 +117,10 @@ Use GitHub's sub-issue REST endpoint for each child:
 POST /repos/{owner}/{repo}/issues/{parent_number}/sub_issues
 {"sub_issue_id": <child_internal_id>}
 ```
+
+With `gh api`, use `-F sub_issue_id=<child_internal_id>` so the sub-issue ID
+is sent as an integer. Use the same narrow-read-back approach when verifying
+the parent list and child parent responses.
 
 Do not rely on checklist links in the issue body as the hierarchy. After all
 links are added, verify both:

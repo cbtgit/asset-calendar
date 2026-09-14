@@ -32,6 +32,11 @@ all of the following in the production PocketBase data:
    operator-supplied stable email identity, `role=administrator`, and completed
    initial password setup.
 
+Groups use the PocketBase collection name `organizational_units` for schema
+compatibility, while the product and API refer to them as Groups. Group names
+are trimmed and compared case-insensitively after lowercasing for
+tenant-scoped uniqueness.
+
 The record IDs, administrator password, and any invitation or setup credential
 are operator-managed values and are not stored in Git. F03 has no tenant
 onboarding or self-service provisioning UI. Later invitations are sent by the
@@ -41,7 +46,7 @@ administrator through the protected application flow.
 
 - Resolve the tenant by the exact normalized `tenants.subdomain` value
   `nejsumlab`, under the configured root domain.
-- Resolve the initial group by its `tenant` relation and the exact
+- Resolve the initial group by its `tenant` relation and its normalized
   operator-supplied `name`. Group names are unique within a tenant.
 - Resolve the initial administrator by the tenant relation and the exact
   operator-supplied PocketBase email identity. Require `active=true` and
