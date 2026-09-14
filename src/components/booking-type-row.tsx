@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import type { BookingType } from "@/api/booking-types";
 import { useUpdateBookingTypeMutation } from "@/hooks/use-booking-types";
 import { formatMoney, formatMoneyInput, parseMoney } from "@/lib/money";
@@ -18,6 +18,17 @@ export function BookingTypeRow({
   const [name, setName] = useState(type.name);
   const [value, setValue] = useState(() => formatMoneyInput(type.surcharge_minor_units, locale));
   const [validationError, setValidationError] = useState("");
+  const [dirty, setDirty] = useState(false);
+  const previousTypeRef = useRef(type);
+  useEffect(() => {
+    const authoritativeTypeChanged = previousTypeRef.current !== type;
+    previousTypeRef.current = type;
+    if (!dirty || authoritativeTypeChanged) {
+      setName(type.name);
+      setValue(formatMoneyInput(type.surcharge_minor_units, locale));
+      if (authoritativeTypeChanged) setDirty(false);
+    }
+  }, [dirty, locale, type]);
   const editable =
     (type.system_kind === "custom" || type.system_kind === "training") && !type.archived;
   const save = (event: FormEvent) => {
@@ -44,7 +55,10 @@ export function BookingTypeRow({
           <input
             aria-label={`Name for ${type.name}`}
             value={name}
-            onChange={(event) => setName(event.target.value)}
+            onChange={(event) => {
+              setDirty(true);
+              setName(event.target.value);
+            }}
             disabled={update.isPending}
           />
         ) : (
@@ -66,6 +80,7 @@ export function BookingTypeRow({
         validationError,
         onSubmit: save,
         onChange: (nextValue) => {
+          setDirty(true);
           setValue(nextValue);
           setValidationError("");
         },

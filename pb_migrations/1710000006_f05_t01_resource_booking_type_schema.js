@@ -5,7 +5,7 @@ const CURRENCY_VALUES = ["DKK", "EUR", "USD", "GBP"];
 const SYSTEM_KIND_VALUES = ["regular", "training", "maintenance", "custom"];
 const NAME_PATTERN = "^.*\\S.*$";
 const LOCALE_PATTERN =
-  "^(?:(?:[A-Za-z]{2,8}(?:-[A-Za-z]{4})?(?:-(?:[A-Za-z]{2}|[0-9]{3}))?(?:-(?:[A-Za-z0-9]{5,8}|[0-9][A-Za-z0-9]{3}))*(?:-(?:[0-9A-WY-Za-wy-z](?:-[A-Za-z0-9]{2,8})+))*|x(?:-[A-Za-z0-9]{1,8})+))(?:-x(?:-[A-Za-z0-9]{1,8})+)?$";
+  "^(?:(?:[A-Za-z]{2,3}(?:-[A-Za-z]{3}){0,3}(?:-[A-Za-z]{4})?(?:-(?:[A-Za-z]{2}|[0-9]{3}))?(?:-(?:[A-Za-z0-9]{5,8}|[0-9][A-Za-z0-9]{3}))*(?:-(?:[0-9A-WY-Za-wy-z](?:-[A-Za-z0-9]{2,8})+))*|x(?:-[A-Za-z0-9]{1,8})+))(?:-x(?:-[A-Za-z0-9]{1,8})+)?$";
 const MAX_SAFE_MINOR_UNITS = Number.MAX_SAFE_INTEGER;
 
 function records(app, collection) {
@@ -294,7 +294,29 @@ function seedBookingTypes(app, collection, tenant) {
     { kind: "maintenance", name: "Maintenance", surcharge: 0, billable: false, blocking: true },
   ];
   for (const definition of definitions) {
-    if (existing.some((record) => record.get("system_kind") === definition.kind)) continue;
+    const matching = existing.filter((record) => record.get("system_kind") === definition.kind);
+    if (matching.length > 1) {
+      throw new Error(
+        `Booking type seed conflict: tenant ${tenant.id} has multiple ${definition.kind} records.`,
+      );
+    }
+    if (matching.length === 1) {
+      const record = matching[0];
+      if (
+        record.get("name") !== definition.name ||
+        record.get("name_normalized") !== definition.name.toLowerCase() ||
+        Number(record.get("surcharge_minor_units")) !== definition.surcharge ||
+        record.get("billable") !== definition.billable ||
+        record.get("resource_blocking") !== definition.blocking ||
+        record.get("archived") !== false ||
+        record.get("archived_at")
+      ) {
+        throw new Error(
+          `Booking type seed conflict: tenant ${tenant.id}, ${definition.kind} record ${record.id} has invalid protected fields.`,
+        );
+      }
+      continue;
+    }
     const normalizedName = definition.name.toLowerCase();
     const conflictingName = existing.find(
       (record) => record.get("name_normalized") === normalizedName,

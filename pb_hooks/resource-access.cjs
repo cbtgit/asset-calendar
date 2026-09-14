@@ -8,6 +8,7 @@ function resourceValue(info, record, field) {
     : record.get(field);
 }
 
+// oxlint-disable-next-line complexity
 function normalizeResource(event, info, record, tenantId) {
   if (
     Object.prototype.hasOwnProperty.call(info.body, TENANT_FIELD) ||
@@ -35,6 +36,9 @@ function normalizeResource(event, info, record, tenantId) {
     throw new BadRequestError("resource_archived_invalid");
   }
   const original = typeof record.original === "function" ? record.original() : undefined;
+  if (!original && archived) {
+    throw new BadRequestError("resource_archival_irreversible");
+  }
   const wasArchived = original
     ? original.get("archived") === true
     : record.get("archived") === true && record.get("archived_at");
@@ -100,7 +104,9 @@ function resourcesProjectionRoute(event, forceActive = false) {
       tenant: context.context.tenant.id,
     });
   }
-  const items = resources.map((record) => resourceProjection(record, administrator));
+  const items = resources.map((record) =>
+    resourceProjection(record, administrator && !forceActive),
+  );
   return event.json(200, resourceId ? items[0] : { items });
 }
 

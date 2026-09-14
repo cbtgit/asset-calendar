@@ -7,8 +7,7 @@ import { formatMoney } from "@/lib/money";
 import { useDialogLifecycle } from "./dialog-focus";
 import "./resource-admin.css";
 
-// oxlint-disable complexity
-// oxlint-disable-next-line max-lines-per-function
+// oxlint-disable-next-line complexity, max-lines-per-function
 export function ResourceDirectory() {
   const resources = useResourcesQuery();
   const settings = useTenantSettingsQuery();
@@ -17,6 +16,7 @@ export function ResourceDirectory() {
   const dialogRef = useRef<HTMLElement>(null);
   const cancelRef = useRef<HTMLButtonElement>(null);
   const confirmRef = useRef<HTMLButtonElement>(null);
+  const statusRef = useRef<HTMLParagraphElement>(null);
   useDialogLifecycle({
     dialogRef,
     cancelRef,
@@ -45,6 +45,10 @@ export function ResourceDirectory() {
   const confirmArchive = () => {
     if (!pending) return;
     archive.mutate(pending.id, {
+      onSuccess: () => {
+        setPending(null);
+        queueMicrotask(() => statusRef.current?.focus());
+      },
       onSettled: () => setPending(null),
     });
   };
@@ -52,7 +56,7 @@ export function ResourceDirectory() {
   return (
     <section className="resource-admin" aria-label="Resources administration">
       <div className="resource-admin-header">
-        <p>
+        <p ref={statusRef} tabIndex={-1}>
           {resources.data.length} resource{resources.data.length === 1 ? "" : "s"}
         </p>
         <Link className="resource-primary-action" to="/resources/new">
@@ -147,4 +151,3 @@ export function ResourceDirectory() {
     </section>
   );
 }
-// oxlint-enable complexity

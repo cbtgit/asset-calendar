@@ -24,14 +24,56 @@ function normalizeDigits(value: string, locale: string): string {
 }
 
 export function formatMoney(minorUnits: number, locale: string, currency: string): string {
-  return new Intl.NumberFormat(locale, { style: "currency", currency }).format(minorUnits / 100);
+  return formatExact(minorUnits, locale, {
+    style: "currency",
+    currency,
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
 }
 
 export function formatMoneyInput(minorUnits: number, locale: string): string {
-  return new Intl.NumberFormat(locale, {
+  return formatExact(minorUnits, locale, {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
-  }).format(minorUnits / 100);
+  });
+}
+
+// oxlint-disable-next-line complexity
+function formatExact(
+  minorUnits: number,
+  locale: string,
+  options: Intl.NumberFormatOptions,
+): string {
+  if (!Number.isSafeInteger(minorUnits) || minorUnits < 0) {
+    throw new RangeError("Minor units must be a non-negative safe integer.");
+  }
+  const integer = BigInt(minorUnits) / 100n;
+  const fraction = Number(BigInt(minorUnits) % 100n);
+  const formatter = new Intl.NumberFormat(locale, options);
+  const parts = formatter.formatToParts(integer);
+  const fractionParts = new Intl.NumberFormat(locale, {
+    useGrouping: false,
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).formatToParts(fraction / 100);
+  const fractionText = fractionParts.find((part) => part.type === "fraction")?.value ?? "00";
+  const decimalPart =
+    formatter.formatToParts(0.1).find((part) => part.type === "decimal")?.value ?? ".";
+  const output: string[] = [];
+  let insertedFraction = false;
+  for (const part of parts) {
+    if (part.type === "decimal" || part.type === "fraction") continue;
+    output.push(part.value);
+    if (!insertedFraction && (part.type === "integer" || part.type === "group")) {
+      const next = parts[parts.indexOf(part) + 1];
+      if (!next || !["integer", "group"].includes(next.type)) {
+        output.push(decimalPart, fractionText);
+        insertedFraction = true;
+      }
+    }
+  }
+  return output.join("");
 }
 
 export function parseMoney(value: string, locale: string): MoneyParseResult {
@@ -56,10 +98,14 @@ export function parseMoney(value: string, locale: string): MoneyParseResult {
   if (!pattern.test(normalizedInput)) return { error: "Use the format for the selected locale." };
 
   const normalized = normalizedInput.split(group).join("").replace(decimal, ".");
-  const amount = Number(normalized);
-  const minorUnits = Math.round(amount * 100);
-  if (!Number.isSafeInteger(minorUnits) || minorUnits < 0) {
+  const [integerPart, fractionPart = ""] = normalized.split(".");
+  try {
+    const minorUnits = BigInt(integerPart) * 100n + BigInt(fractionPart.padEnd(2, "0"));
+    if (minorUnits > BigInt(Number.MAX_SAFE_INTEGER)) {
+      return { error: "Enter a valid non-negative base rate." };
+    }
+    return { value: Number(minorUnits) };
+  } catch {
     return { error: "Enter a valid non-negative base rate." };
   }
-  return { value: minorUnits };
 }

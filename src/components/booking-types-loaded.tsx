@@ -19,6 +19,7 @@ export function BookingTypesLoaded({
   const dialogRef = useRef<HTMLElement>(null);
   const cancelRef = useRef<HTMLButtonElement>(null);
   const confirmRef = useRef<HTMLButtonElement>(null);
+  const statusRef = useRef<HTMLParagraphElement>(null);
   useDialogLifecycle({
     dialogRef,
     cancelRef,
@@ -28,11 +29,19 @@ export function BookingTypesLoaded({
   });
   const confirmArchive = () => {
     if (!pending) return;
-    archive.mutate(pending.id, { onSettled: () => setPending(null) });
+    archive.mutate(pending.id, {
+      onSuccess: () => {
+        setPending(null);
+        queueMicrotask(() => statusRef.current?.focus());
+      },
+      onSettled: () => setPending(null),
+    });
   };
   return (
     <section className="booking-types-directory" aria-label="Booking types directory">
-      <p>System booking types are protected. Custom types can be edited until they are archived.</p>
+      <p ref={statusRef} tabIndex={-1}>
+        System booking types are protected. Custom types can be edited until they are archived.
+      </p>
       <CreateBookingTypeForm locale={locale} />
       {archive.isError ? <p role="alert">{archive.error.message}</p> : null}
       {types.length === 0 ? (

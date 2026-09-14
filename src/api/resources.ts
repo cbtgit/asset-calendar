@@ -1,5 +1,6 @@
 import { queryOptions } from "@tanstack/react-query";
 import type { RecordModel } from "pocketbase";
+import { getAuthSnapshot, isAdministrator } from "./auth";
 import { pocketbase } from "./client.ts";
 import { toAppError } from "./errors.ts";
 import { resourcesKeys } from "./query-keys.ts";
@@ -13,6 +14,7 @@ export type Resource = {
   archived_at?: string;
   base_rate_minor_units: number;
 };
+export type AdministratorResource = Resource;
 
 export type ActiveResource = Omit<Resource, "base_rate_minor_units" | "archived_at">;
 export type ResourceCreate = {
@@ -37,8 +39,17 @@ async function getProjection<T>(path: string): Promise<T> {
   }
 }
 
-export async function getResources(): Promise<Resource[]> {
-  const response = await getProjection<ResourceListResponse<Resource>>("/api/resources");
+function requireAdministratorProjection() {
+  const user = getAuthSnapshot().user;
+  if (user && !isAdministrator(user)) {
+    throw new Error("Administrator authorization is required for resource rates.");
+  }
+}
+
+export async function getResources(): Promise<AdministratorResource[]> {
+  requireAdministratorProjection();
+  const response =
+    await getProjection<ResourceListResponse<AdministratorResource>>("/api/resources");
   return response.items;
 }
 
@@ -48,8 +59,9 @@ export async function getActiveResources(): Promise<ActiveResource[]> {
   return response.items;
 }
 
-export async function getResource(id: string): Promise<Resource> {
-  return getProjection<Resource>(`/api/resources/${id}`);
+export async function getResource(id: string): Promise<AdministratorResource> {
+  requireAdministratorProjection();
+  return getProjection<AdministratorResource>(`/api/resources/${id}`);
 }
 
 export async function createResource(input: ResourceCreate): Promise<Resource> {
@@ -80,7 +92,7 @@ export async function archiveResource(id: string): Promise<Resource> {
 }
 
 export function resourcesQueryOptions() {
-  return queryOptions<Resource[]>({
+  return queryOptions<AdministratorResource[]>({
     queryKey: resourcesKeys.list(),
     queryFn: getResources,
   });
@@ -94,7 +106,7 @@ export function activeResourcesQueryOptions() {
 }
 
 export function resourceQueryOptions(id: string) {
-  return queryOptions<Resource>({
+  return queryOptions<AdministratorResource>({
     queryKey: resourcesKeys.detail(id),
     queryFn: () => getResource(id),
   });

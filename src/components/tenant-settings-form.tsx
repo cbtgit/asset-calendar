@@ -10,10 +10,15 @@ export function TenantSettingsForm() {
   const [locale, setLocale] = useState("");
   const [error, setError] = useState("");
   const localeRef = useRef<HTMLInputElement>(null);
+  const dirtyRef = useRef(false);
+  const initialFocusRef = useRef(false);
 
   useEffect(() => {
-    if (settings.data) setLocale(settings.data.locale);
-    localeRef.current?.focus();
+    if (settings.data && !dirtyRef.current) setLocale(settings.data.locale);
+    if (settings.data && !initialFocusRef.current) {
+      initialFocusRef.current = true;
+      localeRef.current?.focus();
+    }
   }, [settings.data]);
 
   if (settings.isPending) return <p role="status">Loading tenant settings…</p>;
@@ -47,6 +52,7 @@ export function TenantSettingsForm() {
           id="tenant-locale"
           value={locale}
           onChange={(event) => {
+            dirtyRef.current = true;
             setLocale(event.target.value);
             setError("");
           }}

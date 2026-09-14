@@ -22,3 +22,11 @@ it("formats minor units with the tenant locale and currency", () => {
   expect(formatMoney(123450, "da-DK", "DKK")).toContain("1.234,50");
   expect(formatMoney(123450, "en-US", "USD")).toContain("$1,234.50");
 });
+
+it("round-trips the largest safe minor-unit value without cent loss", () => {
+  const value = Number.MAX_SAFE_INTEGER;
+  const formatted = formatMoneyInput(value, "en-US");
+  expect(formatted).toBe("90,071,992,547,409.91");
+  expect(parseMoney(formatted, "en-US")).toEqual({ value });
+  expect(formatMoney(value, "en-US", "USD")).toBe("$90,071,992,547,409.91");
+});
