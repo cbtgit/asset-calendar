@@ -35,7 +35,16 @@ export function TenantSettingsForm() {
       const normalized = new Intl.Locale(locale.trim()).toString();
       if (!normalized) throw new Error();
       setError("");
-      update.mutate({ locale: normalized }, { onError: (cause) => setError(cause.message) });
+      update.mutate(
+        { locale: normalized },
+        {
+          onSuccess: (saved) => {
+            setLocale(saved.locale);
+            dirtyRef.current = false;
+          },
+          onError: (cause) => setError(cause.message),
+        },
+      );
     } catch {
       setError("Enter a valid BCP 47 locale, such as en-US or da-DK.");
     }

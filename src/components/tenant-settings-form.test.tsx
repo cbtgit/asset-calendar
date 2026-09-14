@@ -37,6 +37,21 @@ it("normalizes locale input and presents immutable currency", async () => {
   );
 });
 
+it("reconciles canonical locale after a successful save and refetch", async () => {
+  const { rerender } = render(<TenantSettingsForm />);
+  const locale = screen.getByLabelText("Locale");
+  fireEvent.change(locale, { target: { value: " en-gb " } });
+  fireEvent.submit(screen.getByRole("button", { name: "Save settings" }));
+  await waitFor(() => expect(mocks.update.mutate).toHaveBeenCalled());
+
+  const options = mocks.update.mutate.mock.calls[0][1];
+  options.onSuccess({ id: "tenant-1", currency: "EUR", locale: "en-GB" });
+  mocks.settings.data = { currency: "EUR", locale: "en-GB" };
+  rerender(<TenantSettingsForm />);
+
+  expect((screen.getByLabelText("Locale") as HTMLInputElement).value).toBe("en-GB");
+});
+
 it("shows validation and server errors without changing currency", async () => {
   render(<TenantSettingsForm />);
   fireEvent.change(screen.getByLabelText("Locale"), { target: { value: "not a locale" } });

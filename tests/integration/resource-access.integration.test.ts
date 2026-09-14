@@ -15,6 +15,7 @@ const productionMigrations = resolve(root, "pb_migrations");
 const password = "Correct horse battery staple!";
 let migrationsDir: string;
 let harness: PocketBaseIntegrationHarness;
+const originalTenantHosts = process.env.ASSET_CALENDAR_TENANT_HOSTS;
 
 async function request(
   pocketbase: PocketBase,
@@ -120,7 +121,11 @@ beforeAll(async () => {
 afterAll(async () => {
   if (harness) await harness.stop();
   if (migrationsDir) await rm(migrationsDir, { recursive: true, force: true });
-  delete process.env.ASSET_CALENDAR_TENANT_HOSTS;
+  if (originalTenantHosts === undefined) {
+    delete process.env.ASSET_CALENDAR_TENANT_HOSTS;
+  } else {
+    process.env.ASSET_CALENDAR_TENANT_HOSTS = originalTenantHosts;
+  }
 });
 
 it("enforces administrator tenant authorization and resource validation", async () => {
@@ -297,6 +302,58 @@ it("protects seeded booking-type surcharges on direct updates", async () => {
   expect((await customUpdate.json()).surcharge_minor_units).toBe(20);
 });
 
+it("rejects configuration changes while archiving custom booking types", async () => {
+  const admin = await authenticate("admin-a@example.test", "tenant.localhost");
+  const customCreate = await request(admin, "/api/collections/booking_types/records", {
+    method: "POST",
+    host: "tenant.localhost",
+    body: {
+      name: "Archive custom",
+      system_kind: "custom",
+      surcharge_minor_units: 10,
+      archived: false,
+    },
+  });
+  expect(customCreate.status).toBe(200);
+  const custom = await customCreate.json();
+
+  const archiveWithChanges = await request(
+    admin,
+    `/api/collections/booking_types/records/${custom.id}`,
+    {
+      method: "PATCH",
+      host: "tenant.localhost",
+      body: { name: "Changed custom", surcharge_minor_units: 20, archived: true },
+    },
+  );
+  expect(archiveWithChanges.status).toBe(400);
+  const unchanged = await request(admin, `/api/booking-types/${custom.id}`, {
+    host: "tenant.localhost",
+  });
+  expect(await unchanged.json()).toMatchObject({
+    name: "Archive custom",
+    surcharge_minor_units: 10,
+    archived: false,
+  });
+
+  const archived = await request(admin, `/api/collections/booking_types/records/${custom.id}`, {
+    method: "PATCH",
+    host: "tenant.localhost",
+    body: { archived: true },
+  });
+  expect(archived.status).toBe(200);
+  const archivedUpdate = await request(
+    admin,
+    `/api/collections/booking_types/records/${custom.id}`,
+    {
+      method: "PATCH",
+      host: "tenant.localhost",
+      body: { name: "Changed after archive", surcharge_minor_units: 30, archived: true },
+    },
+  );
+  expect(archivedUpdate.status).toBe(403);
+});
+
 it("archives resources one way and projects rates only to administrators", async () => {
   const admin = await authenticate("admin-a@example.test", "tenant.localhost");
   const regular = await authenticate("regular-a@example.test", "tenant.localhost");
@@ -306,6 +363,25 @@ it("archives resources one way and projects rates only to administrators", async
     body: { name: "Archive Room", base_rate_minor_units: 900, archived: false },
   });
   const resource = await created.json();
+  const archiveWithChanges = await request(
+    admin,
+    `/api/collections/resources/records/${resource.id}`,
+    {
+      method: "PATCH",
+      host: "tenant.localhost",
+      body: { name: "Changed Room", base_rate_minor_units: 901, archived: true },
+    },
+  );
+  expect(archiveWithChanges.status).toBe(400);
+  const unchanged = await request(admin, `/api/resources/${resource.id}`, {
+    host: "tenant.localhost",
+  });
+  expect(await unchanged.json()).toMatchObject({
+    name: "Archive Room",
+    base_rate_minor_units: 900,
+    archived: false,
+  });
+
   const activeResourceResponse = await request(admin, "/api/resources/active", {
     host: "tenant.localhost",
   });

@@ -36,7 +36,10 @@ function setup() {
   return { queryClient, wrapper };
 }
 
-afterEach(() => vi.restoreAllMocks());
+afterEach(() => {
+  pocketbase.authStore.clear();
+  vi.restoreAllMocks();
+});
 
 it("optimistically archives booking types and rolls back on failure", async () => {
   let rejectArchive!: (reason: unknown) => void;

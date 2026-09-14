@@ -138,6 +138,9 @@ it("fails migration explicitly when a protected seeded booking type is invalid",
   const migrationSource = await readFile(migrationPath, "utf8");
   expect(migrationSource).toContain("Booking type seed conflict:");
   expect(migrationSource).toContain('record.get("name_normalized") === normalizedName');
+  expect(migrationSource).toContain(
+    'definition.type === "relation" && existing.collectionId !== definition.collectionId',
+  );
   expect(
     migrationSource.indexOf("for (const tenant of records(app, tenants)) seedBookingTypes"),
   ).toBeLessThan(

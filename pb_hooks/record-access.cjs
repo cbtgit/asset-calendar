@@ -194,6 +194,7 @@ function normalizeBookingType(event, { info, record, tenantId, isCreate }) {
     throw new BadRequestError("booking_type_archived_invalid");
   }
   const original = typeof record.original === "function" ? record.original() : undefined;
+  const previous = original ?? record;
   const wasArchived = original
     ? original.get("archived") === true
     : record.get("archived") === true && Boolean(record.get("archived_at"));
@@ -205,6 +206,19 @@ function normalizeBookingType(event, { info, record, tenantId, isCreate }) {
   }
   if (isCreate && archived) {
     throw new BadRequestError("booking_type_archival_irreversible");
+  }
+  if (
+    !isCreate &&
+    archived &&
+    !wasArchived &&
+    kind === "custom" &&
+    ((Object.prototype.hasOwnProperty.call(info.body, "name") &&
+      typeof info.body.name === "string" &&
+      info.body.name.trim() !== previous.get("name")) ||
+      (Object.prototype.hasOwnProperty.call(info.body, "surcharge_minor_units") &&
+        surcharge !== previous.get("surcharge_minor_units")))
+  ) {
+    throw new BadRequestError("booking_type_archival_configuration_protected");
   }
 
   info.body.name = trimmedName;

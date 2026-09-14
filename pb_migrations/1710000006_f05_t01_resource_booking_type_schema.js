@@ -82,6 +82,11 @@ function ensureField(collection, definition) {
       `Collection ${collection.name} field ${definition.name} has incompatible type ${existingType}.`,
     );
   }
+  if (definition.type === "relation" && existing.collectionId !== definition.collectionId) {
+    throw new Error(
+      `Collection ${collection.name} field ${definition.name} targets the wrong collection.`,
+    );
+  }
   if (
     definition.type === "select" &&
     JSON.stringify(existing.values ?? []) !== JSON.stringify(definition.values)

@@ -43,6 +43,19 @@ function normalizeResource(event, info, record, tenantId, isCreate = false) {
     ? original.get("archived") === true
     : record.get("archived") === true && record.get("archived_at");
   if (wasArchived) recordAccess.deny();
+  const previous = original ?? record;
+  if (
+    !isCreate &&
+    archived &&
+    !wasArchived &&
+    ((Object.prototype.hasOwnProperty.call(info.body, "name") &&
+      typeof info.body.name === "string" &&
+      trimmedName !== previous.get("name")) ||
+      (Object.prototype.hasOwnProperty.call(info.body, "base_rate_minor_units") &&
+        rate !== previous.get("base_rate_minor_units")))
+  ) {
+    throw new BadRequestError("resource_archival_configuration_protected");
+  }
 
   info.body.name = trimmedName;
   info.body.name_normalized = trimmedName.toLowerCase();
