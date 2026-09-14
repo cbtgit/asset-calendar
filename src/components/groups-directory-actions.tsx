@@ -24,6 +24,7 @@ export function GroupsDirectoryActions({
         to="/groups/$groupId/edit"
         params={{ groupId: group.id }}
         aria-label={`Rename ${group.name}`}
+      >
         Rename
       </Link>
       <button
