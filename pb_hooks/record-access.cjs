@@ -10,8 +10,6 @@ const ORGANIZATIONAL_UNIT_COLLECTION = "organizational_units";
 const BOOKING_TYPE_COLLECTION = "booking_types";
 const BOOKING_TYPE_SYSTEM_KINDS = ["regular", "training", "maintenance", "custom"];
 const RESOURCE_COLLECTION = "resources";
-const BOOKING_TYPE_COLLECTION = "booking_types";
-const BOOKING_TYPE_SYSTEM_KINDS = ["regular", "training", "maintenance", "custom"];
 const PROTECTED_USER_FIELDS = [
   "tenant",
   "role",
@@ -393,7 +391,6 @@ function deleteRecord(event) {
   ensureRecordTenant(event.record, context.context.tenant.id);
   if (collectionName({ record: event.record }) === BOOKING_TYPE_COLLECTION) deny();
   if (collectionName({ record: event.record }) === RESOURCE_COLLECTION) deny();
-  if (collectionName({ record: event.record }) === BOOKING_TYPE_COLLECTION) deny();
   if (collectionName({ record: event.record }) === ORGANIZATIONAL_UNIT_COLLECTION) {
     guardOrganizationalUnitDelete(event.record);
   }
@@ -423,14 +420,6 @@ function createRecord(event) {
       event.record,
       context.context.tenant.id,
     );
-  } else if (collectionName({ record: event.record }) === BOOKING_TYPE_COLLECTION) {
-    if (!isAdministrator(context)) deny();
-    normalizeBookingType(event, {
-      info: context.info,
-      record: event.record,
-      tenantId: context.context.tenant.id,
-      isCreate: true,
-    });
   } else {
     applyServerTenant(context.info, event.record, context.context.tenant.id);
   }
@@ -463,14 +452,6 @@ function updateRecord(event) {
       event.record,
       context.context.tenant.id,
     );
-  } else if (collectionName({ record: event.record }) === BOOKING_TYPE_COLLECTION) {
-    if (!isAdministrator(context)) deny();
-    normalizeBookingType(event, {
-      info: context.info,
-      record: event.record,
-      tenantId: context.context.tenant.id,
-      isCreate: false,
-    });
   } else {
     applyServerTenant(context.info, event.record, context.context.tenant.id);
   }
