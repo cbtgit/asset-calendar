@@ -98,7 +98,7 @@ beforeAll(async () => {
   );
   process.env.ASSET_CALENDAR_TENANT_HOSTS = "tenant.localhost,other.localhost";
   harness = await startPocketBaseIntegrationHarness({ migrationsDir });
-});
+}, 30_000);
 
 afterAll(async () => {
   if (harness) await harness.stop();
@@ -110,6 +110,15 @@ it("enforces administrator tenant authorization and resource validation", async 
   const adminA = await authenticate("admin-a@example.test", "tenant.localhost");
   const adminB = await authenticate("admin-b@example.test", "other.localhost");
   const regularA = await authenticate("regular-a@example.test", "tenant.localhost");
+
+  const tenantId = adminA.authStore.record?.tenant;
+  if (typeof tenantId !== "string") throw new Error("Expected administrator tenant.");
+  const currencyChange = await request(adminA, `/api/collections/tenants/records/${tenantId}`, {
+    method: "PATCH",
+    host: "tenant.localhost",
+    body: { currency: "EUR" },
+  });
+  expect(currencyChange.status).toBe(403);
 
   const created = await request(adminA, "/api/collections/resources/records", {
     method: "POST",

@@ -371,6 +371,12 @@ function protectUserFields(context, record) {
   }
 }
 
+function protectTenantSettings(context) {
+  if (Object.prototype.hasOwnProperty.call(context.info.body, "currency")) {
+    deny();
+  }
+}
+
 function checkRecords(event) {
   const context = applicationContext(event);
   if (!context) return event.next();
@@ -434,6 +440,7 @@ function updateRecord(event) {
   ensureRecordTenant(event.record, context.context.tenant.id);
   protectUserFields(context, event.record);
   const collection = collectionName({ record: event.record });
+  if (collection === "tenants") protectTenantSettings(context);
   if (collection === RESOURCE_COLLECTION && context.auth.get("role") !== "administrator") deny();
   if (collection === ORGANIZATIONAL_UNIT_COLLECTION) {
     normalizeOrganizationalUnit(event, context.info, event.record, context.context.tenant.id);
