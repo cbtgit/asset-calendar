@@ -19,6 +19,7 @@ const migrationsDir = resolve(root, "tests/fixtures/pocketbase-integration/migra
 export type PocketBaseIntegrationHarness = {
   baseUrl: string;
   dataDir: string;
+  superuser: { email: string; password: string };
   stop: () => Promise<void>;
 };
 
@@ -33,6 +34,10 @@ export async function startPocketBaseIntegrationHarness(
 
   let child: ChildProcess | undefined;
   let port = 0;
+  const superuser = {
+    email: "integration-superuser@example.test",
+    password: randomBytes(32).toString("base64url"),
+  };
   try {
     const paths = { ...resolveRuntimePaths(root), dataDir };
     for (let attempt = 0; attempt < 10; attempt += 1) {
@@ -42,10 +47,7 @@ export async function startPocketBaseIntegrationHarness(
           config: { host: "127.0.0.1", port },
           paths,
           migrationsDir: options.migrationsDir ?? migrationsDir,
-          superuser: {
-            email: "integration-superuser@example.test",
-            password: randomBytes(32).toString("base64url"),
-          },
+          superuser,
         });
         break;
       } catch (error) {
@@ -65,6 +67,7 @@ export async function startPocketBaseIntegrationHarness(
   return {
     baseUrl: `http://127.0.0.1:${port}`,
     dataDir,
+    superuser,
     stop: async () => {
       if (stopped) return;
       stopped = true;
