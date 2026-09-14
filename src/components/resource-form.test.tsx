@@ -1,5 +1,6 @@
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, expect, it, vi } from "vite-plus/test";
+import { ApplicationError } from "@/api/errors";
 import { ResourceForm } from "./resource-form";
 
 const mocks = vi.hoisted(() => ({
@@ -61,4 +62,16 @@ it("surfaces server rejection and navigates after success", () => {
   expect(screen.getByRole("alert").textContent).toContain("server rejected");
   void act(() => options.onSuccess());
   expect(mocks.navigate).toHaveBeenCalledWith({ to: "/resources" });
+});
+
+it("maps duplicate resource errors to an actionable message", () => {
+  render(<ResourceForm locale="en-US" currency="USD" />);
+  fireEvent.change(screen.getByLabelText("Resource name"), { target: { value: "Room" } });
+  fireEvent.change(screen.getByLabelText(/Base rate/), { target: { value: "10.00" } });
+  fireEvent.click(screen.getByRole("button", { name: "Create resource" }));
+  const options = mocks.create.mutate.mock.calls[0][1];
+
+  void act(() => options.onError(new ApplicationError("conflict", "validation_not_unique")));
+
+  expect(screen.getByRole("alert").textContent).toBe("A resource with this name already exists.");
 });

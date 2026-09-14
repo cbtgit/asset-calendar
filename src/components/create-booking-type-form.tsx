@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from "react";
 import { useCreateBookingTypeMutation } from "@/hooks/use-booking-types";
 import { formatMoneyInput, parseMoney } from "@/lib/money";
+import { mutationErrorMessage } from "@/lib/error-messages";
 
 export function CreateBookingTypeForm({ locale }: { locale: string }) {
   const mutation = useCreateBookingTypeMutation();
@@ -54,7 +55,9 @@ export function CreateBookingTypeForm({ locale }: { locale: string }) {
         {mutation.isPending ? "Creating…" : "Add booking type"}
       </button>
       {validationError ? <p role="alert">{validationError}</p> : null}
-      {mutation.isError ? <p role="alert">{mutation.error.message}</p> : null}
+      {mutation.isError ? (
+        <p role="alert">{mutationErrorMessage(mutation.error, "booking-type-create")}</p>
+      ) : null}
     </form>
   );
 }

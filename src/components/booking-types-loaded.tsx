@@ -4,6 +4,7 @@ import { useArchiveBookingTypeMutation } from "@/hooks/use-booking-types";
 import { BookingTypeRow } from "./booking-type-row";
 import { CreateBookingTypeForm } from "./create-booking-type-form";
 import { useDialogLifecycle } from "./dialog-focus";
+import { mutationErrorMessage } from "@/lib/error-messages";
 
 export function BookingTypesLoaded({
   types,
@@ -47,7 +48,9 @@ export function BookingTypesLoaded({
         can be archived.
       </p>
       <CreateBookingTypeForm locale={locale} />
-      {archive.isError ? <p role="alert">{archive.error.message}</p> : null}
+      {archive.isError ? (
+        <p role="alert">{mutationErrorMessage(archive.error, "booking-type-archive")}</p>
+      ) : null}
       {types.length === 0 ? (
         <p className="booking-types-empty">No booking types have been configured yet.</p>
       ) : (

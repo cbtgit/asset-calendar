@@ -3,6 +3,7 @@ import { useNavigate } from "@tanstack/react-router";
 import type { Resource } from "@/api/resources";
 import { useCreateResourceMutation, useUpdateResourceMutation } from "@/hooks/use-resources";
 import { formatMoneyInput, parseMoney } from "@/lib/money";
+import { mutationErrorMessage } from "@/lib/error-messages";
 import "./resource-admin.css";
 
 // oxlint-disable-next-line complexity
@@ -41,7 +42,7 @@ export function ResourceForm({
         { id: resource.id, input: { name: trimmed, base_rate_minor_units: parsed.value } },
         {
           onSuccess: () => navigate({ to: "/resources" }),
-          onError: (cause) => setError(cause.message),
+          onError: (cause) => setError(mutationErrorMessage(cause, "resource-save")),
         },
       );
     } else {
@@ -49,7 +50,7 @@ export function ResourceForm({
         { name: trimmed, base_rate_minor_units: parsed.value },
         {
           onSuccess: () => navigate({ to: "/resources" }),
-          onError: (cause) => setError(cause.message),
+          onError: (cause) => setError(mutationErrorMessage(cause, "resource-save")),
         },
       );
     }

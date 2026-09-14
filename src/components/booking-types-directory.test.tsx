@@ -1,6 +1,7 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, expect, it, vi } from "vite-plus/test";
+import { ApplicationError } from "@/api/errors";
 import { pocketbase } from "@/api/client";
 import { BookingTypesDirectory } from "./booking-types-directory";
 
@@ -93,6 +94,23 @@ it("requires archive confirmation and archives only custom types", async () => {
   expect(screen.getByRole("dialog").textContent).toContain("permanent");
   fireEvent.click(screen.getByRole("button", { name: "Archive booking type" }));
   await waitFor(() => expect(update).toHaveBeenCalledWith("custom-1", { archived: true }));
+});
+
+it("maps booking-type archive errors to an actionable message", async () => {
+  vi.spyOn(pocketbase, "send").mockResolvedValue({ items: [custom] });
+  vi.spyOn(pocketbase, "collection").mockReturnValue({
+    getOne: vi.fn().mockResolvedValue({ id: "tenant-1", currency: "USD", locale: "en-US" }),
+    update: vi
+      .fn()
+      .mockRejectedValue(new ApplicationError("conflict", "booking_type_archival_protected")),
+  } as never);
+
+  renderDirectory();
+  fireEvent.click(await screen.findByRole("button", { name: "Archive" }));
+  fireEvent.click(screen.getByRole("button", { name: "Archive booking type" }));
+  expect(
+    await screen.findByText("This booking type cannot be archived with configuration changes."),
+  ).toBeTruthy();
 });
 
 it("moves focus to the stable directory status after successful archive", async () => {

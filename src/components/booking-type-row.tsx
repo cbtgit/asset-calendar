@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, type FormEvent } from "react";
 import type { BookingType } from "@/api/booking-types";
 import { useUpdateBookingTypeMutation } from "@/hooks/use-booking-types";
 import { formatMoney, formatMoneyInput, parseMoney } from "@/lib/money";
+import { mutationErrorMessage } from "@/lib/error-messages";
 
 export function BookingTypeRow({
   type,
@@ -62,11 +63,13 @@ export function BookingTypeRow({
       input: { name: name.trim(), surcharge_minor_units: parsed.value },
     });
   };
+  const formId = `booking-type-actions-${type.id}`;
   return (
     <li className="booking-types-row">
       <div>
         {editable ? (
           <input
+            form={formId}
             aria-label={`Name for ${type.name}`}
             value={name}
             onChange={(event) => {
@@ -86,11 +89,12 @@ export function BookingTypeRow({
       <span>{formatMoney(type.surcharge_minor_units, locale, currency)}</span>
       {renderActions({
         type,
+        formId,
         value,
         editable,
         archivable: editable && type.system_kind === "custom",
         pending: update.isPending,
-        error: update.isError ? update.error.message : undefined,
+        error: update.isError ? update.error : undefined,
         validationError,
         onSubmit: save,
         onChange: (nextValue) => {
@@ -106,6 +110,7 @@ export function BookingTypeRow({
 
 function renderActions({
   type,
+  formId,
   value,
   editable,
   archivable,
@@ -117,18 +122,19 @@ function renderActions({
   onArchive,
 }: {
   type: BookingType;
+  formId: string;
   value: string;
   editable: boolean;
   archivable: boolean;
   pending: boolean;
-  error?: string;
+  error?: unknown;
   validationError: string;
   onSubmit: (event: FormEvent) => void;
   onChange: (value: string) => void;
   onArchive: (type: BookingType) => void;
 }) {
   return (
-    <form onSubmit={onSubmit} className="booking-types-actions" noValidate>
+    <form id={formId} onSubmit={onSubmit} className="booking-types-actions" noValidate>
       {editable ? (
         <>
           <label className="sr-only" htmlFor={`surcharge-${type.id}`}>
@@ -160,7 +166,7 @@ function renderActions({
         <span className="booking-types-protected">{type.archived ? "Archived" : "Protected"}</span>
       )}
       {validationError ? <span role="alert">{validationError}</span> : null}
-      {error ? <span role="alert">{error}</span> : null}
+      {error ? <span role="alert">{mutationErrorMessage(error, "booking-type-save")}</span> : null}
     </form>
   );
 }

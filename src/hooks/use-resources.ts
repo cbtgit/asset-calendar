@@ -12,6 +12,7 @@ import {
   type ResourceUpdate,
 } from "@/api/resources";
 import { resourcesKeys } from "@/api/query-keys";
+import { createMutationQueue, type MutationRelease } from "@/lib/mutation-queue";
 
 type ResourceSnapshot = {
   id: string;
@@ -20,6 +21,9 @@ type ResourceSnapshot = {
   detail: Resource | undefined;
   removeIfMissing: boolean;
 };
+type ResourceMutationContext = ResourceSnapshot & { release: MutationRelease };
+
+const mutationQueue = createMutationQueue();
 
 function optimisticResource(input: ResourceCreate): Resource {
   const now = new Date().toISOString();
@@ -100,8 +104,9 @@ export function useCreateResourceMutation() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: createResource,
-    onMutate: async (input): Promise<ResourceSnapshot> => {
+    onMutate: async (input): Promise<ResourceMutationContext> => {
       const resource = optimisticResource(input);
+      const release = await mutationQueue.acquire(resource.id);
       const previous = await snapshot(queryClient, resource.id);
       previous.removeIfMissing = true;
       queryClient.setQueryData<Resource[]>(resourcesKeys.list(), (items) =>
@@ -121,10 +126,12 @@ export function useCreateResourceMutation() {
             ]
           : items,
       );
-      return previous;
+      return { ...previous, release };
     },
-    onError: (_error, _input, previous) => previous && restore(queryClient, previous),
-    onSettled: () => settle(queryClient),
+    onError: (_error, _input, context) => context && restore(queryClient, context),
+    onSettled: (_data, _error, _input, context) => {
+      return settle(queryClient).finally(() => context?.release());
+    },
   });
 }
 
@@ -132,7 +139,8 @@ export function useUpdateResourceMutation() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: ({ id, input }: { id: string; input: ResourceUpdate }) => updateResource(id, input),
-    onMutate: async ({ id, input }): Promise<ResourceSnapshot> => {
+    onMutate: async ({ id, input }): Promise<ResourceMutationContext> => {
+      const release = await mutationQueue.acquire(id);
       const previous = await snapshot(queryClient, id);
       const patch = { name: input.name.trim(), base_rate_minor_units: input.base_rate_minor_units };
       queryClient.setQueryData<Resource[]>(resourcesKeys.list(), (items) =>
@@ -146,10 +154,12 @@ export function useUpdateResourceMutation() {
       queryClient.setQueryData<Resource>(resourcesKeys.detail(id), (item) =>
         item ? { ...item, ...patch } : item,
       );
-      return previous;
+      return { ...previous, release };
     },
-    onError: (_error, _input, previous) => previous && restore(queryClient, previous),
-    onSettled: () => settle(queryClient),
+    onError: (_error, _input, context) => context && restore(queryClient, context),
+    onSettled: (_data, _error, _input, context) => {
+      return settle(queryClient).finally(() => context?.release());
+    },
   });
 }
 
@@ -157,7 +167,8 @@ export function useArchiveResourceMutation() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: archiveResource,
-    onMutate: async (id): Promise<ResourceSnapshot> => {
+    onMutate: async (id): Promise<ResourceMutationContext> => {
+      const release = await mutationQueue.acquire(id);
       const previous = await snapshot(queryClient, id);
       queryClient.setQueryData<Resource[]>(resourcesKeys.list(), (items) =>
         items?.map((item) => (item.id === id ? { ...item, archived: true } : item)),
@@ -168,9 +179,11 @@ export function useArchiveResourceMutation() {
       queryClient.setQueryData<Resource>(resourcesKeys.detail(id), (item) =>
         item ? { ...item, archived: true } : item,
       );
-      return previous;
+      return { ...previous, release };
     },
-    onError: (_error, _input, previous) => previous && restore(queryClient, previous),
-    onSettled: () => settle(queryClient),
+    onError: (_error, _input, context) => context && restore(queryClient, context),
+    onSettled: (_data, _error, _input, context) => {
+      return settle(queryClient).finally(() => context?.release());
+    },
   });
 }

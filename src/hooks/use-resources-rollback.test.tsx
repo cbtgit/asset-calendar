@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { act, renderHook } from "@testing-library/react";
+import { act, renderHook, waitFor } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { afterEach, expect, it, vi } from "vite-plus/test";
 import { pocketbase } from "@/api/client";
@@ -162,4 +162,53 @@ it("rolls back only the failed resource during overlapping updates", async () =>
   ]);
   rejecters.get(secondResource.id)?.(new Error("second conflict"));
   await expect(second).rejects.toThrow("second conflict");
+});
+
+it("serializes overlapping updates for one resource", async () => {
+  let firstReject!: (reason: unknown) => void;
+  let secondReject!: (reason: unknown) => void;
+  let calls = 0;
+  const update = vi.fn().mockImplementation(
+    () =>
+      new Promise((_resolve, reject) => {
+        calls += 1;
+        if (calls === 1) firstReject = reject;
+        else secondReject = reject;
+      }),
+  );
+  vi.spyOn(pocketbase, "collection").mockReturnValue({ update } as never);
+  const { queryClient, wrapper } = setup();
+  const { result } = renderHook(() => useUpdateResourceMutation(), { wrapper });
+
+  const first = result.current.mutateAsync({
+    id: resource.id,
+    input: { name: "First name", base_rate_minor_units: 200 },
+  });
+  const second = result.current.mutateAsync({
+    id: resource.id,
+    input: { name: "Second name", base_rate_minor_units: 300 },
+  });
+  await waitFor(() => expect(update).toHaveBeenCalledTimes(1));
+  expect(
+    queryClient
+      .getQueryData<Resource[]>(resourcesKeys.list())
+      ?.find((item) => item.id === resource.id),
+  ).toMatchObject({ name: "First name", base_rate_minor_units: 200 });
+
+  firstReject(new Error("first conflict"));
+  await expect(first).rejects.toThrow("first conflict");
+  await waitFor(() => expect(update).toHaveBeenCalledTimes(2));
+  expect(
+    queryClient
+      .getQueryData<Resource[]>(resourcesKeys.list())
+      ?.find((item) => item.id === resource.id),
+  ).toMatchObject({ name: "Second name", base_rate_minor_units: 300 });
+
+  secondReject(new Error("second conflict"));
+  await expect(second).rejects.toThrow("second conflict");
+  expect(
+    queryClient
+      .getQueryData<Resource[]>(resourcesKeys.list())
+      ?.find((item) => item.id === resource.id),
+  ).toEqual(resource);
 });

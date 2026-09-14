@@ -10,6 +10,7 @@ import {
   type BookingTypeUpdate,
 } from "@/api/booking-types";
 import { bookingTypesKeys } from "@/api/query-keys";
+import { createMutationQueue, type MutationRelease } from "@/lib/mutation-queue";
 
 type BookingTypeSnapshot = {
   id: string;
@@ -18,6 +19,10 @@ type BookingTypeSnapshot = {
   detail: BookingType | undefined;
   removeIfMissing: boolean;
 };
+type BookingTypeMutationContext = BookingTypeSnapshot & { release: MutationRelease };
+
+const mutationQueue = createMutationQueue();
+let pendingMutations = 0;
 
 function sorted(items: BookingType[]): BookingType[] {
   return [...items].sort((left, right) =>
@@ -66,6 +71,24 @@ function restore(queryClient: ReturnType<typeof useQueryClient>, previous: Booki
   }
 }
 
+function beginMutation() {
+  pendingMutations += 1;
+}
+
+async function settleMutation(
+  queryClient: ReturnType<typeof useQueryClient>,
+  release: MutationRelease | undefined,
+) {
+  pendingMutations -= 1;
+  try {
+    if (pendingMutations === 0) {
+      await queryClient.invalidateQueries({ queryKey: bookingTypesKeys.all });
+    }
+  } finally {
+    release?.();
+  }
+}
+
 export function useBookingTypesQuery() {
   return useQuery(bookingTypesQueryOptions());
 }
@@ -82,8 +105,10 @@ export function useCreateBookingTypeMutation() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: createBookingType,
-    onMutate: async (input): Promise<BookingTypeSnapshot> => {
+    onMutate: async (input): Promise<BookingTypeMutationContext> => {
       const optimisticId = `optimistic-${crypto.randomUUID()}`;
+      beginMutation();
+      const release = await mutationQueue.acquire(optimisticId);
       const previous = await snapshot(queryClient, optimisticId);
       previous.removeIfMissing = true;
       const now = new Date().toISOString();
@@ -102,10 +127,10 @@ export function useCreateBookingTypeMutation() {
       queryClient.setQueryData<BookingType[]>(bookingTypesKeys.selection(), (items) =>
         items ? sorted([...items, item]) : items,
       );
-      return previous;
+      return { ...previous, release };
     },
-    onError: (_error, _input, previous) => previous && restore(queryClient, previous),
-    onSettled: () => queryClient.invalidateQueries({ queryKey: bookingTypesKeys.all }),
+    onError: (_error, _input, context) => context && restore(queryClient, context),
+    onSettled: (_data, _error, _input, context) => settleMutation(queryClient, context?.release),
   });
 }
 
@@ -114,7 +139,9 @@ export function useUpdateBookingTypeMutation() {
   return useMutation({
     mutationFn: ({ id, input }: { id: string; input: BookingTypeUpdate }) =>
       updateBookingType(id, input),
-    onMutate: async ({ id, input }): Promise<BookingTypeSnapshot> => {
+    onMutate: async ({ id, input }): Promise<BookingTypeMutationContext> => {
+      beginMutation();
+      const release = await mutationQueue.acquire(id);
       const previous = await snapshot(queryClient, id);
       const patch = { ...input, ...(input.name ? { name: input.name.trim() } : {}) };
       queryClient.setQueryData<BookingType[]>(bookingTypesKeys.list(), (items) =>
@@ -130,10 +157,10 @@ export function useUpdateBookingTypeMutation() {
       queryClient.setQueryData<BookingType>(bookingTypesKeys.detail(id), (item) =>
         item ? { ...item, ...patch } : item,
       );
-      return previous;
+      return { ...previous, release };
     },
-    onError: (_error, _input, previous) => previous && restore(queryClient, previous),
-    onSettled: () => queryClient.invalidateQueries({ queryKey: bookingTypesKeys.all }),
+    onError: (_error, _input, context) => context && restore(queryClient, context),
+    onSettled: (_data, _error, _input, context) => settleMutation(queryClient, context?.release),
   });
 }
 
@@ -141,7 +168,9 @@ export function useArchiveBookingTypeMutation() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: archiveBookingType,
-    onMutate: async (id): Promise<BookingTypeSnapshot> => {
+    onMutate: async (id): Promise<BookingTypeMutationContext> => {
+      beginMutation();
+      const release = await mutationQueue.acquire(id);
       const previous = await snapshot(queryClient, id);
       queryClient.setQueryData<BookingType[]>(bookingTypesKeys.list(), (items) =>
         items?.map((item) => (item.id === id ? { ...item, archived: true } : item)),
@@ -152,9 +181,9 @@ export function useArchiveBookingTypeMutation() {
       queryClient.setQueryData<BookingType>(bookingTypesKeys.detail(id), (item) =>
         item ? { ...item, archived: true } : item,
       );
-      return previous;
+      return { ...previous, release };
     },
-    onError: (_error, _input, previous) => previous && restore(queryClient, previous),
-    onSettled: () => queryClient.invalidateQueries({ queryKey: bookingTypesKeys.all }),
+    onError: (_error, _input, context) => context && restore(queryClient, context),
+    onSettled: (_data, _error, _input, context) => settleMutation(queryClient, context?.release),
   });
 }

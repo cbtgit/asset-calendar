@@ -2,6 +2,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { afterEach, expect, it, vi } from "vite-plus/test";
+import { ApplicationError } from "@/api/errors";
 import { ResourceDirectory } from "./resource-directory";
 
 vi.mock("@tanstack/react-router", () => ({
@@ -39,7 +40,7 @@ const mocks = vi.hoisted(() => ({
     isError: false,
     refetch: vi.fn(),
   },
-  archive: { isPending: false, isError: false, mutate: vi.fn() },
+  archive: { isPending: false, isError: false, error: null as Error | null, mutate: vi.fn() },
 }));
 
 vi.mock("@/hooks/use-resources", () => ({
@@ -61,6 +62,8 @@ function renderDirectory() {
 afterEach(() => {
   cleanup();
   mocks.archive.isPending = false;
+  mocks.archive.isError = false;
+  mocks.archive.error = null;
   vi.clearAllMocks();
 });
 
@@ -145,4 +148,24 @@ it("keeps a focusable dialog target while archive controls are disabled", async 
   (screen.getByRole("button", { name: "Archive resource" }) as HTMLButtonElement).disabled = true;
   fireEvent.keyDown(screen.getByRole("dialog"), { key: "Tab" });
   expect(document.activeElement).toBe(screen.getByRole("dialog"));
+});
+
+it("maps resource archive errors to an actionable message", () => {
+  mocks.resources.data = [
+    {
+      id: "resource-1",
+      name: "Room",
+      base_rate_minor_units: 1000,
+      archived: false,
+      created: "now",
+      updated: "now",
+    },
+  ];
+  mocks.archive.isError = true;
+  mocks.archive.error = new ApplicationError("conflict", "resource_archival_irreversible");
+  renderDirectory();
+
+  expect(screen.getByRole("alert").textContent).toBe(
+    "This resource cannot be archived with configuration changes.",
+  );
 });

@@ -5,6 +5,7 @@ import { useArchiveResourceMutation, useResourcesQuery } from "@/hooks/use-resou
 import { useTenantSettingsQuery } from "@/hooks/use-tenant-settings";
 import { formatMoney } from "@/lib/money";
 import { useDialogLifecycle } from "./dialog-focus";
+import { mutationErrorMessage } from "@/lib/error-messages";
 import "./resource-admin.css";
 
 // oxlint-disable-next-line complexity, max-lines-per-function
@@ -68,7 +69,7 @@ export function ResourceDirectory() {
       </div>
       {archive.isError ? (
         <p className="resource-error" role="alert">
-          We could not archive the resource: {archive.error.message}
+          {mutationErrorMessage(archive.error, "resource-archive")}
         </p>
       ) : null}
       {resources.data.length === 0 ? (

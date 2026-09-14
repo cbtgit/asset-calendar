@@ -1,5 +1,6 @@
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, expect, it, vi } from "vite-plus/test";
+import { ApplicationError } from "@/api/errors";
 import { CreateBookingTypeForm } from "./create-booking-type-form";
 
 const mocks = vi.hoisted(() => ({
@@ -45,4 +46,14 @@ it("validates blank and invalid input and displays mutation failures", () => {
   mocks.mutation.error = new Error("server rejected");
   fireEvent.change(screen.getByLabelText("Surcharge"), { target: { value: "1.23" } });
   expect(screen.getByRole("alert").textContent).toContain("server rejected");
+});
+
+it("maps validation failures to an actionable message", () => {
+  mocks.mutation.isError = true;
+  mocks.mutation.error = new ApplicationError("validation", "booking_type_surcharge_invalid");
+  render(<CreateBookingTypeForm locale="en-US" />);
+
+  expect(screen.getByRole("alert").textContent).toBe(
+    "Enter a non-negative amount with up to two decimal places.",
+  );
 });

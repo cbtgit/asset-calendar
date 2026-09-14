@@ -1,5 +1,6 @@
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, expect, it, vi } from "vite-plus/test";
+import { ApplicationError } from "@/api/errors";
 import type { BookingType } from "@/api/booking-types";
 import { BookingTypeRow } from "./booking-type-row";
 
@@ -47,6 +48,21 @@ it("submits localized surcharge and custom rename", async () => {
   );
 });
 
+it("submits the rename when Enter is pressed in the name field", () => {
+  renderRow();
+  const name = screen.getByRole("textbox", { name: "Name for After hours" }) as HTMLInputElement;
+  const form = document.getElementById("booking-type-actions-custom-1") as HTMLFormElement;
+
+  expect(name.form).toBe(form);
+  fireEvent.keyDown(name, { key: "Enter", code: "Enter" });
+  form.requestSubmit();
+
+  expect(mocks.update.mutate).toHaveBeenCalledWith({
+    id: "custom-1",
+    input: { name: "After hours", surcharge_minor_units: 1250 },
+  });
+});
+
 it("submits training rename and preserves dirty edits across locale rerenders", () => {
   const training = {
     ...custom,
@@ -80,6 +96,7 @@ it("reconciles authoritative rollback values and displays mutation errors", () =
   fireEvent.change(screen.getByRole("textbox", { name: "Name for After hours" }), {
     target: { value: "Changed" },
   });
+
   rerender(
     <BookingTypeRow
       type={{ ...custom, name: "Server value" }}
@@ -110,4 +127,14 @@ it("reconciles authoritative rollback values and displays mutation errors", () =
     />,
   );
   expect(screen.getByRole("alert").textContent).toContain("save failed");
+});
+
+it("maps duplicate booking-type errors to an actionable message", () => {
+  mocks.update.isError = true;
+  mocks.update.error = new ApplicationError("conflict", "validation_not_unique");
+  renderRow();
+
+  expect(screen.getByRole("alert").textContent).toBe(
+    "A booking type with this name already exists.",
+  );
 });
