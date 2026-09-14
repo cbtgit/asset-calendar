@@ -62,7 +62,7 @@ beforeAll(async () => {
   originalBaseUrl = pocketbase.baseURL;
   harness = await startPocketBaseIntegrationHarness();
   pocketbase.baseURL = harness.baseUrl;
-});
+}, 30_000);
 
 afterEach(() => {
   cleanup();

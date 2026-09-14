@@ -110,7 +110,7 @@ beforeAll(async () => {
 }, () => {});`,
   );
   harness = await startPocketBaseIntegrationHarness({ migrationsDir });
-});
+}, 30_000);
 
 afterAll(async () => {
   if (harness) await harness.stop();

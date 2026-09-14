@@ -98,7 +98,7 @@ beforeAll(async () => {
   );
   process.env.ASSET_CALENDAR_TENANT_HOSTS = "tenant.localhost,other.localhost";
   harness = await startPocketBaseIntegrationHarness({ migrationsDir });
-});
+}, 30_000);
 
 afterAll(async () => {
   if (harness) await harness.stop();
