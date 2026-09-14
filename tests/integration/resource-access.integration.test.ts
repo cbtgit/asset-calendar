@@ -111,6 +111,15 @@ it("enforces administrator tenant authorization and resource validation", async 
   const adminB = await authenticate("admin-b@example.test", "other.localhost");
   const regularA = await authenticate("regular-a@example.test", "tenant.localhost");
 
+  const tenantId = adminA.authStore.record?.tenant;
+  if (typeof tenantId !== "string") throw new Error("Expected administrator tenant.");
+  const currencyChange = await request(adminA, `/api/collections/tenants/records/${tenantId}`, {
+    method: "PATCH",
+    host: "tenant.localhost",
+    body: { currency: "EUR" },
+  });
+  expect(currencyChange.status).toBe(403);
+
   const created = await request(adminA, "/api/collections/resources/records", {
     method: "POST",
     host: "tenant.localhost",
