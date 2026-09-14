@@ -4,17 +4,21 @@ import { Outlet, useRouterState } from "@tanstack/react-router";
 import { AdministrationRail } from "./administration-rail";
 import { ShellHeader } from "./shell-header";
 
-export type ActiveDestination = "calendar" | "groups";
+export type ActiveDestination = "calendar" | "groups" | "booking-types";
 export type ActiveModule = "calendar" | "administration";
 
 // oxlint-disable-next-line eslint(react/only-export-components)
 export function getActiveDestination(pathname: string): ActiveDestination {
-  return pathname.startsWith("/groups") ? "groups" : "calendar";
+  if (pathname.startsWith("/groups")) return "groups";
+  if (pathname.startsWith("/booking-types")) return "booking-types";
+  return "calendar";
 }
 
 // oxlint-disable-next-line eslint(react/only-export-components)
 export function getActiveModule(pathname: string): ActiveModule {
-  return pathname.startsWith("/groups") ? "administration" : "calendar";
+  return pathname.startsWith("/groups") || pathname.startsWith("/booking-types")
+    ? "administration"
+    : "calendar";
 }
 
 export function AppShell() {

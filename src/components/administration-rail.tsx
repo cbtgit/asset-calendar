@@ -16,6 +16,13 @@ export function AdministrationRail({ activeDestination }: AdministrationRailProp
       >
         Groups
       </Link>
+      <Link
+        className="shell-rail-link"
+        data-active={activeDestination === "booking-types" ? "true" : undefined}
+        to="/booking-types"
+      >
+        Booking types
+      </Link>
     </nav>
   );
 }

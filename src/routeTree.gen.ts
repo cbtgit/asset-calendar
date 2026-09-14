@@ -15,6 +15,7 @@ import { Route as SetupPasswordRouteImport } from './routes/setup-password'
 import { Route as SignInRouteImport } from './routes/sign-in'
 import { Route as UnavailableRouteImport } from './routes/unavailable'
 import { Route as AuthenticatedIndexRouteImport } from './routes/_authenticated/index'
+import { Route as AuthenticatedBookingTypesRouteImport } from './routes/_authenticated/booking-types'
 import { Route as AuthenticatedCalendarRouteImport } from './routes/_authenticated/calendar'
 import { Route as AuthenticatedGroupsRouteImport } from './routes/_authenticated/groups'
 import { Route as AuthenticatedGroupsIndexRouteImport } from './routes/_authenticated/groups.index'
@@ -50,6 +51,12 @@ const AuthenticatedIndexRoute = AuthenticatedIndexRouteImport.update({
   path: '/',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
+const AuthenticatedBookingTypesRoute =
+  AuthenticatedBookingTypesRouteImport.update({
+    id: '/booking-types',
+    path: '/booking-types',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
 const AuthenticatedCalendarRoute = AuthenticatedCalendarRouteImport.update({
   id: '/calendar',
   path: '/calendar',
@@ -84,6 +91,7 @@ export interface FileRoutesByFullPath {
   '/setup-password': typeof SetupPasswordRoute
   '/sign-in': typeof SignInRoute
   '/unavailable': typeof UnavailableRoute
+  '/booking-types': typeof AuthenticatedBookingTypesRoute
   '/calendar': typeof AuthenticatedCalendarRoute
   '/groups': typeof AuthenticatedGroupsRouteWithChildren
   '/groups/new': typeof AuthenticatedGroupsNewRoute
@@ -95,6 +103,7 @@ export interface FileRoutesByTo {
   '/setup-password': typeof SetupPasswordRoute
   '/sign-in': typeof SignInRoute
   '/unavailable': typeof UnavailableRoute
+  '/booking-types': typeof AuthenticatedBookingTypesRoute
   '/calendar': typeof AuthenticatedCalendarRoute
   '/': typeof AuthenticatedIndexRoute
   '/groups/new': typeof AuthenticatedGroupsNewRoute
@@ -108,6 +117,7 @@ export interface FileRoutesById {
   '/setup-password': typeof SetupPasswordRoute
   '/sign-in': typeof SignInRoute
   '/unavailable': typeof UnavailableRoute
+  '/_authenticated/booking-types': typeof AuthenticatedBookingTypesRoute
   '/_authenticated/calendar': typeof AuthenticatedCalendarRoute
   '/_authenticated/groups': typeof AuthenticatedGroupsRouteWithChildren
   '/_authenticated/': typeof AuthenticatedIndexRoute
@@ -123,6 +133,7 @@ export interface FileRouteTypes {
     | '/setup-password'
     | '/sign-in'
     | '/unavailable'
+    | '/booking-types'
     | '/calendar'
     | '/groups'
     | '/groups/new'
@@ -134,6 +145,7 @@ export interface FileRouteTypes {
     | '/setup-password'
     | '/sign-in'
     | '/unavailable'
+    | '/booking-types'
     | '/calendar'
     | '/'
     | '/groups/new'
@@ -146,6 +158,7 @@ export interface FileRouteTypes {
     | '/setup-password'
     | '/sign-in'
     | '/unavailable'
+    | '/_authenticated/booking-types'
     | '/_authenticated/calendar'
     | '/_authenticated/groups'
     | '/_authenticated/'
@@ -206,6 +219,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedIndexRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_authenticated/booking-types': {
+      id: '/_authenticated/booking-types'
+      path: '/booking-types'
+      fullPath: '/booking-types'
+      preLoaderRoute: typeof AuthenticatedBookingTypesRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
     '/_authenticated/calendar': {
       id: '/_authenticated/calendar'
       path: '/calendar'
@@ -260,12 +280,14 @@ const AuthenticatedGroupsRouteWithChildren =
   AuthenticatedGroupsRoute._addFileChildren(AuthenticatedGroupsRouteChildren)
 
 interface AuthenticatedRouteChildren {
+  AuthenticatedBookingTypesRoute: typeof AuthenticatedBookingTypesRoute
   AuthenticatedCalendarRoute: typeof AuthenticatedCalendarRoute
   AuthenticatedGroupsRoute: typeof AuthenticatedGroupsRouteWithChildren
   AuthenticatedIndexRoute: typeof AuthenticatedIndexRoute
 }
 
 const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
+  AuthenticatedBookingTypesRoute: AuthenticatedBookingTypesRoute,
   AuthenticatedCalendarRoute: AuthenticatedCalendarRoute,
   AuthenticatedGroupsRoute: AuthenticatedGroupsRouteWithChildren,
   AuthenticatedIndexRoute: AuthenticatedIndexRoute,
