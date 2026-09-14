@@ -23,7 +23,7 @@ export function GroupsDirectoryActions({
         className="groups-directory-action"
         to="/groups/$groupId/edit"
         params={{ groupId: group.id }}
-      >
+        aria-label={`Rename ${group.name}`}
         Rename
       </Link>
       <button
