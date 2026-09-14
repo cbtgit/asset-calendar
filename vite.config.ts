@@ -105,6 +105,7 @@ export default defineConfig(({ mode }) => {
     },
     test: {
       environment: "happy-dom",
+      fileParallelism: false,
       include: ["src/**/*.test.{ts,tsx}", "scripts/**/*.test.ts", "tests/**/*.test.{ts,tsx}"],
     },
     server: {
