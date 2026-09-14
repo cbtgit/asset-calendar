@@ -41,7 +41,7 @@ async function getProjection<T>(path: string): Promise<T> {
 
 function requireAdministratorProjection() {
   const user = getAuthSnapshot().user;
-  if (user && !isAdministrator(user)) {
+  if (!user || !isAdministrator(user)) {
     throw new Error("Administrator authorization is required for resource rates.");
   }
 }

@@ -108,3 +108,21 @@ it("shows administrator actions, confirms archive, and restores focus on Escape"
     expect(mocks.archive.mutate).toHaveBeenCalledWith("resource-1", expect.anything()),
   );
 });
+
+it("moves focus to the stable resource count after successful archive", async () => {
+  mocks.resources.data = [
+    {
+      id: "resource-1",
+      name: "Room",
+      base_rate_minor_units: 1000,
+      archived: false,
+      created: "now",
+      updated: "now",
+    },
+  ];
+  mocks.archive.mutate.mockImplementation((_id, options) => options.onSuccess());
+  renderDirectory();
+  fireEvent.click(screen.getByRole("button", { name: "Archive" }));
+  fireEvent.click(screen.getByRole("button", { name: "Archive resource" }));
+  await waitFor(() => expect(document.activeElement?.textContent).toContain("1 resource"));
+});

@@ -8,8 +8,8 @@ function resourceValue(info, record, field) {
     : record.get(field);
 }
 
-// oxlint-disable-next-line complexity
-function normalizeResource(event, info, record, tenantId) {
+// oxlint-disable-next-line complexity, max-params
+function normalizeResource(event, info, record, tenantId, isCreate = false) {
   if (
     Object.prototype.hasOwnProperty.call(info.body, TENANT_FIELD) ||
     Object.prototype.hasOwnProperty.call(info.body, "name_normalized") ||
@@ -36,7 +36,7 @@ function normalizeResource(event, info, record, tenantId) {
     throw new BadRequestError("resource_archived_invalid");
   }
   const original = typeof record.original === "function" ? record.original() : undefined;
-  if (!original && archived) {
+  if (isCreate && archived) {
     throw new BadRequestError("resource_archival_irreversible");
   }
   const wasArchived = original

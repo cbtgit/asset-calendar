@@ -21,6 +21,13 @@ const resource: Resource = {
 };
 
 function setup() {
+  pocketbase.authStore.save("token", {
+    id: "admin-1",
+    collectionId: "users",
+    collectionName: "users",
+    tenant: "tenant-1",
+    role: "administrator",
+  });
   const queryClient = new QueryClient({ defaultOptions: { mutations: { retry: false } } });
   const wrapper = ({ children }: { children: ReactNode }) => (
     <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
@@ -38,7 +45,10 @@ function setup() {
   return { queryClient, wrapper };
 }
 
-afterEach(() => vi.restoreAllMocks());
+afterEach(() => {
+  pocketbase.authStore.clear();
+  vi.restoreAllMocks();
+});
 
 it("cancels, updates immediately, and rolls back resource updates", async () => {
   let rejectUpdate!: (reason: unknown) => void;

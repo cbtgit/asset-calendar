@@ -90,6 +90,24 @@ it("requires archive confirmation and archives only custom types", async () => {
   await waitFor(() => expect(update).toHaveBeenCalledWith("custom-1", { archived: true }));
 });
 
+it("moves focus to the stable directory status after successful archive", async () => {
+  vi.spyOn(pocketbase, "send")
+    .mockResolvedValueOnce({ items: [custom] })
+    .mockResolvedValueOnce({ id: "tenant-1", currency: "USD", locale: "en-US" })
+    .mockResolvedValueOnce({ ...custom, archived: true });
+  const update = vi.fn().mockResolvedValue({});
+  vi.spyOn(pocketbase, "collection").mockReturnValue({
+    getOne: vi.fn().mockResolvedValue({ id: "tenant-1", currency: "USD", locale: "en-US" }),
+    update,
+  } as never);
+  renderDirectory();
+  fireEvent.click(await screen.findByRole("button", { name: "Archive" }));
+  fireEvent.click(screen.getByRole("button", { name: "Archive booking type" }));
+  await waitFor(() =>
+    expect(document.activeElement?.textContent).toContain("System booking types are protected"),
+  );
+});
+
 it("traps archive dialog focus and closes on Escape", async () => {
   vi.spyOn(pocketbase, "send")
     .mockResolvedValueOnce({ items: [custom] })

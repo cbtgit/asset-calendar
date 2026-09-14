@@ -95,10 +95,10 @@ const ready = (async () => {
   app.save(bookingTypes);
   const legacy = new Record(bookingTypes);
   legacy.set("tenant", tenant.id);
-  legacy.set("name", " Regular ");
-  legacy.set("name_normalized", " regular ");
+  legacy.set("name", "Regular");
+  legacy.set("name_normalized", "regular");
   legacy.set("surcharge_minor_units", "1");
-  legacy.set("system_kind", "custom");
+  legacy.set("system_kind", "regular");
   legacy.set("billable", true);
   legacy.set("resource_blocking", true);
   legacy.set("archived", false);
@@ -126,7 +126,7 @@ afterAll(async () => {
   if (dataDir) await rm(dataDir, { recursive: true, force: true });
 });
 
-it("fails migration explicitly when a seeded booking-type name is already taken", async () => {
+it("fails migration explicitly when a protected seeded booking type is invalid", async () => {
   await ready;
   expect(startupError).toBeInstanceOf(Error);
   const stderr = (startupError as { stderr?: Buffer | string }).stderr;
@@ -134,7 +134,7 @@ it("fails migration explicitly when a seeded booking-type name is already taken"
     typeof stderr === "string" ? stderr : (stderr?.toString("utf8") ?? "")
   }`;
   expect(failureText).toContain("Booking type seed conflict:");
-  expect(failureText).toContain('already uses normalized name "regular"');
+  expect(failureText).toContain("regular record");
   const migrationSource = await readFile(migrationPath, "utf8");
   expect(migrationSource).toContain("Booking type seed conflict:");
   expect(migrationSource).toContain('record.get("name_normalized") === normalizedName');

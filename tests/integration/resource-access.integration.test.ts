@@ -151,6 +151,12 @@ it("enforces administrator tenant authorization and resource validation", async 
   expect(created.status).toBe(200);
   const resource = await created.json();
   expect(resource).toMatchObject({ name: "Meeting Room" });
+  const archivedOnCreate = await request(adminA, "/api/collections/resources/records", {
+    method: "POST",
+    host: "tenant.localhost",
+    body: { name: "Archived on create", base_rate_minor_units: 100, archived: true },
+  });
+  expect(archivedOnCreate.status).toBe(400);
 
   for (const body of [
     { name: "   ", base_rate_minor_units: 1, archived: false },
@@ -208,6 +214,19 @@ it("archives resources one way and projects rates only to administrators", async
     body: { name: "Archive Room", base_rate_minor_units: 900, archived: false },
   });
   const resource = await created.json();
+  const activeResourceResponse = await request(admin, "/api/resources/active", {
+    host: "tenant.localhost",
+  });
+  expect((await activeResourceResponse.json()).items).toEqual(
+    expect.arrayContaining([expect.objectContaining({ id: resource.id })]),
+  );
+  expect(
+    (
+      await request(admin, "/api/resources/active", { host: "tenant.localhost" }).then((response) =>
+        response.json(),
+      )
+    ).items.find((item: { id: string }) => item.id === resource.id),
+  ).not.toHaveProperty("base_rate_minor_units");
 
   const archived = await request(admin, `/api/collections/resources/records/${resource.id}`, {
     method: "PATCH",

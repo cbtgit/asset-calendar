@@ -439,6 +439,7 @@ function createRecord(event) {
       context.info,
       event.record,
       context.context.tenant.id,
+      true,
     );
   } else {
     applyServerTenant(context.info, event.record, context.context.tenant.id);
@@ -472,6 +473,7 @@ function updateRecord(event) {
       context.info,
       event.record,
       context.context.tenant.id,
+      false,
     );
   } else {
     applyServerTenant(context.info, event.record, context.context.tenant.id);

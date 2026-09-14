@@ -19,10 +19,24 @@ export function BookingTypeRow({
   const [value, setValue] = useState(() => formatMoneyInput(type.surcharge_minor_units, locale));
   const [validationError, setValidationError] = useState("");
   const [dirty, setDirty] = useState(false);
-  const previousTypeRef = useRef(type);
+  const previousTypeRef = useRef({
+    id: type.id,
+    name: type.name,
+    surcharge: type.surcharge_minor_units,
+    archived: type.archived,
+  });
   useEffect(() => {
-    const authoritativeTypeChanged = previousTypeRef.current !== type;
-    previousTypeRef.current = type;
+    const authoritativeTypeChanged =
+      previousTypeRef.current.id !== type.id ||
+      previousTypeRef.current.name !== type.name ||
+      previousTypeRef.current.surcharge !== type.surcharge_minor_units ||
+      previousTypeRef.current.archived !== type.archived;
+    previousTypeRef.current = {
+      id: type.id,
+      name: type.name,
+      surcharge: type.surcharge_minor_units,
+      archived: type.archived,
+    };
     if (!dirty || authoritativeTypeChanged) {
       setName(type.name);
       setValue(formatMoneyInput(type.surcharge_minor_units, locale));

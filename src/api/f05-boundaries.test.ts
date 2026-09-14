@@ -4,6 +4,7 @@ import { getActiveResources, getResources } from "./resources";
 import { getBookingTypeSelection } from "./booking-types";
 
 afterEach(() => {
+  pocketbase.authStore.clear();
   vi.restoreAllMocks();
 });
 
@@ -21,6 +22,13 @@ it("keeps rates out of the active-resource response contract", async () => {
 });
 
 it("keeps administrator resource rates and booking-type selection typed separately", async () => {
+  pocketbase.authStore.save("token", {
+    id: "admin-1",
+    collectionId: "users",
+    collectionName: "users",
+    tenant: "tenant-1",
+    role: "administrator",
+  });
   const send = vi.spyOn(pocketbase, "send");
   send
     .mockResolvedValueOnce({

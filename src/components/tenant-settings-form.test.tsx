@@ -53,3 +53,15 @@ it("shows validation and server errors without changing currency", async () => {
   );
   expect((screen.getByLabelText("Currency") as HTMLInputElement).value).toBe("EUR");
 });
+
+it("does not overwrite dirty input or refocus after a settings refetch", () => {
+  const { rerender } = render(<TenantSettingsForm />);
+  const locale = screen.getByLabelText("Locale") as HTMLInputElement;
+  fireEvent.change(locale, { target: { value: "fr-FR" } });
+  const other = screen.getByLabelText("Currency");
+  other.focus();
+  mocks.settings.data = { currency: "EUR", locale: "en-US" };
+  rerender(<TenantSettingsForm />);
+  expect(locale.value).toBe("fr-FR");
+  expect(document.activeElement).toBe(other);
+});
