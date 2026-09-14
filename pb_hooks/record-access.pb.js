@@ -20,7 +20,7 @@ routerAdd("GET", "/api/resources", (event) =>
   require(`${__hooks}/resource-access.cjs`).resourcesProjectionRoute(event),
 );
 routerAdd("GET", "/api/resources/active", (event) =>
-  require(`${__hooks}/resource-access.cjs`).resourcesProjectionRoute(event),
+  require(`${__hooks}/resource-access.cjs`).resourcesProjectionRoute(event, true),
 );
 routerAdd("GET", "/api/resources/{id}", (event) =>
   require(`${__hooks}/resource-access.cjs`).resourcesProjectionRoute(event),

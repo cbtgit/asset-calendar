@@ -9,10 +9,6 @@ function resourceValue(info, record, field) {
 }
 
 function normalizeResource(event, info, record, tenantId) {
-  const missing = String(Math.random());
-  const raw = new DynamicModel({ name_normalized: missing });
-  event.bindBody(raw);
-  if (raw.name_normalized !== missing) recordAccess.deny();
   if (
     Object.prototype.hasOwnProperty.call(info.body, TENANT_FIELD) ||
     Object.prototype.hasOwnProperty.call(info.body, "name_normalized") ||
@@ -38,7 +34,11 @@ function normalizeResource(event, info, record, tenantId) {
   if (typeof archived !== "boolean") {
     throw new BadRequestError("resource_archived_invalid");
   }
-  if (record.get("archived") === true) recordAccess.deny();
+  const original = typeof record.original === "function" ? record.original() : undefined;
+  const wasArchived = original
+    ? original.get("archived") === true
+    : record.get("archived") === true && record.get("archived_at");
+  if (wasArchived) recordAccess.deny();
 
   info.body.name = trimmedName;
   info.body.name_normalized = trimmedName.toLowerCase();
@@ -69,7 +69,7 @@ function resourceProjection(record, includeRate) {
   return projection;
 }
 
-function resourcesProjectionRoute(event) {
+function resourcesProjectionRoute(event, forceActive = false) {
   const context = recordAccess.applicationContext({
     ...event,
     collection: { name: RESOURCE_COLLECTION, fields: [{ name: TENANT_FIELD }] },
@@ -77,7 +77,7 @@ function resourcesProjectionRoute(event) {
   if (!context) recordAccess.deny();
 
   const administrator = context.auth.get("role") === "administrator";
-  const activeOnly = event.request.pathValue("active") === "active" || !administrator;
+  const activeOnly = forceActive || !administrator;
   const resourceId = event.request.pathValue("id");
   let resources;
   if (resourceId) {
