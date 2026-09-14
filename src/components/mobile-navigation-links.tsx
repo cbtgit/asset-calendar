@@ -35,6 +35,12 @@ export function MobileNavigationLinks({
           <Link className="shell-mobile-child-link" to="/groups" onClick={onSelectRoute}>
             Groups
           </Link>
+          <Link className="shell-mobile-child-link" to="/resources" onClick={onSelectRoute}>
+            Resources
+          </Link>
+          <Link className="shell-mobile-child-link" to="/settings" onClick={onSelectRoute}>
+            Settings
+          </Link>
           <Link className="shell-mobile-child-link" to="/booking-types" onClick={onSelectRoute}>
             Booking types
           </Link>

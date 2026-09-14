@@ -18,6 +18,20 @@ export function AdministrationRail({ activeDestination }: AdministrationRailProp
       </Link>
       <Link
         className="shell-rail-link"
+        data-active={activeDestination === "resources" ? "true" : undefined}
+        to="/resources"
+      >
+        Resources
+      </Link>
+      <Link
+        className="shell-rail-link"
+        data-active={activeDestination === "settings" ? "true" : undefined}
+        to="/settings"
+      >
+        Settings
+      </Link>
+      <Link
+        className="shell-rail-link"
         data-active={activeDestination === "booking-types" ? "true" : undefined}
         to="/booking-types"
       >

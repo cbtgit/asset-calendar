@@ -18,9 +18,14 @@ import { Route as AuthenticatedIndexRouteImport } from './routes/_authenticated/
 import { Route as AuthenticatedBookingTypesRouteImport } from './routes/_authenticated/booking-types'
 import { Route as AuthenticatedCalendarRouteImport } from './routes/_authenticated/calendar'
 import { Route as AuthenticatedGroupsRouteImport } from './routes/_authenticated/groups'
+import { Route as AuthenticatedResourcesRouteImport } from './routes/_authenticated/resources'
+import { Route as AuthenticatedSettingsRouteImport } from './routes/_authenticated/settings'
 import { Route as AuthenticatedGroupsIndexRouteImport } from './routes/_authenticated/groups.index'
 import { Route as AuthenticatedGroupsNewRouteImport } from './routes/_authenticated/groups.new'
+import { Route as AuthenticatedResourcesIndexRouteImport } from './routes/_authenticated/resources.index'
+import { Route as AuthenticatedResourcesNewRouteImport } from './routes/_authenticated/resources.new'
 import { Route as AuthenticatedGroupsGroupIdEditRouteImport } from './routes/_authenticated/groups.$groupId.edit'
+import { Route as AuthenticatedResourcesResourceIdEditRouteImport } from './routes/_authenticated/resources.$resourceId.edit'
 
 const AuthenticatedRoute = AuthenticatedRouteImport.update({
   id: '/_authenticated',
@@ -67,6 +72,16 @@ const AuthenticatedGroupsRoute = AuthenticatedGroupsRouteImport.update({
   path: '/groups',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
+const AuthenticatedResourcesRoute = AuthenticatedResourcesRouteImport.update({
+  id: '/resources',
+  path: '/resources',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
+const AuthenticatedSettingsRoute = AuthenticatedSettingsRouteImport.update({
+  id: '/settings',
+  path: '/settings',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
 const AuthenticatedGroupsIndexRoute =
   AuthenticatedGroupsIndexRouteImport.update({
     id: '/',
@@ -78,11 +93,29 @@ const AuthenticatedGroupsNewRoute = AuthenticatedGroupsNewRouteImport.update({
   path: '/new',
   getParentRoute: () => AuthenticatedGroupsRoute,
 } as any)
+const AuthenticatedResourcesIndexRoute =
+  AuthenticatedResourcesIndexRouteImport.update({
+    id: '/',
+    path: '/',
+    getParentRoute: () => AuthenticatedResourcesRoute,
+  } as any)
+const AuthenticatedResourcesNewRoute =
+  AuthenticatedResourcesNewRouteImport.update({
+    id: '/new',
+    path: '/new',
+    getParentRoute: () => AuthenticatedResourcesRoute,
+  } as any)
 const AuthenticatedGroupsGroupIdEditRoute =
   AuthenticatedGroupsGroupIdEditRouteImport.update({
     id: '/$groupId/edit',
     path: '/$groupId/edit',
     getParentRoute: () => AuthenticatedGroupsRoute,
+  } as any)
+const AuthenticatedResourcesResourceIdEditRoute =
+  AuthenticatedResourcesResourceIdEditRouteImport.update({
+    id: '/$resourceId/edit',
+    path: '/$resourceId/edit',
+    getParentRoute: () => AuthenticatedResourcesRoute,
   } as any)
 
 export interface FileRoutesByFullPath {
@@ -94,9 +127,14 @@ export interface FileRoutesByFullPath {
   '/booking-types': typeof AuthenticatedBookingTypesRoute
   '/calendar': typeof AuthenticatedCalendarRoute
   '/groups': typeof AuthenticatedGroupsRouteWithChildren
+  '/resources': typeof AuthenticatedResourcesRouteWithChildren
+  '/settings': typeof AuthenticatedSettingsRoute
   '/groups/new': typeof AuthenticatedGroupsNewRoute
+  '/resources/new': typeof AuthenticatedResourcesNewRoute
   '/groups/': typeof AuthenticatedGroupsIndexRoute
+  '/resources/': typeof AuthenticatedResourcesIndexRoute
   '/groups/$groupId/edit': typeof AuthenticatedGroupsGroupIdEditRoute
+  '/resources/$resourceId/edit': typeof AuthenticatedResourcesResourceIdEditRoute
 }
 export interface FileRoutesByTo {
   '/setup': typeof SetupRoute
@@ -105,10 +143,14 @@ export interface FileRoutesByTo {
   '/unavailable': typeof UnavailableRoute
   '/booking-types': typeof AuthenticatedBookingTypesRoute
   '/calendar': typeof AuthenticatedCalendarRoute
+  '/settings': typeof AuthenticatedSettingsRoute
   '/': typeof AuthenticatedIndexRoute
   '/groups/new': typeof AuthenticatedGroupsNewRoute
+  '/resources/new': typeof AuthenticatedResourcesNewRoute
   '/groups': typeof AuthenticatedGroupsIndexRoute
+  '/resources': typeof AuthenticatedResourcesIndexRoute
   '/groups/$groupId/edit': typeof AuthenticatedGroupsGroupIdEditRoute
+  '/resources/$resourceId/edit': typeof AuthenticatedResourcesResourceIdEditRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -120,10 +162,15 @@ export interface FileRoutesById {
   '/_authenticated/booking-types': typeof AuthenticatedBookingTypesRoute
   '/_authenticated/calendar': typeof AuthenticatedCalendarRoute
   '/_authenticated/groups': typeof AuthenticatedGroupsRouteWithChildren
+  '/_authenticated/resources': typeof AuthenticatedResourcesRouteWithChildren
+  '/_authenticated/settings': typeof AuthenticatedSettingsRoute
   '/_authenticated/': typeof AuthenticatedIndexRoute
   '/_authenticated/groups/new': typeof AuthenticatedGroupsNewRoute
+  '/_authenticated/resources/new': typeof AuthenticatedResourcesNewRoute
   '/_authenticated/groups/': typeof AuthenticatedGroupsIndexRoute
+  '/_authenticated/resources/': typeof AuthenticatedResourcesIndexRoute
   '/_authenticated/groups/$groupId/edit': typeof AuthenticatedGroupsGroupIdEditRoute
+  '/_authenticated/resources/$resourceId/edit': typeof AuthenticatedResourcesResourceIdEditRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -136,9 +183,14 @@ export interface FileRouteTypes {
     | '/booking-types'
     | '/calendar'
     | '/groups'
+    | '/resources'
+    | '/settings'
     | '/groups/new'
+    | '/resources/new'
     | '/groups/'
+    | '/resources/'
     | '/groups/$groupId/edit'
+    | '/resources/$resourceId/edit'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/setup'
@@ -147,10 +199,14 @@ export interface FileRouteTypes {
     | '/unavailable'
     | '/booking-types'
     | '/calendar'
+    | '/settings'
     | '/'
     | '/groups/new'
+    | '/resources/new'
     | '/groups'
+    | '/resources'
     | '/groups/$groupId/edit'
+    | '/resources/$resourceId/edit'
   id:
     | '__root__'
     | '/_authenticated'
@@ -161,10 +217,15 @@ export interface FileRouteTypes {
     | '/_authenticated/booking-types'
     | '/_authenticated/calendar'
     | '/_authenticated/groups'
+    | '/_authenticated/resources'
+    | '/_authenticated/settings'
     | '/_authenticated/'
     | '/_authenticated/groups/new'
+    | '/_authenticated/resources/new'
     | '/_authenticated/groups/'
+    | '/_authenticated/resources/'
     | '/_authenticated/groups/$groupId/edit'
+    | '/_authenticated/resources/$resourceId/edit'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -240,6 +301,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedGroupsRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_authenticated/resources': {
+      id: '/_authenticated/resources'
+      path: '/resources'
+      fullPath: '/resources'
+      preLoaderRoute: typeof AuthenticatedResourcesRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/settings': {
+      id: '/_authenticated/settings'
+      path: '/settings'
+      fullPath: '/settings'
+      preLoaderRoute: typeof AuthenticatedSettingsRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
     '/_authenticated/groups/': {
       id: '/_authenticated/groups/'
       path: '/'
@@ -254,12 +329,33 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedGroupsNewRouteImport
       parentRoute: typeof AuthenticatedGroupsRoute
     }
+    '/_authenticated/resources/': {
+      id: '/_authenticated/resources/'
+      path: '/'
+      fullPath: '/resources/'
+      preLoaderRoute: typeof AuthenticatedResourcesIndexRouteImport
+      parentRoute: typeof AuthenticatedResourcesRoute
+    }
+    '/_authenticated/resources/new': {
+      id: '/_authenticated/resources/new'
+      path: '/new'
+      fullPath: '/resources/new'
+      preLoaderRoute: typeof AuthenticatedResourcesNewRouteImport
+      parentRoute: typeof AuthenticatedResourcesRoute
+    }
     '/_authenticated/groups/$groupId/edit': {
       id: '/_authenticated/groups/$groupId/edit'
       path: '/$groupId/edit'
       fullPath: '/groups/$groupId/edit'
       preLoaderRoute: typeof AuthenticatedGroupsGroupIdEditRouteImport
       parentRoute: typeof AuthenticatedGroupsRoute
+    }
+    '/_authenticated/resources/$resourceId/edit': {
+      id: '/_authenticated/resources/$resourceId/edit'
+      path: '/$resourceId/edit'
+      fullPath: '/resources/$resourceId/edit'
+      preLoaderRoute: typeof AuthenticatedResourcesResourceIdEditRouteImport
+      parentRoute: typeof AuthenticatedResourcesRoute
     }
   }
 }
@@ -279,10 +375,31 @@ const AuthenticatedGroupsRouteChildren: AuthenticatedGroupsRouteChildren = {
 const AuthenticatedGroupsRouteWithChildren =
   AuthenticatedGroupsRoute._addFileChildren(AuthenticatedGroupsRouteChildren)
 
+interface AuthenticatedResourcesRouteChildren {
+  AuthenticatedResourcesNewRoute: typeof AuthenticatedResourcesNewRoute
+  AuthenticatedResourcesIndexRoute: typeof AuthenticatedResourcesIndexRoute
+  AuthenticatedResourcesResourceIdEditRoute: typeof AuthenticatedResourcesResourceIdEditRoute
+}
+
+const AuthenticatedResourcesRouteChildren: AuthenticatedResourcesRouteChildren =
+  {
+    AuthenticatedResourcesNewRoute: AuthenticatedResourcesNewRoute,
+    AuthenticatedResourcesIndexRoute: AuthenticatedResourcesIndexRoute,
+    AuthenticatedResourcesResourceIdEditRoute:
+      AuthenticatedResourcesResourceIdEditRoute,
+  }
+
+const AuthenticatedResourcesRouteWithChildren =
+  AuthenticatedResourcesRoute._addFileChildren(
+    AuthenticatedResourcesRouteChildren,
+  )
+
 interface AuthenticatedRouteChildren {
   AuthenticatedBookingTypesRoute: typeof AuthenticatedBookingTypesRoute
   AuthenticatedCalendarRoute: typeof AuthenticatedCalendarRoute
   AuthenticatedGroupsRoute: typeof AuthenticatedGroupsRouteWithChildren
+  AuthenticatedResourcesRoute: typeof AuthenticatedResourcesRouteWithChildren
+  AuthenticatedSettingsRoute: typeof AuthenticatedSettingsRoute
   AuthenticatedIndexRoute: typeof AuthenticatedIndexRoute
 }
 
@@ -290,6 +407,8 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedBookingTypesRoute: AuthenticatedBookingTypesRoute,
   AuthenticatedCalendarRoute: AuthenticatedCalendarRoute,
   AuthenticatedGroupsRoute: AuthenticatedGroupsRouteWithChildren,
+  AuthenticatedResourcesRoute: AuthenticatedResourcesRouteWithChildren,
+  AuthenticatedSettingsRoute: AuthenticatedSettingsRoute,
   AuthenticatedIndexRoute: AuthenticatedIndexRoute,
 }
 
