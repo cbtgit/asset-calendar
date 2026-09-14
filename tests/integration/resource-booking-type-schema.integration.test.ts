@@ -169,11 +169,16 @@ it("locks raw collections and reconciles legacy numeric fields before indexing",
     deleteRule: null,
   });
   expect(bookingTypesCollection).toMatchObject({
-    listRule: null,
-    viewRule: null,
-    createRule: null,
-    updateRule: null,
-    deleteRule: null,
+    listRule:
+      '@request.auth.id != "" && @request.auth.active = true && @request.auth.role = "administrator" && @request.auth.tenant = tenant',
+    viewRule:
+      '@request.auth.id != "" && @request.auth.active = true && @request.auth.role = "administrator" && @request.auth.tenant = tenant',
+    createRule:
+      '@request.auth.id != "" && @request.auth.active = true && @request.auth.role = "administrator"',
+    updateRule:
+      '@request.auth.id != "" && @request.auth.active = true && @request.auth.role = "administrator" && @request.auth.tenant = tenant',
+    deleteRule:
+      '@request.auth.id != "" && @request.auth.active = true && @request.auth.role = "administrator" && @request.auth.tenant = tenant',
   });
   expect(
     resourcesCollection!.fields.find((field) => field.name === "base_rate_minor_units"),

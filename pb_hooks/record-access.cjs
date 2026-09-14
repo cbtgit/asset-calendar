@@ -1,3 +1,5 @@
+/* eslint-disable max-lines */
+
 const authConfig = require(`${__hooks}/auth-config.cjs`);
 const tenantResolver = require(`${__hooks}/tenant-host-resolver.cjs`);
 
@@ -5,6 +7,8 @@ const configuration = authConfig.validateAuthConfig(authConfig.readPocketBaseEnv
 const TENANT_FIELD = "tenant";
 const USER_COLLECTION = "users";
 const ORGANIZATIONAL_UNIT_COLLECTION = "organizational_units";
+const BOOKING_TYPE_COLLECTION = "booking_types";
+const BOOKING_TYPE_SYSTEM_KINDS = ["regular", "training", "maintenance", "custom"];
 const RESOURCE_COLLECTION = "resources";
 const PROTECTED_USER_FIELDS = [
   "tenant",
@@ -100,6 +104,105 @@ function ensureOrganizationalUnitTenant(value, tenantId) {
     if (unit.get(TENANT_FIELD) !== tenantId) deny();
   } catch {
     deny();
+  }
+}
+
+function isAdministrator(context) {
+  return context.auth.get("role") === "administrator";
+}
+
+function bookingTypeValue(info, record, field) {
+  return Object.prototype.hasOwnProperty.call(info.body, field)
+    ? info.body[field]
+    : record.get(field);
+}
+
+// oxlint-disable-next-line eslint(complexity)
+function normalizeBookingType(event, { info, record, tenantId, isCreate }) {
+  if (
+    Object.prototype.hasOwnProperty.call(info.body, TENANT_FIELD) ||
+    Object.prototype.hasOwnProperty.call(info.body, "name_normalized") ||
+    Object.prototype.hasOwnProperty.call(info.body, "archived_at")
+  ) {
+    deny();
+  }
+
+  const name = bookingTypeValue(info, record, "name");
+  if (typeof name !== "string" || name.trim() === "") {
+    throw new BadRequestError("booking_type_name_required");
+  }
+  const trimmedName = name.trim();
+  if (trimmedName.length > 200) {
+    throw new BadRequestError("booking_type_name_too_long");
+  }
+
+  const kind = bookingTypeValue(info, record, "system_kind");
+  const surcharge = bookingTypeValue(info, record, "surcharge_minor_units");
+  if (!BOOKING_TYPE_SYSTEM_KINDS.includes(kind)) {
+    throw new BadRequestError("booking_type_system_kind_invalid");
+  }
+  if (!Number.isSafeInteger(surcharge) || surcharge < 0) {
+    throw new BadRequestError("booking_type_surcharge_invalid");
+  }
+  if (isCreate && kind !== "custom") {
+    throw new BadRequestError("booking_type_system_kind_protected");
+  }
+  if (!isCreate && kind !== record.get("system_kind")) {
+    throw new BadRequestError("booking_type_system_kind_protected");
+  }
+  if (kind === "regular" && surcharge !== 0) {
+    throw new BadRequestError("booking_type_regular_surcharge_protected");
+  }
+  if (kind === "regular" || kind === "training") {
+    if (bookingTypeValue(info, record, "billable") !== true) {
+      throw new BadRequestError("booking_type_billable_protected");
+    }
+    if (bookingTypeValue(info, record, "resource_blocking") !== true) {
+      throw new BadRequestError("booking_type_blocking_protected");
+    }
+  }
+  if (kind === "maintenance") {
+    if (bookingTypeValue(info, record, "billable") !== false) {
+      throw new BadRequestError("booking_type_maintenance_billable_protected");
+    }
+    if (bookingTypeValue(info, record, "resource_blocking") !== true) {
+      throw new BadRequestError("booking_type_maintenance_blocking_protected");
+    }
+  }
+  if (kind === "custom") {
+    info.body.billable = true;
+    info.body.resource_blocking = true;
+    record.set("billable", true);
+    record.set("resource_blocking", true);
+  }
+
+  const archived = bookingTypeValue(info, record, "archived");
+  if (typeof archived !== "boolean") {
+    throw new BadRequestError("booking_type_archived_invalid");
+  }
+  const original = typeof record.original === "function" ? record.original() : undefined;
+  const wasArchived = original
+    ? original.get("archived") === true
+    : record.get("archived") === true && Boolean(record.get("archived_at"));
+  if (wasArchived) {
+    deny();
+  }
+  if (archived && kind !== "custom") {
+    throw new BadRequestError("booking_type_archival_protected");
+  }
+  if (isCreate && archived) {
+    throw new BadRequestError("booking_type_archival_irreversible");
+  }
+
+  info.body.name = trimmedName;
+  info.body.name_normalized = trimmedName.toLowerCase();
+  info.body[TENANT_FIELD] = tenantId;
+  record.set("name", trimmedName);
+  record.set("name_normalized", info.body.name_normalized);
+  record.set(TENANT_FIELD, tenantId);
+  if (archived && !wasArchived) {
+    info.body.archived_at = new Date().toISOString();
+    record.set("archived_at", info.body.archived_at);
   }
 }
 
@@ -203,6 +306,56 @@ function groupsProjectionRoute(event) {
   return event.json(200, groupId ? items[0] : { items });
 }
 
+// oxlint-disable-next-line eslint(complexity)
+function bookingTypesProjectionRoute(event, forceSelection = false) {
+  const context = applicationContext({
+    ...event,
+    collection: {
+      name: BOOKING_TYPE_COLLECTION,
+      fields: [{ name: TENANT_FIELD }],
+    },
+  });
+  if (!context || !isAdministrator(context)) deny();
+
+  const routeId = event.request.pathValue("id");
+  const selection =
+    forceSelection || event.request.pathValue("selection") || routeId === "selection";
+  const id = selection ? undefined : routeId;
+  const filter = selection ? "tenant = {:tenant} && archived = false" : "tenant = {:tenant}";
+  let types;
+  if (id) {
+    try {
+      const type = $app.findRecordById(BOOKING_TYPE_COLLECTION, id);
+      if (type.get(TENANT_FIELD) !== context.context.tenant.id) {
+        throw new NotFoundError("booking_type_not_found");
+      }
+      types = [type];
+    } catch (error) {
+      if (error instanceof NotFoundError) throw error;
+      throw new NotFoundError("booking_type_not_found");
+    }
+  } else {
+    types = $app.findRecordsByFilter(BOOKING_TYPE_COLLECTION, filter, "name_normalized,id", 0, 0, {
+      tenant: context.context.tenant.id,
+    });
+  }
+  const items = types.map((record) => ({
+    id: record.id,
+    name: record.get("name"),
+    system_kind: record.get("system_kind"),
+    surcharge_minor_units: record.get("surcharge_minor_units"),
+    billable: record.get("billable"),
+    resource_blocking: record.get("resource_blocking"),
+    archived: record.get("archived"),
+    archived_at: record.get("archived_at"),
+  }));
+  return event.json(200, id ? items[0] : { items });
+}
+
+function bookingTypesSelectionProjectionRoute(event) {
+  return bookingTypesProjectionRoute(event, true);
+}
+
 function protectUserFields(context, record) {
   if (
     collectionName({ record }) !== USER_COLLECTION ||
@@ -221,6 +374,7 @@ function protectUserFields(context, record) {
 function checkRecords(event) {
   const context = applicationContext(event);
   if (!context) return event.next();
+  if (collectionName(event) === BOOKING_TYPE_COLLECTION && !isAdministrator(context)) deny();
 
   if (collectionName(event) === RESOURCE_COLLECTION) deny();
 
@@ -235,6 +389,7 @@ function deleteRecord(event) {
   const context = applicationContext(event);
   if (!context) return event.next();
   ensureRecordTenant(event.record, context.context.tenant.id);
+  if (collectionName({ record: event.record }) === BOOKING_TYPE_COLLECTION) deny();
   if (collectionName({ record: event.record }) === RESOURCE_COLLECTION) deny();
   if (collectionName({ record: event.record }) === ORGANIZATIONAL_UNIT_COLLECTION) {
     guardOrganizationalUnitDelete(event.record);
@@ -250,6 +405,14 @@ function createRecord(event) {
   if (collection === RESOURCE_COLLECTION && context.auth.get("role") !== "administrator") deny();
   if (collection === ORGANIZATIONAL_UNIT_COLLECTION) {
     normalizeOrganizationalUnit(event, context.info, event.record, context.context.tenant.id);
+  } else if (collectionName({ record: event.record }) === BOOKING_TYPE_COLLECTION) {
+    if (!isAdministrator(context)) deny();
+    normalizeBookingType(event, {
+      info: context.info,
+      record: event.record,
+      tenantId: context.context.tenant.id,
+      isCreate: true,
+    });
   } else if (collection === RESOURCE_COLLECTION) {
     resourceAccess().normalizeResource(
       event,
@@ -274,6 +437,14 @@ function updateRecord(event) {
   if (collection === RESOURCE_COLLECTION && context.auth.get("role") !== "administrator") deny();
   if (collection === ORGANIZATIONAL_UNIT_COLLECTION) {
     normalizeOrganizationalUnit(event, context.info, event.record, context.context.tenant.id);
+  } else if (collectionName({ record: event.record }) === BOOKING_TYPE_COLLECTION) {
+    if (!isAdministrator(context)) deny();
+    normalizeBookingType(event, {
+      info: context.info,
+      record: event.record,
+      tenantId: context.context.tenant.id,
+      isCreate: false,
+    });
   } else if (collection === RESOURCE_COLLECTION) {
     resourceAccess().normalizeResource(
       event,
@@ -307,6 +478,8 @@ module.exports = {
   applicationContext,
   deny,
   groupsProjectionRoute,
+  bookingTypesProjectionRoute,
+  bookingTypesSelectionProjectionRoute,
   rejectInactive,
   updateRecord,
 };
