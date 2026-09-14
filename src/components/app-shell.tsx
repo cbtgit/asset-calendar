@@ -4,12 +4,7 @@ import { Outlet, useRouterState } from "@tanstack/react-router";
 import { AdministrationRail } from "./administration-rail";
 import { ShellHeader } from "./shell-header";
 
-export type ActiveDestination =
-  | "calendar"
-  | "groups"
-  | "resources"
-  | "settings"
-  | "booking-types";
+export type ActiveDestination = "calendar" | "groups" | "resources" | "settings" | "booking-types";
 export type ActiveModule = "calendar" | "administration";
 
 // oxlint-disable-next-line eslint(react/only-export-components)
