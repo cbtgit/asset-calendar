@@ -22,7 +22,14 @@ function validateName(value: string): string | undefined {
 function duplicateNameCode(error: ApplicationError): string | undefined {
   if (typeof error.cause !== "object" || error.cause === null) return undefined;
 
-  const data = Reflect.get(error.cause, "data");
+  const directData = Reflect.get(error.cause, "data");
+  const response = Reflect.get(error.cause, "response");
+  const data =
+    typeof directData === "object" && directData !== null
+      ? directData
+      : typeof response === "object" && response !== null
+        ? Reflect.get(response, "data")
+        : undefined;
   if (typeof data !== "object" || data === null) return undefined;
 
   const field = Reflect.get(data, "name_normalized");
