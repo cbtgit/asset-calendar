@@ -25,6 +25,8 @@ const custom = {
 afterEach(() => {
   cleanup();
   vi.clearAllMocks();
+  mocks.update.isError = false;
+  mocks.update.error = null;
 });
 
 function renderRow(type: BookingType = custom, locale = "de-DE") {
@@ -46,6 +48,20 @@ it("submits localized surcharge and custom rename", async () => {
       input: { name: "Evening", surcharge_minor_units: 1250 },
     }),
   );
+});
+
+it("parses dirty surcharge using the locale where it was entered", () => {
+  const { rerender } = renderRow(custom, "de-DE");
+  fireEvent.change(screen.getByRole("textbox", { name: "Surcharge for After hours" }), {
+    target: { value: "12,50" },
+  });
+  rerender(<BookingTypeRow type={custom} locale="en-US" currency="USD" onArchive={vi.fn()} />);
+  fireEvent.click(screen.getByRole("button", { name: "Save" }));
+
+  expect(mocks.update.mutate).toHaveBeenCalledWith({
+    id: "custom-1",
+    input: { name: "After hours", surcharge_minor_units: 1250 },
+  });
 });
 
 it("submits the rename when Enter is pressed in the name field", () => {
@@ -136,5 +152,25 @@ it("maps duplicate booking-type errors to an actionable message", () => {
 
   expect(screen.getByRole("alert").textContent).toBe(
     "A booking type with this name already exists.",
+  );
+  const name = screen.getByRole("textbox", { name: "Name for After hours" });
+  const surcharge = screen.getByRole("textbox", { name: "Surcharge for After hours" });
+  expect(name.getAttribute("aria-invalid")).toBe("true");
+  expect(name.getAttribute("aria-describedby")).toBe("booking-type-mutation-error-custom-1");
+  expect(surcharge.getAttribute("aria-describedby")).toBe("booking-type-mutation-error-custom-1");
+});
+
+it("links validation errors to the affected booking-type field", () => {
+  renderRow();
+  fireEvent.change(screen.getByRole("textbox", { name: "Name for After hours" }), {
+    target: { value: "" },
+  });
+  fireEvent.submit(document.getElementById("booking-type-actions-custom-1")!);
+
+  const name = screen.getByRole("textbox", { name: "Name for After hours" });
+  expect(name.getAttribute("aria-invalid")).toBe("true");
+  expect(name.getAttribute("aria-describedby")).toBe("booking-type-name-error-custom-1");
+  expect(document.getElementById("booking-type-name-error-custom-1")?.textContent).toContain(
+    "Enter a booking type name.",
   );
 });

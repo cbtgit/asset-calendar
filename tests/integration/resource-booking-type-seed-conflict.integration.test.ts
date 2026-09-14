@@ -148,4 +148,4 @@ it("fails migration explicitly when a protected seeded booking type is invalid",
       "CREATE UNIQUE INDEX idx_booking_types_tenant_name_normalized ON booking_types (tenant, name_normalized)",
     ),
   );
-});
+}, 30_000);

@@ -52,6 +52,19 @@ it("validates locale-formatted input and submits create and edit mutations", () 
   );
 });
 
+it("preserves dirty rate locale when the form locale changes", () => {
+  const { rerender } = render(<ResourceForm locale="de-DE" currency="EUR" />);
+  fireEvent.change(screen.getByLabelText("Resource name"), { target: { value: "Meeting room" } });
+  fireEvent.change(screen.getByLabelText(/Base rate/), { target: { value: "12,50" } });
+  rerender(<ResourceForm locale="en-US" currency="USD" />);
+  fireEvent.click(screen.getByRole("button", { name: "Create resource" }));
+
+  expect(mocks.create.mutate).toHaveBeenCalledWith(
+    { name: "Meeting room", base_rate_minor_units: 1250 },
+    expect.any(Object),
+  );
+});
+
 it("surfaces server rejection and navigates after success", () => {
   render(<ResourceForm locale="en-US" currency="USD" />);
   fireEvent.change(screen.getByLabelText("Resource name"), { target: { value: "Room" } });
@@ -74,4 +87,9 @@ it("maps duplicate resource errors to an actionable message", () => {
   void act(() => options.onError(new ApplicationError("conflict", "validation_not_unique")));
 
   expect(screen.getByRole("alert").textContent).toBe("A resource with this name already exists.");
+  expect(screen.getByLabelText("Resource name").getAttribute("aria-invalid")).toBe("true");
+  expect(screen.getByLabelText("Resource name").getAttribute("aria-describedby")).toBe(
+    "resource-form-error",
+  );
+  expect(screen.getByLabelText(/Base rate/).getAttribute("aria-invalid")).toBe("true");
 });

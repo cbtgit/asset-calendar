@@ -362,7 +362,6 @@ migrate(
       type: "text",
       required: true,
       min: 2,
-      max: 35,
       pattern: LOCALE_PATTERN,
     });
     app.saveNoValidate(tenants);

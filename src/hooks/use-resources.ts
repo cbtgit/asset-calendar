@@ -21,9 +21,25 @@ type ResourceSnapshot = {
   detail: Resource | undefined;
   removeIfMissing: boolean;
 };
-type ResourceMutationContext = ResourceSnapshot & { release: MutationRelease };
+type ResourceMutationContext = ResourceSnapshot & {
+  keys: ResourceQueryKeys;
+  release: MutationRelease;
+};
 
 const mutationQueue = createMutationQueue();
+const pendingMutations = new Map<string, number>();
+
+function captureResourceKeys() {
+  const all = resourcesKeys.all;
+  return {
+    all,
+    list: [...all, "list"] as const,
+    active: [...all, "active"] as const,
+    detail: (id: string) => [...all, "detail", id] as const,
+  } as const;
+}
+
+type ResourceQueryKeys = ReturnType<typeof captureResourceKeys>;
 
 function optimisticResource(input: ResourceCreate): Resource {
   const now = new Date().toISOString();
@@ -43,25 +59,29 @@ function sorted(resources: Resource[]): Resource[] {
   );
 }
 
-async function snapshot(queryClient: ReturnType<typeof useQueryClient>, id: string) {
-  await queryClient.cancelQueries({ queryKey: resourcesKeys.all });
+async function snapshot(
+  queryClient: ReturnType<typeof useQueryClient>,
+  id: string,
+  keys: ResourceQueryKeys,
+) {
+  await queryClient.cancelQueries({ queryKey: keys.all });
   return {
     id,
-    list: queryClient
-      .getQueryData<Resource[]>(resourcesKeys.list())
-      ?.find((item) => item.id === id),
-    active: queryClient
-      .getQueryData<ActiveResource[]>(resourcesKeys.active())
-      ?.find((item) => item.id === id),
-    detail: queryClient.getQueryData<Resource>(resourcesKeys.detail(id)),
+    list: queryClient.getQueryData<Resource[]>(keys.list)?.find((item) => item.id === id),
+    active: queryClient.getQueryData<ActiveResource[]>(keys.active)?.find((item) => item.id === id),
+    detail: queryClient.getQueryData<Resource>(keys.detail(id)),
     removeIfMissing: false,
   };
 }
 
-function restore(queryClient: ReturnType<typeof useQueryClient>, previous: ResourceSnapshot) {
+function restore(
+  queryClient: ReturnType<typeof useQueryClient>,
+  previous: ResourceSnapshot,
+  keys: ResourceQueryKeys,
+) {
   const previousList = previous.list;
   const previousActive = previous.active;
-  queryClient.setQueryData<Resource[]>(resourcesKeys.list(), (items) => {
+  queryClient.setQueryData<Resource[]>(keys.list, (items) => {
     if (previousList) {
       if (!items) return items;
       return items.some((item) => item.id === previous.id)
@@ -70,7 +90,7 @@ function restore(queryClient: ReturnType<typeof useQueryClient>, previous: Resou
     }
     return previous.removeIfMissing ? items?.filter((item) => item.id !== previous.id) : items;
   });
-  queryClient.setQueryData<ActiveResource[]>(resourcesKeys.active(), (items) => {
+  queryClient.setQueryData<ActiveResource[]>(keys.active, (items) => {
     if (previousActive) {
       if (!items) return items;
       return items.some((item) => item.id === previous.id)
@@ -80,12 +100,27 @@ function restore(queryClient: ReturnType<typeof useQueryClient>, previous: Resou
     return previous.removeIfMissing ? items?.filter((item) => item.id !== previous.id) : items;
   });
   if (previous.detail) {
-    queryClient.setQueryData(resourcesKeys.detail(previous.id), previous.detail);
+    queryClient.setQueryData(keys.detail(previous.id), previous.detail);
   }
 }
 
-function settle(queryClient: ReturnType<typeof useQueryClient>) {
-  return queryClient.invalidateQueries({ queryKey: resourcesKeys.all });
+function beginMutation(keys: ResourceQueryKeys) {
+  const scope = keys.all[0];
+  pendingMutations.set(scope, (pendingMutations.get(scope) ?? 0) + 1);
+}
+
+function settle(
+  queryClient: ReturnType<typeof useQueryClient>,
+  keys: ResourceQueryKeys,
+  release: MutationRelease | undefined,
+) {
+  const scope = keys.all[0];
+  const remaining = (pendingMutations.get(scope) ?? 1) - 1;
+  if (remaining === 0) pendingMutations.delete(scope);
+  else pendingMutations.set(scope, remaining);
+  return (
+    remaining === 0 ? queryClient.invalidateQueries({ queryKey: keys.all }) : Promise.resolve()
+  ).finally(() => release?.());
 }
 
 export function useResourcesQuery() {
@@ -105,14 +140,16 @@ export function useCreateResourceMutation() {
   return useMutation({
     mutationFn: createResource,
     onMutate: async (input): Promise<ResourceMutationContext> => {
+      const keys = captureResourceKeys();
       const resource = optimisticResource(input);
-      const release = await mutationQueue.acquire(resource.id);
-      const previous = await snapshot(queryClient, resource.id);
+      beginMutation(keys);
+      const release = await mutationQueue.acquire(`${keys.all[0]}:${resource.id}`);
+      const previous = await snapshot(queryClient, resource.id, keys);
       previous.removeIfMissing = true;
-      queryClient.setQueryData<Resource[]>(resourcesKeys.list(), (items) =>
+      queryClient.setQueryData<Resource[]>(keys.list, (items) =>
         items ? sorted([...items, resource]) : items,
       );
-      queryClient.setQueryData<ActiveResource[]>(resourcesKeys.active(), (items) =>
+      queryClient.setQueryData<ActiveResource[]>(keys.active, (items) =>
         items
           ? [
               ...items,
@@ -126,11 +163,11 @@ export function useCreateResourceMutation() {
             ]
           : items,
       );
-      return { ...previous, release };
+      return { ...previous, keys, release };
     },
-    onError: (_error, _input, context) => context && restore(queryClient, context),
+    onError: (_error, _input, context) => context && restore(queryClient, context, context.keys),
     onSettled: (_data, _error, _input, context) => {
-      return settle(queryClient).finally(() => context?.release());
+      return context && settle(queryClient, context.keys, context.release);
     },
   });
 }
@@ -140,25 +177,27 @@ export function useUpdateResourceMutation() {
   return useMutation({
     mutationFn: ({ id, input }: { id: string; input: ResourceUpdate }) => updateResource(id, input),
     onMutate: async ({ id, input }): Promise<ResourceMutationContext> => {
-      const release = await mutationQueue.acquire(id);
-      const previous = await snapshot(queryClient, id);
+      const keys = captureResourceKeys();
+      beginMutation(keys);
+      const release = await mutationQueue.acquire(`${keys.all[0]}:${id}`);
+      const previous = await snapshot(queryClient, id, keys);
       const patch = { name: input.name.trim(), base_rate_minor_units: input.base_rate_minor_units };
-      queryClient.setQueryData<Resource[]>(resourcesKeys.list(), (items) =>
+      queryClient.setQueryData<Resource[]>(keys.list, (items) =>
         items
           ? sorted(items.map((item) => (item.id === id ? { ...item, ...patch } : item)))
           : items,
       );
-      queryClient.setQueryData<ActiveResource[]>(resourcesKeys.active(), (items) =>
+      queryClient.setQueryData<ActiveResource[]>(keys.active, (items) =>
         items?.map((item) => (item.id === id ? { ...item, name: patch.name } : item)),
       );
-      queryClient.setQueryData<Resource>(resourcesKeys.detail(id), (item) =>
+      queryClient.setQueryData<Resource>(keys.detail(id), (item) =>
         item ? { ...item, ...patch } : item,
       );
-      return { ...previous, release };
+      return { ...previous, keys, release };
     },
-    onError: (_error, _input, context) => context && restore(queryClient, context),
+    onError: (_error, _input, context) => context && restore(queryClient, context, context.keys),
     onSettled: (_data, _error, _input, context) => {
-      return settle(queryClient).finally(() => context?.release());
+      return context && settle(queryClient, context.keys, context.release);
     },
   });
 }
@@ -168,22 +207,24 @@ export function useArchiveResourceMutation() {
   return useMutation({
     mutationFn: archiveResource,
     onMutate: async (id): Promise<ResourceMutationContext> => {
-      const release = await mutationQueue.acquire(id);
-      const previous = await snapshot(queryClient, id);
-      queryClient.setQueryData<Resource[]>(resourcesKeys.list(), (items) =>
+      const keys = captureResourceKeys();
+      beginMutation(keys);
+      const release = await mutationQueue.acquire(`${keys.all[0]}:${id}`);
+      const previous = await snapshot(queryClient, id, keys);
+      queryClient.setQueryData<Resource[]>(keys.list, (items) =>
         items?.map((item) => (item.id === id ? { ...item, archived: true } : item)),
       );
-      queryClient.setQueryData<ActiveResource[]>(resourcesKeys.active(), (items) =>
+      queryClient.setQueryData<ActiveResource[]>(keys.active, (items) =>
         items?.filter((item) => item.id !== id),
       );
-      queryClient.setQueryData<Resource>(resourcesKeys.detail(id), (item) =>
+      queryClient.setQueryData<Resource>(keys.detail(id), (item) =>
         item ? { ...item, archived: true } : item,
       );
-      return { ...previous, release };
+      return { ...previous, keys, release };
     },
-    onError: (_error, _input, context) => context && restore(queryClient, context),
+    onError: (_error, _input, context) => context && restore(queryClient, context, context.keys),
     onSettled: (_data, _error, _input, context) => {
-      return settle(queryClient).finally(() => context?.release());
+      return context && settle(queryClient, context.keys, context.release);
     },
   });
 }

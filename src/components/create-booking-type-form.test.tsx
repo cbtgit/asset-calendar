@@ -32,6 +32,19 @@ it("parses localized surcharge and resets after success", () => {
   expect((screen.getByLabelText("Surcharge") as HTMLInputElement).value).toBe("0,00");
 });
 
+it("preserves dirty surcharge locale when the form locale changes", () => {
+  const { rerender } = render(<CreateBookingTypeForm locale="de-DE" />);
+  fireEvent.change(screen.getByLabelText("Name"), { target: { value: "Evening" } });
+  fireEvent.change(screen.getByLabelText("Surcharge"), { target: { value: "12,50" } });
+  rerender(<CreateBookingTypeForm locale="en-US" />);
+  fireEvent.click(screen.getByRole("button", { name: "Add booking type" }));
+
+  expect(mocks.mutation.mutate).toHaveBeenCalledWith(
+    { name: "Evening", surcharge_minor_units: 1250, system_kind: "custom" },
+    expect.any(Object),
+  );
+});
+
 it("validates blank and invalid input and displays mutation failures", () => {
   render(<CreateBookingTypeForm locale="en-US" />);
   fireEvent.change(screen.getByLabelText("Surcharge"), { target: { value: "not money" } });
@@ -56,4 +69,8 @@ it("maps validation failures to an actionable message", () => {
   expect(screen.getByRole("alert").textContent).toBe(
     "Enter a non-negative amount with up to two decimal places.",
   );
+  expect(screen.getByLabelText("Surcharge").getAttribute("aria-describedby")).toBe(
+    "booking-type-create-mutation-error",
+  );
+  expect(screen.getByLabelText("Surcharge").getAttribute("aria-invalid")).toBe("true");
 });

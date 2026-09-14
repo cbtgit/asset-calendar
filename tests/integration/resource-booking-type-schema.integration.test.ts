@@ -236,6 +236,13 @@ it("enforces currency, locale, safe rates, and normalized tenant uniqueness", as
   await expect(
     pocketbase.collection("tenants").update(tenant.id, { locale: "en-u" }),
   ).rejects.toThrow();
+  const longLocale = "zh-Latn-CN-variant1-variant2-variant3";
+  const updatedTenant = await pocketbase
+    .collection("tenants")
+    .update(tenant.id, { locale: longLocale });
+  expect(updatedTenant.locale).toBe(longLocale);
+  const tenantCollection = await pocketbase.collections.getOne("tenants");
+  expect(tenantCollection.fields.find((field) => field.name === "locale")?.max).not.toBe(35);
   const resource = await pocketbase.collection("resources").create({
     tenant: tenant.id,
     name: "Meeting room",

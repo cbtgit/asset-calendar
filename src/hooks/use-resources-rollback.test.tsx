@@ -135,6 +135,7 @@ it("rolls back only the failed resource during overlapping updates", async () =>
   vi.spyOn(pocketbase, "send").mockResolvedValue(resource);
   const { queryClient, wrapper } = setup();
   const { result } = renderHook(() => useUpdateResourceMutation(), { wrapper });
+  const invalidate = vi.spyOn(queryClient, "invalidateQueries");
 
   let first!: Promise<unknown>;
   let second!: Promise<unknown>;
@@ -156,12 +157,14 @@ it("rolls back only the failed resource during overlapping updates", async () =>
   ]);
   rejecters.get(resource.id)?.(new Error("first conflict"));
   await expect(first).rejects.toThrow("first conflict");
+  expect(invalidate).not.toHaveBeenCalled();
   expect(queryClient.getQueryData<Resource[]>(resourcesKeys.list())).toEqual([
     { ...secondResource, name: "Updated office", base_rate_minor_units: 300 },
     resource,
   ]);
   rejecters.get(secondResource.id)?.(new Error("second conflict"));
   await expect(second).rejects.toThrow("second conflict");
+  expect(invalidate).toHaveBeenCalledTimes(1);
 });
 
 it("serializes overlapping updates for one resource", async () => {

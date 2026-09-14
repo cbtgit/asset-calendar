@@ -10,6 +10,15 @@ import { createMutationQueue, type MutationRelease } from "@/lib/mutation-queue"
 
 const mutationQueue = createMutationQueue();
 
+function captureTenantSettingsKeys() {
+  return {
+    all: tenantSettingsKeys.all,
+    current: tenantSettingsKeys.current(),
+  } as const;
+}
+
+type TenantSettingsQueryKeys = ReturnType<typeof captureTenantSettingsKeys>;
+
 export function useTenantSettingsQuery() {
   return useQuery(tenantSettingsQueryOptions());
 }
@@ -22,23 +31,25 @@ export function useUpdateTenantSettingsMutation() {
       input: TenantSettingsUpdate,
     ): Promise<{
       previous: TenantSettings | undefined;
+      keys: TenantSettingsQueryKeys;
       release: MutationRelease;
     }> => {
-      const release = await mutationQueue.acquire("locale");
-      await queryClient.cancelQueries({ queryKey: tenantSettingsKeys.current() });
-      const previous = queryClient.getQueryData<TenantSettings>(tenantSettingsKeys.current());
-      queryClient.setQueryData<TenantSettings>(tenantSettingsKeys.current(), (settings) =>
+      const keys = captureTenantSettingsKeys();
+      const release = await mutationQueue.acquire(`${keys.all[0]}:locale`);
+      await queryClient.cancelQueries({ queryKey: keys.all });
+      const previous = queryClient.getQueryData<TenantSettings>(keys.current);
+      queryClient.setQueryData<TenantSettings>(keys.current, (settings) =>
         settings ? { ...settings, locale: input.locale } : settings,
       );
-      return { previous, release };
+      return { previous, keys, release };
     },
     onError: (_error, _input, context) => {
-      if (context?.previous)
-        queryClient.setQueryData(tenantSettingsKeys.current(), context.previous);
+      if (context?.previous) queryClient.setQueryData(context.keys.current, context.previous);
     },
     onSettled: (_data, _error, _input, context) =>
+      context &&
       queryClient
-        .invalidateQueries({ queryKey: tenantSettingsKeys.current() })
-        .finally(() => context?.release()),
+        .invalidateQueries({ queryKey: context.keys.current })
+        .finally(() => context.release()),
   });
 }

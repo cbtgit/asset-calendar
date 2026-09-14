@@ -4,6 +4,7 @@ import { useUpdateBookingTypeMutation } from "@/hooks/use-booking-types";
 import { formatMoney, formatMoneyInput, parseMoney } from "@/lib/money";
 import { mutationErrorMessage } from "@/lib/error-messages";
 
+// oxlint-disable-next-line complexity, max-lines-per-function
 export function BookingTypeRow({
   type,
   locale,
@@ -19,7 +20,9 @@ export function BookingTypeRow({
   const [name, setName] = useState(type.name);
   const [value, setValue] = useState(() => formatMoneyInput(type.surcharge_minor_units, locale));
   const [validationError, setValidationError] = useState("");
+  const [validationField, setValidationField] = useState<"name" | "surcharge" | null>(null);
   const [dirty, setDirty] = useState(false);
+  const valueLocaleRef = useRef(locale);
   const previousTypeRef = useRef({
     id: type.id,
     name: type.name,
@@ -41,6 +44,7 @@ export function BookingTypeRow({
     if (!dirty || authoritativeTypeChanged) {
       setName(type.name);
       setValue(formatMoneyInput(type.surcharge_minor_units, locale));
+      valueLocaleRef.current = locale;
       if (authoritativeTypeChanged) setDirty(false);
     }
   }, [dirty, locale, type]);
@@ -50,20 +54,35 @@ export function BookingTypeRow({
     event.preventDefault();
     if (!name.trim()) {
       setValidationError("Enter a booking type name.");
+      setValidationField("name");
       return;
     }
-    const parsed = parseMoney(value, locale);
+    const parsed = parseMoney(value, valueLocaleRef.current);
     if ("error" in parsed) {
       setValidationError("Enter a non-negative amount with up to two decimal places.");
+      setValidationField("surcharge");
       return;
     }
     setValidationError("");
+    setValidationField(null);
     update.mutate({
       id: type.id,
       input: { name: name.trim(), surcharge_minor_units: parsed.value },
     });
   };
   const formId = `booking-type-actions-${type.id}`;
+  const nameErrorId = `booking-type-name-error-${type.id}`;
+  const surchargeErrorId = `booking-type-surcharge-error-${type.id}`;
+  const mutationErrorId = `booking-type-mutation-error-${type.id}`;
+  const mutationError = update.isError
+    ? mutationErrorMessage(update.error, "booking-type-save")
+    : "";
+  const nameDescribedBy = [
+    validationField === "name" ? nameErrorId : "",
+    mutationError ? mutationErrorId : "",
+  ]
+    .filter(Boolean)
+    .join(" ");
   return (
     <li className="booking-types-row">
       <div>
@@ -75,8 +94,12 @@ export function BookingTypeRow({
             onChange={(event) => {
               setDirty(true);
               setName(event.target.value);
+              setValidationError("");
+              setValidationField(null);
             }}
             disabled={update.isPending}
+            aria-invalid={validationField === "name" || Boolean(mutationError)}
+            aria-describedby={nameDescribedBy || undefined}
           />
         ) : (
           <strong>{type.name}</strong>
@@ -94,13 +117,17 @@ export function BookingTypeRow({
         editable,
         archivable: editable && type.system_kind === "custom",
         pending: update.isPending,
-        error: update.isError ? update.error : undefined,
         validationError,
+        validationField,
+        surchargeErrorId,
+        mutationErrorId,
+        mutationError,
         onSubmit: save,
         onChange: (nextValue) => {
           setDirty(true);
           setValue(nextValue);
           setValidationError("");
+          setValidationField(null);
         },
         onArchive,
       })}
@@ -108,6 +135,7 @@ export function BookingTypeRow({
   );
 }
 
+// oxlint-disable-next-line complexity
 function renderActions({
   type,
   formId,
@@ -115,8 +143,11 @@ function renderActions({
   editable,
   archivable,
   pending,
-  error,
   validationError,
+  validationField,
+  surchargeErrorId,
+  mutationErrorId,
+  mutationError,
   onSubmit,
   onChange,
   onArchive,
@@ -127,8 +158,11 @@ function renderActions({
   editable: boolean;
   archivable: boolean;
   pending: boolean;
-  error?: unknown;
   validationError: string;
+  validationField: "name" | "surcharge" | null;
+  surchargeErrorId: string;
+  mutationErrorId: string;
+  mutationError: string;
   onSubmit: (event: FormEvent) => void;
   onChange: (value: string) => void;
   onArchive: (type: BookingType) => void;
@@ -145,6 +179,15 @@ function renderActions({
             inputMode="decimal"
             value={value}
             aria-label={`Surcharge for ${type.name}`}
+            aria-invalid={validationField === "surcharge" || Boolean(mutationError)}
+            aria-describedby={
+              [
+                validationField === "surcharge" ? surchargeErrorId : "",
+                mutationError ? mutationErrorId : "",
+              ]
+                .filter(Boolean)
+                .join(" ") || undefined
+            }
             onChange={(event) => onChange(event.target.value)}
             disabled={pending}
           />
@@ -165,8 +208,19 @@ function renderActions({
       ) : (
         <span className="booking-types-protected">{type.archived ? "Archived" : "Protected"}</span>
       )}
-      {validationError ? <span role="alert">{validationError}</span> : null}
-      {error ? <span role="alert">{mutationErrorMessage(error, "booking-type-save")}</span> : null}
+      {validationError ? (
+        <span
+          id={validationField === "name" ? `booking-type-name-error-${type.id}` : surchargeErrorId}
+          role="alert"
+        >
+          {validationError}
+        </span>
+      ) : null}
+      {mutationError ? (
+        <span id={mutationErrorId} role="alert">
+          {mutationError}
+        </span>
+      ) : null}
     </form>
   );
 }
