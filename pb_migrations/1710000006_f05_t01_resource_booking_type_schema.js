@@ -31,7 +31,7 @@ function createField(definition) {
       return new NumberField({
         id: definition.id,
         name: definition.name,
-        required: false,
+        required: definition.required === true,
         min: definition.min,
         max: definition.max,
         noDecimal: true,
@@ -93,6 +93,7 @@ function ensureField(collection, definition) {
     existing.max = definition.max;
     existing.pattern = definition.pattern;
   } else if (definition.type === "number") {
+    existing.required = definition.required === true;
     existing.min = definition.min;
     existing.max = definition.max;
     existing.noDecimal = true;
@@ -144,11 +145,11 @@ function createCollection(name, id) {
     name,
     type: "base",
     fields: [],
-    listRule: "",
-    viewRule: "",
-    createRule: "",
-    updateRule: "",
-    deleteRule: "",
+    listRule: null,
+    viewRule: null,
+    createRule: null,
+    updateRule: null,
+    deleteRule: null,
   });
 }
 
