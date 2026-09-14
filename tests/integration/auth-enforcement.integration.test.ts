@@ -50,6 +50,7 @@ async function createSeededMigrations(): Promise<string> {
     { email: "admin-b@example.test", tenant: tenantB.id, unit: unitB.id, role: "administrator", active: true },
     { email: "inactive-a@example.test", tenant: tenantA.id, unit: unitA.id, role: "regular", active: false },
     { email: "pending-a@example.test", tenant: tenantA.id, unit: unitA.id, role: "regular", active: true, pending: true },
+    { email: "booking-type-regular@example.test", tenant: tenantA.id, unit: unitA.id, role: "regular", active: true },
   ]) {
     const user = new Record(users);
     user.set("email", data.email);
@@ -160,7 +161,7 @@ it("enforces the resolved tenant and role boundary on direct requests", async ()
       },
       {
         name: "Unit A",
-        member_count: 4,
+        member_count: 5,
       },
     ],
   });
@@ -178,7 +179,7 @@ it("enforces the resolved tenant and role boundary on direct requests", async ()
 
   const directGroup = await request(admin, `/api/groups/${groupId}`, { host: "tenant.localhost" });
   expect(directGroup.status).toBe(200);
-  expect(await directGroup.json()).toMatchObject({ id: groupId, name: "Unit A", member_count: 4 });
+  expect(await directGroup.json()).toMatchObject({ id: groupId, name: "Unit A", member_count: 5 });
 
   const duplicateGroup = await request(admin, "/api/collections/organizational_units/records", {
     method: "POST",
@@ -258,7 +259,7 @@ it("enforces the resolved tenant and role boundary on direct requests", async ()
   });
   expect(usersResponse.status).toBe(200);
   const users = await usersResponse.json();
-  expect(users.items).toHaveLength(4);
+  expect(users.items).toHaveLength(5);
 
   const foreignFilter = await request(
     admin,
@@ -334,4 +335,89 @@ it("enforces the resolved tenant and role boundary on direct requests", async ()
     host: "tenant.localhost",
   });
   expect(inactiveRequest.status).toBe(403);
+});
+
+it("enforces administrator-only booking-type rules and safe projections", async () => {
+  const admin = new PocketBase(harness.baseUrl);
+  await authenticate(admin, "admin-a@example.test");
+
+  const regular = new PocketBase(harness.baseUrl);
+  await authenticate(regular, "booking-type-regular@example.test");
+  const regularCatalog = await request(regular, "/api/booking-types", { host: "tenant.localhost" });
+  expect(regularCatalog.status).toBe(403);
+
+  const created = await request(admin, "/api/collections/booking_types/records", {
+    method: "POST",
+    host: "tenant.localhost",
+    body: {
+      name: "  Special Event  ",
+      surcharge_minor_units: 125,
+      system_kind: "custom",
+    },
+  });
+  expect(created.status).toBe(200);
+  const custom = await created.json();
+  expect(custom).toMatchObject({
+    name: "Special Event",
+    surcharge_minor_units: 125,
+    billable: true,
+    resource_blocking: true,
+    archived: false,
+  });
+
+  const duplicate = await request(admin, "/api/collections/booking_types/records", {
+    method: "POST",
+    host: "tenant.localhost",
+    body: { name: " special event ", surcharge_minor_units: 1, system_kind: "custom" },
+  });
+  expect(duplicate.status).toBe(400);
+
+  const catalogBeforeArchive = await request(admin, "/api/booking-types", {
+    host: "tenant.localhost",
+  });
+  const regularType = (await catalogBeforeArchive.json()).items.find(
+    (type: { system_kind: string }) => type.system_kind === "regular",
+  );
+  if (!regularType) throw new Error("Expected the seeded regular booking type.");
+  const incompatibleRegular = await request(
+    admin,
+    `/api/collections/booking_types/records/${regularType.id}`,
+    {
+      method: "PATCH",
+      host: "tenant.localhost",
+      body: { surcharge_minor_units: 1 },
+    },
+  );
+  expect(incompatibleRegular.status).toBe(400);
+
+  const archive = await request(admin, `/api/collections/booking_types/records/${custom.id}`, {
+    method: "PATCH",
+    host: "tenant.localhost",
+    body: { archived: true },
+  });
+  expect(archive.status).toBe(200);
+  const unarchive = await request(admin, `/api/collections/booking_types/records/${custom.id}`, {
+    method: "PATCH",
+    host: "tenant.localhost",
+    body: { archived: false },
+  });
+  expect(unarchive.status).toBe(400);
+
+  const selection = await request(admin, "/api/booking-types/selection", {
+    host: "tenant.localhost",
+  });
+  expect(selection.status).toBe(200);
+  expect((await selection.json()).items).not.toContainEqual(
+    expect.objectContaining({ id: custom.id }),
+  );
+  const catalog = await request(admin, "/api/booking-types", { host: "tenant.localhost" });
+  expect(catalog.status).toBe(200);
+  expect((await catalog.json()).items).toContainEqual(expect.objectContaining({ id: custom.id }));
+
+  const deleteResponse = await request(
+    admin,
+    `/api/collections/booking_types/records/${custom.id}`,
+    { method: "DELETE", host: "tenant.localhost" },
+  );
+  expect(deleteResponse.status).toBe(403);
 });

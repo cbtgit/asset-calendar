@@ -269,7 +269,14 @@ function ensureBookingTypeSchema(app, tenants) {
   ensureField(bookingTypes, { id: "booking_type_archived", name: "archived", type: "bool" });
   ensureField(bookingTypes, { id: "booking_type_archived_at", name: "archived_at", type: "date" });
   bookingTypes.fields.find((field) => field.name === "name_normalized").hidden = true;
-  lockCollectionRules(bookingTypes);
+  bookingTypes.listRule =
+    '@request.auth.id != "" && @request.auth.active = true && @request.auth.role = "administrator" && @request.auth.tenant = tenant';
+  bookingTypes.viewRule = bookingTypes.listRule;
+  bookingTypes.createRule =
+    '@request.auth.id != "" && @request.auth.active = true && @request.auth.role = "administrator"';
+  bookingTypes.updateRule =
+    '@request.auth.id != "" && @request.auth.active = true && @request.auth.role = "administrator" && @request.auth.tenant = tenant';
+  bookingTypes.deleteRule = bookingTypes.updateRule;
   app.save(bookingTypes);
   return bookingTypes;
 }

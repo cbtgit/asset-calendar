@@ -16,3 +16,12 @@ routerAdd("GET", "/api/groups", (event) =>
 routerAdd("GET", "/api/groups/{id}", (event) =>
   require(`${__hooks}/record-access.cjs`).groupsProjectionRoute(event),
 );
+routerAdd("GET", "/api/booking-types", (event) =>
+  require(`${__hooks}/record-access.cjs`).bookingTypesProjectionRoute(event),
+);
+routerAdd("GET", "/api/booking-types/selection", (event) =>
+  require(`${__hooks}/record-access.cjs`).bookingTypesSelectionProjectionRoute(event),
+);
+routerAdd("GET", "/api/booking-types/{id}", (event) =>
+  require(`${__hooks}/record-access.cjs`).bookingTypesProjectionRoute(event),
+);
