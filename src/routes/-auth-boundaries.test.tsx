@@ -52,6 +52,17 @@ it("allows administrators through the groups guard", async () => {
   await expect(runBeforeLoad(GroupsRoute)).resolves.toBeUndefined();
 });
 
+it("protects nested groups routes through the groups layout guard", async () => {
+  vi.spyOn(auth, "getAuthSnapshot").mockReturnValue({
+    status: "authenticated",
+    user: { role: "regular" } as auth.AuthUser,
+  });
+
+  await expect(runBeforeLoad(GroupsRoute)).rejects.toMatchObject({
+    options: { to: "/calendar" },
+  });
+});
+
 it("does not treat users without an administrator role as administrators", async () => {
   vi.spyOn(auth, "getAuthSnapshot").mockReturnValue({
     status: "authenticated",
