@@ -1,10 +1,12 @@
 // @vitest-environment node
+/// <reference types="node" />
+import { execFileSync } from "node:child_process";
 import { cp, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { afterAll, expect, it } from "vite-plus/test";
-import { startPocketBaseIntegrationHarness } from "./pocketbase-harness";
+import { ensurePocketBaseBinary, resolveRuntimePaths } from "../../scripts/pocketbase.ts";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
 const productionMigrations = resolve(root, "pb_migrations");
@@ -13,6 +15,7 @@ const migrationPath = resolve(
   "1710000006_f05_t01_resource_booking_type_schema.js",
 );
 let migrationsDir: string | undefined;
+let dataDir: string | undefined;
 let startupError: unknown;
 
 const ready = (async () => {
@@ -103,8 +106,15 @@ const ready = (async () => {
 }, () => {});`,
   );
   try {
-    const harness = await startPocketBaseIntegrationHarness({ migrationsDir });
-    await harness.stop();
+    const dataDirPath = await mkdtemp(resolve(tmpdir(), "asset-calendar-f05-seed-conflict-data-"));
+    dataDir = dataDirPath;
+    const paths = { ...resolveRuntimePaths(root), dataDir: dataDirPath };
+    const binaryPath = await ensurePocketBaseBinary(paths);
+    execFileSync(
+      binaryPath,
+      ["migrate", "up", `--dir=${paths.dataDir}`, `--migrationsDir=${migrationsDir}`],
+      { cwd: paths.worktreeRoot, stdio: "pipe" },
+    );
   } catch (error) {
     startupError = error;
   }
@@ -113,12 +123,18 @@ const ready = (async () => {
 afterAll(async () => {
   await ready;
   if (migrationsDir) await rm(migrationsDir, { recursive: true, force: true });
+  if (dataDir) await rm(dataDir, { recursive: true, force: true });
 });
 
 it("fails migration explicitly when a seeded booking-type name is already taken", async () => {
   await ready;
   expect(startupError).toBeInstanceOf(Error);
-  expect((startupError as Error).message).toMatch(/Command failed:/);
+  const stderr = (startupError as { stderr?: Buffer | string }).stderr;
+  const failureText = `${(startupError as Error).message}\n${
+    typeof stderr === "string" ? stderr : (stderr?.toString("utf8") ?? "")
+  }`;
+  expect(failureText).toContain("Booking type seed conflict:");
+  expect(failureText).toContain('already uses normalized name "regular"');
   const migrationSource = await readFile(migrationPath, "utf8");
   expect(migrationSource).toContain("Booking type seed conflict:");
   expect(migrationSource).toContain('record.get("name_normalized") === normalizedName');
