@@ -145,10 +145,11 @@ export function useUpdateUserMutation() {
       );
       queryClient.setQueryData(usersKeys.active(), (users: ActiveUser[] | undefined) => {
         if (!users) return users;
-        const listed = queryClient
-          .getQueryData<User[]>(usersKeys.list())
-          ?.find((user) => user.id === id);
-        if (!listed?.active) return users.filter((user) => user.id !== id);
+        const listed =
+          queryClient.getQueryData<User[]>(usersKeys.list())?.find((user) => user.id === id) ??
+          queryClient.getQueryData<User>(usersKeys.detail(id));
+        if (!listed) return input.active === false ? users.filter((user) => user.id !== id) : users;
+        if (!listed.active) return users.filter((user) => user.id !== id);
         return users.some((user) => user.id === id)
           ? users.map((user) => (user.id === id ? toActiveUser(listed) : user))
           : [...users, toActiveUser(listed)];
