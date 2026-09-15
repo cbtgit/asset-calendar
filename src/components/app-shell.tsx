@@ -1,43 +1,31 @@
 import "../App.css";
 import { getAuthSnapshot, isAdministrator } from "@/api/auth";
-import { Outlet, useRouterState } from "@tanstack/react-router";
-import { AdministrationRail } from "./administration-rail";
+import { Outlet, useMatches, useRouterState } from "@tanstack/react-router";
+import { AdministrationRail } from "./administration/administration-rail";
 import { ShellHeader } from "./shell-header";
 
-export type ActiveDestination = "calendar" | "groups";
 export type ActiveModule = "calendar" | "administration";
 
-// oxlint-disable-next-line eslint(react/only-export-components)
-export function getActiveDestination(pathname: string): ActiveDestination {
-  return pathname.startsWith("/groups") ? "groups" : "calendar";
-}
-
-// oxlint-disable-next-line eslint(react/only-export-components)
-export function getActiveModule(pathname: string): ActiveModule {
-  return pathname.startsWith("/groups") ? "administration" : "calendar";
-}
-
 export function AppShell() {
-  const { pathname, href } = useRouterState({ select: (state) => state.location });
-  const activeDestination = getActiveDestination(pathname);
-  const activeModule = getActiveModule(pathname);
+  const matches = useMatches();
+  const { href } = useRouterState({ select: (state) => state.location });
+
+  const activeModule: ActiveModule = matches.some(
+    (match) => match.routeId === "/_authenticated/administration",
+  )
+    ? "administration"
+    : "calendar";
   const administrator = isAdministrator(getAuthSnapshot().user);
 
   return (
-    <div
-      className="shell"
-      data-active-destination={activeDestination}
-      data-active-module={activeModule}
-    >
+    <div className="shell" data-active-module={activeModule}>
       <ShellHeader
         activeModule={activeModule}
         isAdministrator={administrator}
         navigationKey={href}
       />
       <div className="shell-body">
-        {administrator && activeModule === "administration" ? (
-          <AdministrationRail activeDestination={activeDestination} />
-        ) : null}
+        {administrator && activeModule === "administration" ? <AdministrationRail /> : null}
         <main className="shell-content" aria-label="Authenticated content">
           <Outlet />
         </main>

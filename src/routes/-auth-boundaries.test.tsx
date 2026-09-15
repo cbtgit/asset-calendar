@@ -1,7 +1,7 @@
 import { afterEach, expect, it, vi } from "vite-plus/test";
 import * as auth from "@/api/auth";
 import { Route as AuthenticatedRoute } from "./_authenticated";
-import { Route as GroupsRoute } from "./_authenticated/groups";
+import { Route as GroupsRoute } from "./_authenticated/administration.groups";
 import { Route as AuthenticatedIndexRoute } from "./_authenticated/index";
 import { Route as SignInRoute } from "./sign-in";
 

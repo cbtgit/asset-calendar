@@ -1,9 +1,9 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { getGroup } from "@/api/groups";
-import { GroupForm } from "@/components/group-form";
-import { GroupEditError } from "@/components/group-edit-error";
+import { GroupForm } from "@/components/administration/groups/group-form";
+import { GroupEditError } from "@/components/administration/groups/group-edit-error";
 
-export const Route = createFileRoute("/_authenticated/groups/$groupId/edit")({
+export const Route = createFileRoute("/_authenticated/administration/groups/$groupId/edit")({
   loader: ({ params }) => getGroup(params.groupId),
   errorComponent: GroupEditError,
   component: GroupEditPage,
@@ -19,8 +19,8 @@ function GroupEditPage() {
       mode="edit"
       groupId={group.id}
       initialName={group.name}
-      onCancel={() => void navigate({ to: "/groups", replace: true })}
-      onSuccess={() => void navigate({ to: "/groups", replace: true })}
+      onCancel={() => void navigate({ to: "/administration/groups", replace: true })}
+      onSuccess={() => void navigate({ to: "/administration/groups", replace: true })}
     />
   );
 }

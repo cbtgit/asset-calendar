@@ -9,7 +9,7 @@ export function GroupsDirectoryHeader({ count }: { count: number }) {
         </p>
         <p>Manage the groups available to your organization.</p>
       </div>
-      <Link className="groups-directory-add" to="/groups/new">
+      <Link className="groups-directory-add" to="/administration/groups/new">
         Add Group
       </Link>
     </div>
