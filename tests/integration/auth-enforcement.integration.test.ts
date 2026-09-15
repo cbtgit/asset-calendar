@@ -588,6 +588,29 @@ it("manages users through projections and keeps active selection separate", asyn
   });
   expect(reactivated.status).toBe(200);
 
+  const invitationRecordsPath = `/api/collections/user_invitations/records?filter=${encodeURIComponent(
+    `user = '${created.id}'`,
+  )}`;
+  const invitationsBeforeInvalidResend = await request(admin, invitationRecordsPath, {
+    host: "tenant.localhost",
+  });
+  expect(invitationsBeforeInvalidResend.status).toBe(200);
+  const invitationsBeforeInvalidResendBody = await invitationsBeforeInvalidResend.json();
+
+  const invalidResend = await request(admin, `/api/users/${created.id}`, {
+    method: "PATCH",
+    host: "tenant.localhost",
+    body: { action: "resend_invitation", typo: true },
+  });
+  expect(invalidResend.status).toBe(400);
+  expect((await invalidResend.text()).toLowerCase()).toContain("unknown_user_field");
+
+  const invitationsAfterInvalidResend = await request(admin, invitationRecordsPath, {
+    host: "tenant.localhost",
+  });
+  expect(invitationsAfterInvalidResend.status).toBe(200);
+  expect(await invitationsAfterInvalidResend.json()).toEqual(invitationsBeforeInvalidResendBody);
+
   const resend = await request(admin, `/api/users/${created.id}`, {
     method: "PATCH",
     host: "tenant.localhost",

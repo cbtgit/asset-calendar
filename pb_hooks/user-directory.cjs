@@ -184,6 +184,20 @@ function updateUser(event) {
     throw new ForbiddenError("protected_user_field");
   }
 
+  if (
+    Object.keys(body).some(
+      (key) =>
+        key !== "first_name" &&
+        key !== "last_name" &&
+        key !== "group" &&
+        key !== "role" &&
+        key !== "active" &&
+        key !== "action",
+    )
+  ) {
+    throw new BadRequestError("unknown_user_field");
+  }
+
   if (has(body, "first_name"))
     user.set("first_name", requireText(body.first_name, "first_name_required"));
   if (has(body, "last_name"))
@@ -201,20 +215,6 @@ function updateUser(event) {
     }
     expireOutstandingInvitations(user.id);
     sendInvitation(user);
-  }
-
-  if (
-    Object.keys(body).some(
-      (key) =>
-        key !== "first_name" &&
-        key !== "last_name" &&
-        key !== "group" &&
-        key !== "role" &&
-        key !== "active" &&
-        key !== "action",
-    )
-  ) {
-    throw new BadRequestError("unknown_user_field");
   }
 
   $app.save(user);
