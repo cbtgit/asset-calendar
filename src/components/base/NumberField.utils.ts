@@ -18,5 +18,6 @@ export function toMinorUnits(value: string): number | undefined {
   if (normalizedValue === undefined) return;
 
   const [wholeUnits, fractionalUnits = ""] = normalizedValue.split(".");
-  return Number(wholeUnits) * 100 + Number(fractionalUnits.padEnd(2, "0"));
+  const minorUnits = Number(wholeUnits) * 100 + Number(fractionalUnits.padEnd(2, "0"));
+  return Number.isSafeInteger(minorUnits) ? minorUnits : undefined;
 }
