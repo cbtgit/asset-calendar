@@ -21,6 +21,8 @@ export type BookingTypeCreate = {
   surchargeMinorUnits?: number;
 };
 
+export type BookingTypeUpdate = BookingTypeCreate;
+
 type BookingTypeRecord = RecordModel & BookingType;
 
 type BookingTypePayload = {
@@ -38,6 +40,14 @@ export async function getBookingTypes(): Promise<BookingType[]> {
     return await records().getFullList({
       sort: "name",
     });
+  } catch (cause) {
+    throw toAppError(cause);
+  }
+}
+
+export async function getBookingType(id: string): Promise<BookingType> {
+  try {
+    return await records().getOne(id);
   } catch (cause) {
     throw toAppError(cause);
   }
@@ -69,6 +79,20 @@ export async function createBookingType(input: BookingTypeCreate): Promise<Booki
 
   try {
     return await records().create(toBookingTypePayload(input, tenant));
+  } catch (cause) {
+    throw toAppError(cause);
+  }
+}
+
+export async function updateBookingType(
+  id: string,
+  input: BookingTypeUpdate,
+): Promise<BookingType> {
+  try {
+    return await records().update(id, {
+      name: input.name.trim(),
+      surcharge_minor_units: input.surchargeMinorUnits ?? 0,
+    });
   } catch (cause) {
     throw toAppError(cause);
   }

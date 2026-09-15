@@ -9,6 +9,9 @@ function NewBookingTypePage() {
   const navigate = useNavigate();
 
   return (
-    <BookingTypeForm onCancel={() => void navigate({ to: "/administration/booking-types" })} />
+    <BookingTypeForm
+      onCancel={() => void navigate({ to: "/administration/booking-types" })}
+      onSuccess={() => void navigate({ to: "/administration/booking-types", replace: true })}
+    />
   );
 }

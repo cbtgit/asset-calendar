@@ -1,3 +1,4 @@
+import { Link } from "@tanstack/react-router";
 import { useBookingTypesQuery } from "@/hooks/use-booking-types";
 
 const priceFormatter = new Intl.NumberFormat(undefined, {
@@ -24,11 +25,22 @@ export function BookingTypesDirectory() {
     <ul className="booking-types-list">
       {bookingTypes.data.map((bookingType) => (
         <li className="booking-type-row" key={bookingType.id}>
-          <div>
-            <h2>{bookingType.name}</h2>
+          <div className="booking-type-name">
+            <span className="booking-type-label">Booking type</span>
+            <strong>{bookingType.name}</strong>
             <p>{bookingType.archived_at ? "Archived" : "Active"}</p>
           </div>
-          <p className="booking-type-price">{formatSurcharge(bookingType.surcharge_minor_units)}</p>
+          <div className="booking-type-price">
+            <span className="booking-type-label">Hourly price</span>
+            <span>{formatSurcharge(bookingType.surcharge_minor_units)}</span>
+          </div>
+          <Link
+            className="booking-type-edit"
+            to="/administration/booking-types/$bookingTypeId/edit"
+            params={{ bookingTypeId: bookingType.id }}
+          >
+            Edit
+          </Link>
         </li>
       ))}
     </ul>

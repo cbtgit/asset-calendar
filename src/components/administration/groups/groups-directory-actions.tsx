@@ -24,9 +24,9 @@ export function GroupsDirectoryActions({
         className="groups-directory-action"
         to="/administration/groups/$groupId/edit"
         params={{ groupId: group.id }}
-        aria-label={`Rename ${group.name}`}
+        aria-label={`Edit ${group.name}`}
       >
-        Rename
+        Edit
       </Link>
       <Button
         className="groups-directory-action groups-directory-delete"

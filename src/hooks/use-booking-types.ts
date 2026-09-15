@@ -2,8 +2,10 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   bookingTypesQueryOptions,
   createBookingType,
+  updateBookingType,
   type BookingType,
   type BookingTypeCreate,
+  type BookingTypeUpdate,
 } from "@/api/booking-types";
 import { bookingTypesKeys } from "@/api/query-keys";
 import { getAuthSnapshot } from "@/api/auth";
@@ -51,6 +53,42 @@ export function useCreateBookingTypeMutation() {
           sortBookingTypes([...previousBookingTypes, optimisticBookingType(input)]),
         );
       }
+      return { previousBookingTypes };
+    },
+    onError: (_error, _input, context) => {
+      if (context?.previousBookingTypes !== undefined) {
+        queryClient.setQueryData(bookingTypesKeys.list(), context.previousBookingTypes);
+      }
+    },
+    onSettled: () => queryClient.invalidateQueries({ queryKey: bookingTypesKeys.list() }),
+  });
+}
+
+export function useUpdateBookingTypeMutation() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ id, input }: { id: string; input: BookingTypeUpdate }) =>
+      updateBookingType(id, input),
+    onMutate: async ({ id, input }): Promise<BookingTypesContext> => {
+      await queryClient.cancelQueries({ queryKey: bookingTypesKeys.list() });
+      const previousBookingTypes = queryClient.getQueryData<BookingType[]>(bookingTypesKeys.list());
+      queryClient.setQueryData<BookingType[]>(bookingTypesKeys.list(), (bookingTypes) =>
+        bookingTypes
+          ? sortBookingTypes(
+              bookingTypes.map((bookingType) =>
+                bookingType.id === id
+                  ? {
+                      ...bookingType,
+                      name: input.name.trim(),
+                      name_normalized: input.name.trim().toLowerCase(),
+                      surcharge_minor_units: input.surchargeMinorUnits ?? 0,
+                    }
+                  : bookingType,
+              ),
+            )
+          : bookingTypes,
+      );
       return { previousBookingTypes };
     },
     onError: (_error, _input, context) => {

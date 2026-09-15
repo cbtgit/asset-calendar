@@ -26,22 +26,40 @@
   padding: var(--space-4) 0;
 }
 
-.booking-type-row h2,
 .booking-type-row p {
   margin: 0;
-}
-
-.booking-type-row h2 {
-  font-size: 1rem;
 }
 
 .booking-type-row p {
   color: var(--color-text-muted);
 }
 
+.booking-type-label {
+  display: block;
+  margin-bottom: var(--space-1);
+  color: var(--color-text-muted);
+  font-size: 0.8rem;
+}
+
 .booking-type-price {
   color: var(--color-text) !important;
   font-variant-numeric: tabular-nums;
+}
+
+.booking-type-edit {
+  display: inline-flex;
+  min-height: 2.25rem;
+  align-items: center;
+  justify-content: center;
+  padding: 0 var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  color: var(--color-brand-dark);
+  background: var(--color-surface);
+  cursor: pointer;
+  font: inherit;
+  font-weight: 650;
+  text-decoration: none;
 }
 
 .booking-types-empty {

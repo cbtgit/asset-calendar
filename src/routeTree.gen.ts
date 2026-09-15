@@ -24,6 +24,7 @@ import { Route as AuthenticatedAdministrationBookingTypesIndexRouteImport } from
 import { Route as AuthenticatedAdministrationBookingTypesNewRouteImport } from './routes/_authenticated/administration.booking-types.new'
 import { Route as AuthenticatedAdministrationGroupsIndexRouteImport } from './routes/_authenticated/administration.groups.index'
 import { Route as AuthenticatedAdministrationGroupsNewRouteImport } from './routes/_authenticated/administration.groups.new'
+import { Route as AuthenticatedAdministrationBookingTypesBookingTypeIdEditRouteImport } from './routes/_authenticated/administration.booking-types.$bookingTypeId.edit'
 import { Route as AuthenticatedAdministrationGroupsGroupIdEditRouteImport } from './routes/_authenticated/administration.groups.$groupId.edit'
 
 const AuthenticatedRoute = AuthenticatedRouteImport.update({
@@ -107,6 +108,12 @@ const AuthenticatedAdministrationGroupsNewRoute =
     path: '/new',
     getParentRoute: () => AuthenticatedAdministrationGroupsRoute,
   } as any)
+const AuthenticatedAdministrationBookingTypesBookingTypeIdEditRoute =
+  AuthenticatedAdministrationBookingTypesBookingTypeIdEditRouteImport.update({
+    id: '/$bookingTypeId/edit',
+    path: '/$bookingTypeId/edit',
+    getParentRoute: () => AuthenticatedAdministrationBookingTypesRoute,
+  } as any)
 const AuthenticatedAdministrationGroupsGroupIdEditRoute =
   AuthenticatedAdministrationGroupsGroupIdEditRouteImport.update({
     id: '/$groupId/edit',
@@ -129,6 +136,7 @@ export interface FileRoutesByFullPath {
   '/administration/groups/new': typeof AuthenticatedAdministrationGroupsNewRoute
   '/administration/booking-types/': typeof AuthenticatedAdministrationBookingTypesIndexRoute
   '/administration/groups/': typeof AuthenticatedAdministrationGroupsIndexRoute
+  '/administration/booking-types/$bookingTypeId/edit': typeof AuthenticatedAdministrationBookingTypesBookingTypeIdEditRoute
   '/administration/groups/$groupId/edit': typeof AuthenticatedAdministrationGroupsGroupIdEditRoute
 }
 export interface FileRoutesByTo {
@@ -144,6 +152,7 @@ export interface FileRoutesByTo {
   '/administration/groups/new': typeof AuthenticatedAdministrationGroupsNewRoute
   '/administration/booking-types': typeof AuthenticatedAdministrationBookingTypesIndexRoute
   '/administration/groups': typeof AuthenticatedAdministrationGroupsIndexRoute
+  '/administration/booking-types/$bookingTypeId/edit': typeof AuthenticatedAdministrationBookingTypesBookingTypeIdEditRoute
   '/administration/groups/$groupId/edit': typeof AuthenticatedAdministrationGroupsGroupIdEditRoute
 }
 export interface FileRoutesById {
@@ -163,6 +172,7 @@ export interface FileRoutesById {
   '/_authenticated/administration/groups/new': typeof AuthenticatedAdministrationGroupsNewRoute
   '/_authenticated/administration/booking-types/': typeof AuthenticatedAdministrationBookingTypesIndexRoute
   '/_authenticated/administration/groups/': typeof AuthenticatedAdministrationGroupsIndexRoute
+  '/_authenticated/administration/booking-types/$bookingTypeId/edit': typeof AuthenticatedAdministrationBookingTypesBookingTypeIdEditRoute
   '/_authenticated/administration/groups/$groupId/edit': typeof AuthenticatedAdministrationGroupsGroupIdEditRoute
 }
 export interface FileRouteTypes {
@@ -182,6 +192,7 @@ export interface FileRouteTypes {
     | '/administration/groups/new'
     | '/administration/booking-types/'
     | '/administration/groups/'
+    | '/administration/booking-types/$bookingTypeId/edit'
     | '/administration/groups/$groupId/edit'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -197,6 +208,7 @@ export interface FileRouteTypes {
     | '/administration/groups/new'
     | '/administration/booking-types'
     | '/administration/groups'
+    | '/administration/booking-types/$bookingTypeId/edit'
     | '/administration/groups/$groupId/edit'
   id:
     | '__root__'
@@ -215,6 +227,7 @@ export interface FileRouteTypes {
     | '/_authenticated/administration/groups/new'
     | '/_authenticated/administration/booking-types/'
     | '/_authenticated/administration/groups/'
+    | '/_authenticated/administration/booking-types/$bookingTypeId/edit'
     | '/_authenticated/administration/groups/$groupId/edit'
   fileRoutesById: FileRoutesById
 }
@@ -333,6 +346,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAdministrationGroupsNewRouteImport
       parentRoute: typeof AuthenticatedAdministrationGroupsRoute
     }
+    '/_authenticated/administration/booking-types/$bookingTypeId/edit': {
+      id: '/_authenticated/administration/booking-types/$bookingTypeId/edit'
+      path: '/$bookingTypeId/edit'
+      fullPath: '/administration/booking-types/$bookingTypeId/edit'
+      preLoaderRoute: typeof AuthenticatedAdministrationBookingTypesBookingTypeIdEditRouteImport
+      parentRoute: typeof AuthenticatedAdministrationBookingTypesRoute
+    }
     '/_authenticated/administration/groups/$groupId/edit': {
       id: '/_authenticated/administration/groups/$groupId/edit'
       path: '/$groupId/edit'
@@ -346,6 +366,7 @@ declare module '@tanstack/react-router' {
 interface AuthenticatedAdministrationBookingTypesRouteChildren {
   AuthenticatedAdministrationBookingTypesNewRoute: typeof AuthenticatedAdministrationBookingTypesNewRoute
   AuthenticatedAdministrationBookingTypesIndexRoute: typeof AuthenticatedAdministrationBookingTypesIndexRoute
+  AuthenticatedAdministrationBookingTypesBookingTypeIdEditRoute: typeof AuthenticatedAdministrationBookingTypesBookingTypeIdEditRoute
 }
 
 const AuthenticatedAdministrationBookingTypesRouteChildren: AuthenticatedAdministrationBookingTypesRouteChildren =
@@ -354,6 +375,8 @@ const AuthenticatedAdministrationBookingTypesRouteChildren: AuthenticatedAdminis
       AuthenticatedAdministrationBookingTypesNewRoute,
     AuthenticatedAdministrationBookingTypesIndexRoute:
       AuthenticatedAdministrationBookingTypesIndexRoute,
+    AuthenticatedAdministrationBookingTypesBookingTypeIdEditRoute:
+      AuthenticatedAdministrationBookingTypesBookingTypeIdEditRoute,
   }
 
 const AuthenticatedAdministrationBookingTypesRouteWithChildren =

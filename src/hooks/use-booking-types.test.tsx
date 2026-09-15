@@ -6,7 +6,7 @@ import { pocketbase } from "@/api/client";
 import { signOut } from "@/api/auth";
 import type { BookingType } from "@/api/booking-types";
 import { bookingTypesKeys } from "@/api/query-keys";
-import { useCreateBookingTypeMutation } from "./use-booking-types";
+import { useCreateBookingTypeMutation, useUpdateBookingTypeMutation } from "./use-booking-types";
 
 const bookingType: BookingType = {
   id: "booking-type-1",
@@ -89,6 +89,66 @@ it("rolls back a failed booking type create and invalidates the list", async () 
   expect(queryClient.getQueryData<BookingType[]>(bookingTypesKeys.list())).toHaveLength(2);
 
   rejectCreate(error);
+  await expect(mutation).rejects.toMatchObject({ kind: "conflict" });
+  expect(queryClient.getQueryData<BookingType[]>(bookingTypesKeys.list())).toEqual([bookingType]);
+  expect(invalidate).toHaveBeenCalledWith({ queryKey: bookingTypesKeys.list() });
+});
+
+it("optimistically updates and sorts a booking type", async () => {
+  let resolveUpdate!: (value: BookingType) => void;
+  const update = vi.fn().mockReturnValue(
+    new Promise<BookingType>((resolve) => {
+      resolveUpdate = resolve;
+    }),
+  );
+  vi.spyOn(pocketbase, "collection").mockReturnValue({ update } as never);
+  const { queryClient, wrapper } = setup();
+  const { result } = renderHook(() => useUpdateBookingTypeMutation(), { wrapper });
+
+  let mutation!: Promise<unknown>;
+  await act(async () => {
+    mutation = result.current.mutateAsync({
+      id: bookingType.id,
+      input: { name: "Accounting", surchargeMinorUnits: 250 },
+    });
+    await Promise.resolve();
+  });
+  expect(queryClient.getQueryData<BookingType[]>(bookingTypesKeys.list())).toEqual([
+    {
+      ...bookingType,
+      name: "Accounting",
+      name_normalized: "accounting",
+      surcharge_minor_units: 250,
+    },
+  ]);
+
+  resolveUpdate({ ...bookingType, name: "Accounting", surcharge_minor_units: 250 });
+  await mutation;
+});
+
+it("rolls back a failed booking type update", async () => {
+  const error = Object.assign(new Error("Duplicate"), { status: 409 });
+  let rejectUpdate!: (reason: unknown) => void;
+  const update = vi.fn().mockReturnValue(
+    new Promise<never>((_resolve, reject) => {
+      rejectUpdate = reject;
+    }),
+  );
+  vi.spyOn(pocketbase, "collection").mockReturnValue({ update } as never);
+  const { queryClient, wrapper } = setup();
+  const invalidate = vi.spyOn(queryClient, "invalidateQueries");
+  const { result } = renderHook(() => useUpdateBookingTypeMutation(), { wrapper });
+
+  let mutation!: Promise<unknown>;
+  await act(async () => {
+    mutation = result.current.mutateAsync({
+      id: bookingType.id,
+      input: { name: "Duplicate", surchargeMinorUnits: 250 },
+    });
+    await Promise.resolve();
+  });
+
+  rejectUpdate(error);
   await expect(mutation).rejects.toMatchObject({ kind: "conflict" });
   expect(queryClient.getQueryData<BookingType[]>(bookingTypesKeys.list())).toEqual([bookingType]);
   expect(invalidate).toHaveBeenCalledWith({ queryKey: bookingTypesKeys.list() });

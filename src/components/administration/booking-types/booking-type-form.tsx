@@ -1,16 +1,36 @@
 import { useState, type FormEvent } from "react";
+import type { BookingType } from "@/api/booking-types";
 import { Button } from "@/components/base/Button";
 import { NumberField } from "@/components/base/NumberField";
 import { toMinorUnits } from "@/components/base/NumberField.utils";
 import "./booking-type-form.css";
-import { useCreateBookingTypeMutation } from "@/hooks/use-booking-types";
+import {
+  useCreateBookingTypeMutation,
+  useUpdateBookingTypeMutation,
+} from "@/hooks/use-booking-types";
 
-export function BookingTypeForm({ onCancel }: { onCancel: () => void }) {
-  const [bookingType, setBookingType] = useState("");
-  const [hourlyPrice, setHourlyPrice] = useState("");
+type BookingTypeFormProps = {
+  mode?: "create" | "edit";
+  initialBookingType?: BookingType;
+  onCancel: () => void;
+  onSuccess?: () => void;
+};
+
+export function BookingTypeForm({
+  mode = "create",
+  initialBookingType,
+  onCancel,
+  onSuccess,
+}: BookingTypeFormProps) {
+  const [bookingType, setBookingType] = useState(initialBookingType?.name ?? "");
+  const [hourlyPrice, setHourlyPrice] = useState(
+    initialBookingType ? String(initialBookingType.surcharge_minor_units / 100) : "",
+  );
   const [priceError, setPriceError] = useState("");
   const [submitted, setSubmitted] = useState(false);
-  const mutation = useCreateBookingTypeMutation();
+  const createMutation = useCreateBookingTypeMutation();
+  const updateMutation = useUpdateBookingTypeMutation();
+  const mutation = mode === "edit" ? updateMutation : createMutation;
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -22,19 +42,28 @@ export function BookingTypeForm({ onCancel }: { onCancel: () => void }) {
     }
     setPriceError("");
     setSubmitted(false);
-    mutation.mutate(
-      {
-        name: bookingType,
-        surchargeMinorUnits,
-      },
-      { onSuccess: () => setSubmitted(true) },
-    );
+    const input = { name: bookingType, surchargeMinorUnits };
+    if (mode === "edit" && initialBookingType) {
+      updateMutation.mutate(
+        { id: initialBookingType.id, input },
+        { onSuccess: () => onSuccess?.() },
+      );
+    } else {
+      createMutation.mutate(input, {
+        onSuccess: () => {
+          setSubmitted(true);
+          onSuccess?.();
+        },
+      });
+    }
   }
 
   return (
     <section className="booking-type-form-surface" aria-labelledby="booking-type-form-title">
       <p className="eyebrow">Administration</p>
-      <h1 id="booking-type-form-title">New Booking Type</h1>
+      <h1 id="booking-type-form-title">
+        {mode === "edit" ? "Edit Booking Type" : "New Booking Type"}
+      </h1>
       <form className="booking-type-form" onSubmit={submit}>
         <label htmlFor="booking-type-name">Booking type</label>
         <input
@@ -62,7 +91,7 @@ export function BookingTypeForm({ onCancel }: { onCancel: () => void }) {
             Cancel
           </Button>
           <Button type="submit" variant="primary" disabled={mutation.isPending}>
-            {mutation.isPending ? "Creating booking type..." : "Create booking type"}
+            {mutation.isPending ? "Saving..." : "Save"}
           </Button>
         </div>
         {mutation.error ? (
