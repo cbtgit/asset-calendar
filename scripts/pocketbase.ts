@@ -555,6 +555,7 @@ export async function startPocketBase(
     await terminateChild(child);
     throw error;
   }
+
   return child;
 }
 
@@ -592,6 +593,12 @@ async function main(): Promise<void> {
   }
 
   const child = await startPocketBase(resolveConfig(process.env, args));
+  const requestShutdown = (): void => {
+    void stopPocketBase(child).finally(() => process.exit(0));
+  };
+  process.once("SIGINT", requestShutdown);
+  process.once("SIGTERM", requestShutdown);
+  process.once("SIGHUP", requestShutdown);
   await new Promise<void>((resolvePromise, rejectPromise) => {
     child.once("error", rejectPromise);
     child.once("exit", () => resolvePromise());

@@ -6,35 +6,64 @@ const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const pocketbase = spawn(process.execPath, [resolve(root, "scripts/pocketbase.ts"), "start"], {
   cwd: root,
   stdio: "inherit",
-  detached: process.platform !== "win32",
 });
 const frontend = spawn("vp", ["dev"], {
   cwd: root,
   stdio: "inherit",
-  detached: process.platform !== "win32",
 });
 const children: ChildProcess[] = [pocketbase, frontend];
+const CHILD_SHUTDOWN_TIMEOUT_MS = 2_000;
 let shuttingDown = false;
+let shutdownPromise: Promise<void> | undefined;
 
-function stopChildren(): void {
-  for (const child of children) {
-    if (child.exitCode !== null || child.signalCode !== null) continue;
-    if (process.platform !== "win32" && child.pid) {
-      try {
-        process.kill(-child.pid, "SIGTERM");
-        continue;
-      } catch {
-        // The process may have exited between the status check and the signal.
-      }
+function signalChild(child: ChildProcess, signal: NodeJS.Signals): void {
+  if (child.exitCode !== null || child.signalCode !== null) return;
+  if (process.platform !== "win32" && child.pid) {
+    try {
+      process.kill(-child.pid, signal);
+      return;
+    } catch {
+      // The process may have exited between the status check and the signal.
     }
-    child.kill("SIGTERM");
   }
+  child.kill(signal);
+}
+
+function waitForChildExit(child: ChildProcess): Promise<void> {
+  if (child.exitCode !== null || child.signalCode !== null) return Promise.resolve();
+
+  return new Promise<void>((resolvePromise) => {
+    let forceTimer: ReturnType<typeof setTimeout> | undefined;
+    const finish = (): void => {
+      if (forceTimer) clearTimeout(forceTimer);
+      child.off("exit", finish);
+      child.off("error", finish);
+      resolvePromise();
+    };
+
+    child.once("exit", finish);
+    child.once("error", finish);
+    forceTimer = setTimeout(() => {
+      signalChild(child, "SIGKILL");
+      finish();
+    }, CHILD_SHUTDOWN_TIMEOUT_MS);
+  });
+}
+
+async function stopChildren(): Promise<void> {
+  const activeChildren = children.filter(
+    (child) => child.exitCode === null && child.signalCode === null,
+  );
+  for (const child of activeChildren) {
+    signalChild(child, "SIGTERM");
+  }
+  await Promise.all(activeChildren.map(waitForChildExit));
 }
 
 function requestShutdown(): void {
-  if (shuttingDown) return;
+  if (shutdownPromise) return;
   shuttingDown = true;
-  stopChildren();
+  shutdownPromise = stopChildren();
 }
 
 process.once("SIGINT", requestShutdown);
@@ -94,4 +123,4 @@ await new Promise<void>((resolvePromise, rejectPromise) => {
   }
 });
 
-stopChildren();
+await shutdownPromise;
