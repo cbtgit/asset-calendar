@@ -1,4 +1,5 @@
 import type { FormEvent, RefObject } from "react";
+import { Button } from "../../base/Button";
 
 type GroupFormFieldsProps = {
   name: string;
@@ -71,12 +72,12 @@ function renderErrors(fieldError: string | undefined, serverError: boolean) {
 function renderActions(pending: boolean, mode: "create" | "edit", onCancel: () => void) {
   return (
     <div className="group-form-actions">
-      <button type="button" onClick={onCancel} disabled={pending}>
+      <Button type="button" onClick={onCancel} disabled={pending}>
         Cancel
-      </button>
-      <button type="submit" disabled={pending}>
+      </Button>
+      <Button type="submit" variant="primary" disabled={pending}>
         {pending ? "Saving…" : mode === "create" ? "Create group" : "Save changes"}
-      </button>
+      </Button>
     </div>
   );
 }

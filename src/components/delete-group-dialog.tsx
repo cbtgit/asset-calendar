@@ -1,5 +1,6 @@
 import { useEffect, useRef, type RefObject } from "react";
 import type { Group } from "@/api/groups";
+import { Button } from "./base/Button";
 
 function trapDialogTabNavigation({
   event,
@@ -125,18 +126,18 @@ export function DeleteGroupDialog({
         <h2 id="delete-group-title">Delete {group.name}?</h2>
         <p>This action cannot be undone.</p>
         <div className="groups-directory-dialog-actions">
-          <button ref={cancelRef} type="button" onClick={onCancel}>
+          <Button ref={cancelRef} type="button" onClick={onCancel}>
             Cancel
-          </button>
-          <button
+          </Button>
+          <Button
             ref={confirmRef}
             className="groups-directory-delete"
-            type="button"
+            variant="danger"
             disabled={pending}
             onClick={onConfirm}
           >
             {pending ? "Deleting…" : "Delete group"}
-          </button>
+          </Button>
         </div>
       </section>
     </div>

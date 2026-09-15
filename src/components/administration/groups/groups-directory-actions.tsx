@@ -1,5 +1,6 @@
 import { Link } from "@tanstack/react-router";
 import type { Group } from "@/api/groups";
+import { Button } from "../../base/Button";
 
 function memberLabel(count: number) {
   return `${count} ${count === 1 ? "member" : "members"}`;
@@ -27,15 +28,16 @@ export function GroupsDirectoryActions({
       >
         Rename
       </Link>
-      <button
+      <Button
         className="groups-directory-action groups-directory-delete"
-        type="button"
+        size="compact"
+        variant="danger"
         disabled={blocked || deleting}
         title={blocked ? blockedMessage : undefined}
         onClick={() => onDelete(group)}
       >
         {deleting ? "Deleting…" : "Delete"}
-      </button>
+      </Button>
       {blocked ? <span className="groups-directory-hint">{blockedMessage}</span> : null}
     </div>
   );

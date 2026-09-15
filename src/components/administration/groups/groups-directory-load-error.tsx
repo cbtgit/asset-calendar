@@ -1,3 +1,5 @@
+import { Button } from "../../base/Button";
+
 export function GroupsDirectoryLoadError({
   message,
   onRetry,
@@ -8,9 +10,9 @@ export function GroupsDirectoryLoadError({
   return (
     <section className="groups-directory-state" aria-live="polite">
       <p role="alert">Unable to load groups: {message}</p>
-      <button type="button" onClick={() => void onRetry()}>
+      <Button type="button" onClick={() => void onRetry()}>
         Retry
-      </button>
+      </Button>
     </section>
   );
 }

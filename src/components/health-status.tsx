@@ -1,4 +1,5 @@
 import { useHealthQuery } from "@/hooks/use-health-query";
+import { Button } from "./base/Button";
 
 export function HealthStatus() {
   const health = useHealthQuery();
@@ -11,9 +12,9 @@ export function HealthStatus() {
     return (
       <section aria-live="polite">
         <p role="alert">Unable to connect to PocketBase: {health.error.message}</p>
-        <button type="button" onClick={() => void health.refetch()}>
+        <Button type="button" onClick={() => void health.refetch()}>
           Retry
-        </button>
+        </Button>
       </section>
     );
   }
