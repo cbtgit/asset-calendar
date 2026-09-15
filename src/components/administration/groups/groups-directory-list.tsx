@@ -16,11 +16,6 @@ export function GroupsDirectoryList({
 
   return (
     <ul className="groups-directory-list">
-      <li className="groups-directory-table-heading" aria-hidden="true">
-        <span>Group</span>
-        <span>Assigned members</span>
-        <span>Actions</span>
-      </li>
       {groups.map((group) => (
         <GroupRow
           key={group.id}
