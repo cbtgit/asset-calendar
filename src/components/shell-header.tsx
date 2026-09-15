@@ -33,7 +33,7 @@ export function ShellHeader({ activeModule, isAdministrator, navigationKey }: Sh
             data-active={activeModule === "administration" ? "true" : undefined}
             to="/administration/groups"
           >
-            a Administration
+            Administration
           </Link>
         ) : null}
       </nav>

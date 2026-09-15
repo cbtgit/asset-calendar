@@ -2,20 +2,28 @@ import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { afterEach, expect, it, vi } from "vite-plus/test";
 import { pocketbase } from "@/api/client";
-import { useNavigate, useRouterState } from "@tanstack/react-router";
-import { AppShell, getActiveDestination, getActiveModule } from "./app-shell";
+import { useMatches, useNavigate, useRouterState } from "@tanstack/react-router";
+import { AppShell } from "./app-shell";
 
 vi.mock("@tanstack/react-router", () => ({
   Link: ({
     children,
     to,
+    activeOptions: _activeOptions,
+    activeProps,
     ...props
-  }: { children: ReactNode; to: string } & Record<string, unknown>) => (
-    <a href={to} {...props}>
+  }: {
+    children: ReactNode;
+    to: string;
+    activeOptions?: unknown;
+    activeProps?: Record<string, string>;
+  } & Record<string, unknown>) => (
+    <a href={to} {...activeProps} {...props}>
       {children}
     </a>
   ),
   Outlet: () => <p>Calendar destination</p>,
+  useMatches: vi.fn(),
   useNavigate: vi.fn(),
   useRouterState: vi.fn(),
 }));
@@ -26,27 +34,15 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-function mockRouterLocation(location: { pathname: string; href: string }) {
+function mockRouterLocation(
+  location: { pathname: string; href: string },
+  routeIds = ["/_authenticated/calendar"],
+) {
+  vi.mocked(useMatches).mockReturnValue(routeIds.map((routeId) => ({ routeId })) as never);
   vi.mocked(useRouterState).mockImplementation(((options?: {
     select?: (state: unknown) => unknown;
   }) => options?.select?.({ location })) as never);
 }
-
-it.each([
-  ["/calendar", "calendar"],
-  ["/groups", "groups"],
-  ["/groups/new", "groups"],
-] as const)("derives the active destination from %s", (pathname, destination) => {
-  expect(getActiveDestination(pathname)).toBe(destination);
-});
-
-it.each([
-  ["/calendar", "calendar"],
-  ["/groups", "administration"],
-  ["/groups/new", "administration"],
-] as const)("derives the active module from %s", (pathname, module) => {
-  expect(getActiveModule(pathname)).toBe(module);
-});
 
 it("provides the shared authenticated page landmarks and outlet state", () => {
   vi.mocked(useNavigate).mockReturnValue(vi.fn() as never);
@@ -63,7 +59,10 @@ it("provides the shared authenticated page landmarks and outlet state", () => {
 
 it("shows the administration module and rail for administrators", () => {
   vi.mocked(useNavigate).mockReturnValue(vi.fn() as never);
-  mockRouterLocation({ pathname: "/groups", href: "/groups" });
+  mockRouterLocation({ pathname: "/administration/groups", href: "/administration/groups" }, [
+    "/_authenticated/administration",
+    "/_authenticated/administration/groups",
+  ]);
   pocketbase.authStore.save("token", {
     id: "admin-1",
     collectionId: "users",
@@ -82,6 +81,7 @@ it("shows the administration module and rail for administrators", () => {
     "Calendar",
     "Administration",
     "Groups",
+    "Booking Types",
   ]);
 });
 

@@ -32,7 +32,11 @@ export function MobileNavigationLinks({
           expandedModule={expandedModule}
           onToggleModule={onToggleModule}
         >
-          <Link className="shell-mobile-child-link" to="/groups" onClick={onSelectRoute}>
+          <Link
+            className="shell-mobile-child-link"
+            to="/administration/groups"
+            onClick={onSelectRoute}
+          >
             Groups
           </Link>
         </MobileNavigationModuleSection>
