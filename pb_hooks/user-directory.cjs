@@ -119,7 +119,9 @@ function sendInvitation(user) {
   });
   try {
     mailTransport.sendInvitation({ configuration, invitation, app: $app });
-  } catch {
+  } catch (error) {
+    const reason = error instanceof Error ? error.message : String(error);
+    console.error(`[asset-calendar] Invitation delivery failed: ${reason}`);
     throw new InternalServerError("invitation_delivery_failed");
   }
 }
