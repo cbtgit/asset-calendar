@@ -18,7 +18,9 @@ function ResourcesPage() {
       <p className="eyebrow">Administration</p>
       <div className="resources-header">
         <div>
-          <h1 ref={focusHeading} tabIndex={-1}>Resources</h1>
+          <h1 ref={focusHeading} tabIndex={-1}>
+            Resources
+          </h1>
           <p>Manage the resources available for bookings.</p>
         </div>
         <Button

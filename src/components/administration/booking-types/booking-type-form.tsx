@@ -65,7 +65,9 @@ export function BookingTypeForm({
 
     const surchargeMinorUnits = toMinorUnits(hourlyPrice, locale);
     if (surchargeMinorUnits === undefined) {
-      setPriceError(`Enter a valid hourly price, such as ${formatMinorUnitsForInput(123450, locale)}.`);
+      setPriceError(
+        `Enter a valid hourly price, such as ${formatMinorUnitsForInput(123450, locale)}.`,
+      );
       setSubmitted(false);
       return;
     }
