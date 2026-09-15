@@ -52,7 +52,7 @@ it("links each booking type to its edit route", async () => {
 
   expect(await screen.findByText("Booking type")).toBeTruthy();
   expect(screen.getByText("Hourly price")).toBeTruthy();
-  expect((await screen.findByRole("link", { name: "Edit" })).getAttribute("href")).toBe(
+  expect((await screen.findByRole("link", { name: "Edit Operations" })).getAttribute("href")).toBe(
     "/administration/booking-types/booking-type-1/edit",
   );
 });
