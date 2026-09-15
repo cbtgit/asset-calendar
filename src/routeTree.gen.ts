@@ -19,6 +19,7 @@ import { Route as AuthenticatedAdministrationRouteImport } from './routes/_authe
 import { Route as AuthenticatedCalendarRouteImport } from './routes/_authenticated/calendar'
 import { Route as AuthenticatedAdministrationBookingTypesRouteImport } from './routes/_authenticated/administration.booking-types'
 import { Route as AuthenticatedAdministrationGroupsRouteImport } from './routes/_authenticated/administration.groups'
+import { Route as AuthenticatedGroupsNewRouteImport } from './routes/_authenticated/groups.new'
 import { Route as AuthenticatedAdministrationGroupsIndexRouteImport } from './routes/_authenticated/administration.groups.index'
 import { Route as AuthenticatedAdministrationGroupsNewRouteImport } from './routes/_authenticated/administration.groups.new'
 import { Route as AuthenticatedAdministrationGroupsGroupIdEditRouteImport } from './routes/_authenticated/administration.groups.$groupId.edit'
@@ -75,6 +76,11 @@ const AuthenticatedAdministrationGroupsRoute =
     path: '/groups',
     getParentRoute: () => AuthenticatedAdministrationRoute,
   } as any)
+const AuthenticatedGroupsNewRoute = AuthenticatedGroupsNewRouteImport.update({
+  id: '/groups/new',
+  path: '/groups/new',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
 const AuthenticatedAdministrationGroupsIndexRoute =
   AuthenticatedAdministrationGroupsIndexRouteImport.update({
     id: '/',
@@ -104,6 +110,7 @@ export interface FileRoutesByFullPath {
   '/calendar': typeof AuthenticatedCalendarRoute
   '/administration/booking-types': typeof AuthenticatedAdministrationBookingTypesRoute
   '/administration/groups': typeof AuthenticatedAdministrationGroupsRouteWithChildren
+  '/groups/new': typeof AuthenticatedGroupsNewRoute
   '/administration/groups/new': typeof AuthenticatedAdministrationGroupsNewRoute
   '/administration/groups/': typeof AuthenticatedAdministrationGroupsIndexRoute
   '/administration/groups/$groupId/edit': typeof AuthenticatedAdministrationGroupsGroupIdEditRoute
@@ -117,6 +124,7 @@ export interface FileRoutesByTo {
   '/calendar': typeof AuthenticatedCalendarRoute
   '/': typeof AuthenticatedIndexRoute
   '/administration/booking-types': typeof AuthenticatedAdministrationBookingTypesRoute
+  '/groups/new': typeof AuthenticatedGroupsNewRoute
   '/administration/groups/new': typeof AuthenticatedAdministrationGroupsNewRoute
   '/administration/groups': typeof AuthenticatedAdministrationGroupsIndexRoute
   '/administration/groups/$groupId/edit': typeof AuthenticatedAdministrationGroupsGroupIdEditRoute
@@ -133,6 +141,7 @@ export interface FileRoutesById {
   '/_authenticated/': typeof AuthenticatedIndexRoute
   '/_authenticated/administration/booking-types': typeof AuthenticatedAdministrationBookingTypesRoute
   '/_authenticated/administration/groups': typeof AuthenticatedAdministrationGroupsRouteWithChildren
+  '/_authenticated/groups/new': typeof AuthenticatedGroupsNewRoute
   '/_authenticated/administration/groups/new': typeof AuthenticatedAdministrationGroupsNewRoute
   '/_authenticated/administration/groups/': typeof AuthenticatedAdministrationGroupsIndexRoute
   '/_authenticated/administration/groups/$groupId/edit': typeof AuthenticatedAdministrationGroupsGroupIdEditRoute
@@ -149,6 +158,7 @@ export interface FileRouteTypes {
     | '/calendar'
     | '/administration/booking-types'
     | '/administration/groups'
+    | '/groups/new'
     | '/administration/groups/new'
     | '/administration/groups/'
     | '/administration/groups/$groupId/edit'
@@ -162,6 +172,7 @@ export interface FileRouteTypes {
     | '/calendar'
     | '/'
     | '/administration/booking-types'
+    | '/groups/new'
     | '/administration/groups/new'
     | '/administration/groups'
     | '/administration/groups/$groupId/edit'
@@ -177,6 +188,7 @@ export interface FileRouteTypes {
     | '/_authenticated/'
     | '/_authenticated/administration/booking-types'
     | '/_authenticated/administration/groups'
+    | '/_authenticated/groups/new'
     | '/_authenticated/administration/groups/new'
     | '/_authenticated/administration/groups/'
     | '/_authenticated/administration/groups/$groupId/edit'
@@ -262,6 +274,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAdministrationGroupsRouteImport
       parentRoute: typeof AuthenticatedAdministrationRoute
     }
+    '/_authenticated/groups/new': {
+      id: '/_authenticated/groups/new'
+      path: '/groups/new'
+      fullPath: '/groups/new'
+      preLoaderRoute: typeof AuthenticatedGroupsNewRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
     '/_authenticated/administration/groups/': {
       id: '/_authenticated/administration/groups/'
       path: '/'
@@ -329,6 +348,7 @@ interface AuthenticatedRouteChildren {
   AuthenticatedAdministrationRoute: typeof AuthenticatedAdministrationRouteWithChildren
   AuthenticatedCalendarRoute: typeof AuthenticatedCalendarRoute
   AuthenticatedIndexRoute: typeof AuthenticatedIndexRoute
+  AuthenticatedGroupsNewRoute: typeof AuthenticatedGroupsNewRoute
 }
 
 const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
@@ -336,6 +356,7 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
     AuthenticatedAdministrationRouteWithChildren,
   AuthenticatedCalendarRoute: AuthenticatedCalendarRoute,
   AuthenticatedIndexRoute: AuthenticatedIndexRoute,
+  AuthenticatedGroupsNewRoute: AuthenticatedGroupsNewRoute,
 }
 
 const AuthenticatedRouteWithChildren = AuthenticatedRoute._addFileChildren(
