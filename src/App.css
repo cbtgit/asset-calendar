@@ -245,7 +245,7 @@
   line-height: 1.6;
 }
 
-@media (max-width: 767px) {
+@media (width < 48rem) {
   .shell-header {
     display: flex;
     padding: 0 var(--space-4);

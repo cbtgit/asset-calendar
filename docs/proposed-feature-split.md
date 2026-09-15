@@ -1,11 +1,16 @@
 # Asset Calendar Proposed Feature Split
 
 **Status:** Reconciled delivery contract
-**Last updated:** 2026-09-14
+**Last updated:** 2026-09-15
 **Source:** [Product requirements](./product-requirements.md)
 
 The non-secret production operator boundary is defined in the
 [production bootstrap contract](./production-bootstrap-contract.md).
+
+The current `create-booking-type` branch covers the administrator booking-type
+catalog for listing, creating, and editing records. It does not seed
+prefilled booking types, and booking-type archival is not implemented yet.
+The F05 descriptions below retain the planned follow-up work where noted.
 
 ## 1. Purpose
 
@@ -733,12 +738,12 @@ allowlist. Currency is immutable after tenant provisioning; the tenant locale
 remains editable and drives localized money formatting and input parsing.
 
 The frontend provides resource and booking-type administration, localized rate
-fields, archive confirmation, active-resource/type selection data, and
+fields, planned archive confirmation, active-resource/type selection data, and
 TanStack Query invalidation inside the shared shell. Regular users never
-receive rates or the booking-type catalog. Resource/type lists, forms, archive
-confirmation, tenant-locale settings, and rate fields must define a usable
-narrow-screen layout without horizontal scrolling; the same role restrictions
-apply at every viewport size.
+receive rates or the booking-type catalog. Resource/type lists, forms, future
+archive confirmation, tenant-locale settings, and rate fields must define a
+usable narrow-screen layout without horizontal scrolling; the same role
+restrictions apply at every viewport size.
 
 #### PocketBase data and backend behavior
 
@@ -749,12 +754,10 @@ hidden normalized name, integer `base_rate_minor_units`, archival state,
 timestamps, and a tenant-scoped unique-name index.
 
 The migration also creates tenant-owned booking types with a display name,
-hidden normalized name, integer `surcharge_minor_units`, archival state, and a
-protected system kind. It seeds permanent `regular`, `training`, and
-`maintenance` records for each existing tenant. Regular has zero surcharge;
-training is configurable; maintenance is permanently non-billable and
-resource-blocking. Administrators may create custom billable,
-resource-blocking types.
+hidden normalized name, integer `surcharge_minor_units`, and archival state.
+This branch does not seed prefilled records. Permanent `regular`, `training`,
+and `maintenance` records, protected system semantics, and custom
+resource-blocking behavior are planned follow-up work.
 
 Backend rules and hooks enforce:
 
@@ -764,11 +767,11 @@ Backend rules and hooks enforce:
 - Currency allowlist and tenant-level currency immutability.
 - Name trimming, non-blank validation, maximum length, and tenant-scoped
   case-insensitive uniqueness.
-- Permanent one-way archival for resources and custom booking types.
-- Immutable archived resource/type configuration and protected built-in type
-  semantics.
+- Permanent one-way archival for resources; booking-type archival is planned.
+- Immutable archived resource configuration; protected built-in type semantics
+  and archived booking-type configuration are planned.
 - Rejection of new bookings for archived resources.
-- Rejection of new bookings for archived booking types.
+- Planned rejection of new bookings for archived booking types.
 - Protection of rate fields from regular users.
 
 #### Why a safe resource response is needed
@@ -838,16 +841,17 @@ flowchart TD
 **Description:** Add the versioned PocketBase migration for tenant currency
 and locale configuration, tenant-owned resources, and tenant-owned booking
 types. Preserve existing tenants with `DKK` and `da-DK`, validate the currency
-allowlist and locale shape, add normalized-name fields and tenant-scoped unique
-indexes, and seed the permanent `regular`, `training`, and `maintenance`
-booking types for every existing tenant. Encode the protected system kind,
-archival fields, integer minor-unit fields, and timestamps needed by later
-server and frontend work. Keep production migrations and seeded records out
-of integration-only fixtures.
+allowlist and locale shape, and add normalized-name fields and tenant-scoped
+unique indexes. The migration creates the booking-type schema without
+prefilled records; system-type seeding and booking-type archival are planned
+follow-up work. Encode the fields needed by later server and frontend work,
+including archival state, integer minor-unit fields, and timestamps. Keep
+production data out of integration-only fixtures.
 
 **When this issue is done, the user can:** start from a clean database or the
 existing tenant data and find the complete F05 schema with deterministic
-defaults, indexes, and permanent built-in booking types.
+defaults and indexes, without the migration inventing prefilled booking-type
+records.
 
 ##### F05-T02 - Enforce resource rules and safe resource projections
 
@@ -872,17 +876,15 @@ without receiving pricing when they are not an administrator.
 
 **Depends on:** F05-T01
 
-**Description:** Implement the server-side booking-type administration
+Description:** Implement the server-side booking-type administration
 contract. Restrict booking-type reads and writes to same-tenant
 administrators, validate names and non-negative integer surcharges, and enforce
-tenant-scoped case-insensitive uniqueness. Protect the permanent built-in
-semantics: `regular` remains zero-surcharge, `maintenance` remains
-non-billable and resource-blocking, and protected system types cannot be
-deleted or changed incompatibly. Allow administrators to create and archive
-custom billable resource-blocking types, make archival one-way, and ensure
-archived types cannot appear in new-booking selection data. Keep the type
-catalog out of regular-user responses and leave booking creation authorization
-to F08 and F10.
+tenant-scoped case-insensitive uniqueness. The current branch covers the
+administrator catalog for existing records and create/update operations. The
+planned follow-up will add permanent built-in semantics, custom-type archival,
+one-way archival rules, and exclusion of archived types from new-booking
+selection data. Keep the type catalog out of regular-user responses and leave
+booking creation authorization to F08 and F10.
 
 **When this issue is done, the user can:** maintain the administrator-only
 booking-type catalog while permanent system behavior and regular-user privacy
@@ -892,13 +894,14 @@ remain enforced by PocketBase.
 
 **Depends on:** F05-T02 and F05-T03
 
-**Description:** Add the hand-written types, query keys, PocketBase API
+Description:** Add the hand-written types, query keys, PocketBase API
 functions, and TanStack Query options for tenant settings, resources,
 booking types, administrator projections, and regular-user active-resource
-selection. Components must not call the PocketBase SDK directly. Implement
-create, update, and archive mutations with affected-query cancellation,
-snapshots, immediate cache updates, rollback and surfaced errors on failure,
-and invalidation or reconciliation after settlement. Keep rates and the
+selection. Components must not call the PocketBase SDK directly. The current
+branch provides create and update booking-type mutations; archive mutations
+remain planned. Mutations must use affected-query cancellation, snapshots,
+immediate cache updates, rollback and surfaced errors on failure, and
+invalidation or reconciliation after settlement. Keep rates and the
 booking-type catalog absent from regular-user query responses, and preserve
 the API shapes needed by later calendar and booking features.
 
@@ -929,20 +932,20 @@ currency, and complete the workflow on desktop or a narrow screen.
 
 **Depends on:** F03.5 and F05-T04
 
-**Description:** Add the administrator booking-type workflow inside the shared
-shell. Render permanent system types and custom types with their protected
-behavior, provide custom-type creation and surcharge editing where allowed,
-and provide one-way archive confirmation for custom types. Show localized
-money values using the tenant configuration, prevent edits to archived or
-protected configurations, and keep booking-type data and rates inaccessible
-to regular users. Define loading, empty, validation, authorization, conflict,
-and mutation-error states without adding booking creation. Make lists, forms,
-and confirmations usable on narrow screens without horizontal scrolling.
+Description:** Add the administrator booking-type workflow inside the shared
+shell. The current branch provides the list, creation form, and edit form for
+tenant-owned records. Planned follow-up work will render permanent system
+types and protected behavior, add one-way archive confirmation for custom
+types, prevent edits to archived or protected configurations, and keep
+booking-type data and rates inaccessible to regular users. Define loading,
+empty, validation, authorization, conflict, and mutation-error states without
+adding booking creation. Make lists, forms, and future confirmations usable
+on narrow screens without horizontal scrolling.
 
 **When this issue is done, the user can:** configure permitted booking types
-and surcharges, understand which system types are protected, and archive a
-custom type without weakening the backend rules or exposing the catalog to
-regular users.
+and surcharges through the current list, create, and edit workflow. A later
+follow-up will add protected system types and custom-type archival without
+weakening the backend rules or exposing the catalog to regular users.
 
 ##### F05-T07 - Verify F05 rules, projections, and responsive workflows
 

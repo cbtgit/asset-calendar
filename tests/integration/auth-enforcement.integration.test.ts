@@ -114,6 +114,24 @@ async function authenticate(
   pocketbase.authStore.save(auth.token, auth.record);
 }
 
+async function createBookingType(
+  pocketbase: PocketBase,
+  tenant: string,
+  name: string,
+  host = "tenant.localhost",
+): Promise<Response> {
+  const response = await request(pocketbase, "/api/collections/booking_types/records", {
+    method: "POST",
+    host,
+    body: {
+      tenant,
+      name,
+      surcharge_minor_units: 1250,
+    },
+  });
+  return response;
+}
+
 const originalTenantHosts = process.env.ASSET_CALENDAR_TENANT_HOSTS;
 
 beforeAll(async () => {
@@ -252,6 +270,25 @@ it("enforces the resolved tenant and role boundary on direct requests", async ()
   await authenticate(regular, "regular-a@example.test");
   const regularGroups = await request(regular, "/api/groups", { host: "tenant.localhost" });
   expect(regularGroups.status).toBe(403);
+  const regularUserBookingTypes = await request(regular, "/api/collections/booking_types/records", {
+    host: "tenant.localhost",
+  });
+  expect(regularUserBookingTypes.status).toBe(200);
+  expect((await regularUserBookingTypes.json()).items).toHaveLength(0);
+  const regularUserBookingTypeCreate = await request(
+    regular,
+    "/api/collections/booking_types/records",
+    {
+      method: "POST",
+      host: "tenant.localhost",
+      body: {
+        tenant: groupRecord.tenant,
+        name: "Unauthorized booking type",
+        surcharge_minor_units: 1250,
+      },
+    },
+  );
+  expect(regularUserBookingTypeCreate.status).toBe(400);
 
   const usersResponse = await request(admin, "/api/collections/users/records?page=1&perPage=50", {
     host: "tenant.localhost",
@@ -334,4 +371,89 @@ it("enforces the resolved tenant and role boundary on direct requests", async ()
     host: "tenant.localhost",
   });
   expect(inactiveRequest.status).toBe(403);
+});
+
+it("derives booking type normalization on the server", async () => {
+  const admin = new PocketBase(harness.baseUrl);
+  await authenticate(admin, "admin-a@example.test");
+  const authRecord = admin.authStore.model;
+  if (!authRecord) throw new Error("Expected the administrator auth record.");
+
+  const adminB = new PocketBase(harness.baseUrl);
+  await authenticate(adminB, "admin-b@example.test", "other.localhost");
+  const otherAuthRecord = adminB.authStore.model;
+  if (!otherAuthRecord) throw new Error("Expected the second administrator auth record.");
+
+  const wrongTenantCreate = await request(admin, "/api/collections/booking_types/records", {
+    method: "POST",
+    host: "tenant.localhost",
+    body: {
+      tenant: otherAuthRecord.tenant,
+      name: "Wrong tenant",
+      surcharge_minor_units: 1250,
+    },
+  });
+  expect(wrongTenantCreate.status).toBe(400);
+
+  const normalizedOverride = await request(admin, "/api/collections/booking_types/records", {
+    method: "POST",
+    host: "tenant.localhost",
+    body: {
+      tenant: authRecord.tenant,
+      name: "Protected normalized name",
+      name_normalized: "injected",
+      surcharge_minor_units: 1250,
+    },
+  });
+  expect(normalizedOverride.status).toBe(403);
+
+  const beforeAuthorizedCreate = await request(admin, "/api/collections/booking_types/records", {
+    host: "tenant.localhost",
+  });
+  expect((await beforeAuthorizedCreate.json()).items).toHaveLength(0);
+
+  const created = await createBookingType(admin, authRecord.tenant, "  Training  ");
+  expect(created.status).toBe(200);
+  const createdBookingType = await created.json();
+  expect(createdBookingType).toMatchObject({
+    name: "Training",
+    tenant: authRecord.tenant,
+  });
+
+  const otherCreated = await createBookingType(
+    adminB,
+    otherAuthRecord.tenant,
+    "Other training",
+    "other.localhost",
+  );
+  expect(otherCreated.status).toBe(200);
+  const otherBookingType = await otherCreated.json();
+
+  const crossTenantView = await request(
+    admin,
+    `/api/collections/booking_types/records/${otherBookingType.id}`,
+    { host: "tenant.localhost" },
+  );
+  expect(crossTenantView.status).toBe(404);
+
+  const crossTenantUpdate = await request(
+    admin,
+    `/api/collections/booking_types/records/${otherBookingType.id}`,
+    {
+      method: "PATCH",
+      host: "tenant.localhost",
+      body: { name: "Unauthorized update", surcharge_minor_units: 2000 },
+    },
+  );
+  expect(crossTenantUpdate.status).toBe(404);
+
+  const otherAfterUpdate = await request(
+    adminB,
+    `/api/collections/booking_types/records/${otherBookingType.id}`,
+    { host: "other.localhost" },
+  );
+  expect((await otherAfterUpdate.json()).name).toBe("Other training");
+
+  const duplicate = await createBookingType(admin, authRecord.tenant, "training");
+  expect(duplicate.status).toBe(400);
 });

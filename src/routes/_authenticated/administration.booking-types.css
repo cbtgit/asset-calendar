@@ -1,0 +1,97 @@
+.booking-types-header {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: var(--space-5);
+}
+
+.booking-types-header p {
+  margin-bottom: 0;
+}
+
+.booking-types-list {
+  display: grid;
+  gap: var(--space-3);
+  list-style: none;
+  margin: var(--space-6) 0 0;
+  padding: 0;
+}
+
+.booking-type-row {
+  align-items: center;
+  border-bottom: 1px solid var(--color-border);
+  display: flex;
+  gap: var(--space-4);
+  justify-content: space-between;
+  padding: var(--space-4) 0;
+}
+
+.booking-type-name {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.booking-type-name strong {
+  overflow-wrap: anywhere;
+}
+
+.booking-type-row p {
+  margin: 0;
+}
+
+.booking-type-row p {
+  color: var(--color-text-muted);
+}
+
+.booking-type-label {
+  display: block;
+  margin-bottom: var(--space-1);
+  color: var(--color-text-muted);
+  font-size: 0.8rem;
+}
+
+.booking-type-price {
+  flex: 0 0 auto;
+  color: var(--color-text) !important;
+  font-variant-numeric: tabular-nums;
+}
+
+.booking-type-edit {
+  display: inline-flex;
+  min-height: 2.25rem;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  padding: 0 var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  color: var(--color-brand-dark);
+  background: var(--color-surface);
+  cursor: pointer;
+  font: inherit;
+  font-weight: 650;
+  text-decoration: none;
+}
+
+.booking-types-empty {
+  margin-top: var(--space-6);
+}
+
+@media (width < 48rem) {
+  .booking-types-header {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .booking-types-header .button {
+    width: 100%;
+  }
+
+  .booking-type-row {
+    gap: var(--space-3);
+  }
+
+  .booking-type-price {
+    display: none;
+  }
+}

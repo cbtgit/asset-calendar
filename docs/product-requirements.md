@@ -1,10 +1,16 @@
 # Asset Calendar Product Requirements
 
 **Status:** Normative MVP requirements
-**Last updated:** 2026-09-14
+**Last updated:** 2026-09-15
 
 The non-secret operator boundary for the existing production tenant is defined
 in the [production bootstrap contract](./production-bootstrap-contract.md).
+
+The current `create-booking-type` branch implements the administrator
+catalog for listing, creating, and editing tenant-owned booking types. It does
+not seed prefilled booking-type records and does not yet provide a
+booking-type archival workflow. The requirements below describe the intended
+MVP behavior beyond this branch.
 
 ## 1. Product summary
 
@@ -138,8 +144,9 @@ the booker.
 
 ### 5.1 Booking types
 
-Booking types are tenant-owned records. The MVP seeds these permanent types
-for every tenant:
+Booking types are tenant-owned records. The intended MVP defines these
+permanent types for every tenant, but the current branch does not seed
+prefilled records:
 
 1. **Regular** - the default type for regular users and administrators, with a
    zero surcharge.
@@ -150,10 +157,11 @@ for every tenant:
 
 Administrators may create additional custom booking types. Custom types are
 billable, block the selected resource, and have an administrator-configurable
-name and surcharge. No booking type may be deleted. Custom types may be
-archived permanently; archived types cannot be used for new bookings but
-remain available for historical records. The built-in types remain permanent;
-regular and maintenance semantics cannot be changed.
+name and surcharge. No booking type may be deleted. In the intended MVP,
+custom types may be archived permanently; archived types cannot be used for
+new bookings but remain available for historical records. The built-in types
+remain permanent; regular and maintenance semantics cannot be changed. The
+current branch has no archive action yet.
 
 Regular users do not see a booking type field or the booking-type catalog. Their
 bookings are assigned the regular type automatically. Administrators may select
@@ -389,9 +397,11 @@ Administrators have access to an administration area for:
   - Archived resources cannot receive new bookings but remain visible for
     existing and future bookings.
 - Booking types.
-  - View seeded regular, training, and maintenance types.
+  - View existing booking types. The current branch does not provide seeded
+    regular, training, or maintenance records.
   - Configure the training name and surcharge.
-  - Create, edit, and permanently archive custom billable booking types.
+  - Create and edit custom billable booking types. Permanent archival is part
+    of the intended MVP but is not implemented in the current branch.
   - View archived types for administration and historical records; archived
     types cannot be used for new bookings.
   - Regular and maintenance semantics are protected, and no type can be
