@@ -1,0 +1,21 @@
+.booking-types-header {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: var(--space-5);
+}
+
+.booking-types-header p {
+  margin-bottom: 0;
+}
+
+@media (max-width: 767px) {
+  .booking-types-header {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .booking-types-header .button {
+    width: 100%;
+  }
+}
