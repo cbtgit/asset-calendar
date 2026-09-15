@@ -838,7 +838,7 @@ flowchart TD
 
 **Depends on:** F03
 
-Description:** Add the versioned PocketBase migration for tenant currency
+**Description:** Add the versioned PocketBase migration for tenant currency
 and locale configuration, tenant-owned resources, and tenant-owned booking
 types. Preserve existing tenants with `DKK` and `da-DK`, validate the currency
 allowlist and locale shape, and add normalized-name fields and tenant-scoped
