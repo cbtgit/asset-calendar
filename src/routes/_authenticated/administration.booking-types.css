@@ -9,7 +9,7 @@
   margin-bottom: 0;
 }
 
-@media (max-width: 767px) {
+@media (width < 48rem) {
   .booking-types-header {
     align-items: stretch;
     flex-direction: column;
