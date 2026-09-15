@@ -88,6 +88,7 @@ it("shows administrator destinations and closes on outside tap with focus restor
   fireEvent.click(screen.getByRole("button", { name: "Administration" }));
 
   expect(screen.getByRole("link", { name: "Groups" })).toBeTruthy();
+  expect(screen.getByRole("link", { name: "Booking Types" })).toBeTruthy();
   const backdrop = document.querySelector(".shell-mobile-backdrop");
   expect(backdrop).toBeTruthy();
   fireEvent.click(backdrop as HTMLElement);
