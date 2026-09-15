@@ -5,7 +5,7 @@ function ensureUniqueIndex(collection, index) {
   const indexName = /INDEX\s+`?([^`\s]+)`?/i.exec(index)?.[1];
   const exists = indexName
     ? collection.indexes.some((existing) =>
-        new RegExp(`INDEXs+\`?${indexName}\`?`, "i").test(existing),
+        new RegExp(`INDEX\\s+\`?${indexName}\`?`, "i").test(existing),
       )
     : collection.indexes.includes(index);
   if (!exists) collection.indexes.push(index);
