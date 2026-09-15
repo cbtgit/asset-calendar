@@ -52,6 +52,8 @@ export function UserForm(props: UserFormProps) {
   const updateMutation = useUpdateUserMutation();
   const resendMutation = useResendUserInvitationMutation();
   const mutation = editing ? updateMutation : createMutation;
+  const conflict =
+    mutation.error instanceof ApplicationError &&
     mutation.error.message.toLowerCase().includes("email_already_exists");
 
   useEffect(() => {
