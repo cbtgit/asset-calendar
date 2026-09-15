@@ -164,12 +164,7 @@ function normalizeResource(event, info, record, tenantId) {
   if (raw.name_normalized !== missing) deny();
   if (Object.prototype.hasOwnProperty.call(info.body, TENANT_FIELD)) deny();
   if (Object.prototype.hasOwnProperty.call(info.body, "name_normalized")) deny();
-  if (
-    Object.prototype.hasOwnProperty.call(info.body, "archived_at") &&
-    info.body.archived_at !== ""
-  ) {
-    deny();
-  }
+  if (Object.prototype.hasOwnProperty.call(info.body, "archived_at")) deny();
 
   const name = Object.prototype.hasOwnProperty.call(info.body, "name")
     ? info.body.name
