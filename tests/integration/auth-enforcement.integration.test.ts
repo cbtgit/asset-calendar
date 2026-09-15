@@ -114,6 +114,23 @@ async function authenticate(
   pocketbase.authStore.save(auth.token, auth.record);
 }
 
+async function createBookingType(
+  pocketbase: PocketBase,
+  tenant: string,
+  name: string,
+): Promise<Response> {
+  const response = await request(pocketbase, "/api/collections/booking_types/records", {
+    method: "POST",
+    host: "tenant.localhost",
+    body: {
+      tenant,
+      name,
+      surcharge_minor_units: 1250,
+    },
+  });
+  return response;
+}
+
 const originalTenantHosts = process.env.ASSET_CALENDAR_TENANT_HOSTS;
 
 beforeAll(async () => {
@@ -334,4 +351,21 @@ it("enforces the resolved tenant and role boundary on direct requests", async ()
     host: "tenant.localhost",
   });
   expect(inactiveRequest.status).toBe(403);
+});
+
+it("derives booking type normalization on the server", async () => {
+  const admin = new PocketBase(harness.baseUrl);
+  await authenticate(admin, "admin-a@example.test");
+  const authRecord = admin.authStore.model;
+  if (!authRecord) throw new Error("Expected the administrator auth record.");
+
+  const created = await createBookingType(admin, authRecord.tenant, "  Training  ");
+  expect(created.status).toBe(200);
+  expect(await created.json()).toMatchObject({
+    name: "Training",
+    tenant: authRecord.tenant,
+  });
+
+  const duplicate = await createBookingType(admin, authRecord.tenant, "training");
+  expect(duplicate.status).toBe(400);
 });

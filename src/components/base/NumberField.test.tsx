@@ -1,7 +1,7 @@
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vite-plus/test";
 import { NumberField } from "./NumberField";
-import { normalizeLocalizedNumber } from "./NumberField.utils";
+import { normalizeLocalizedNumber, toMinorUnits } from "./NumberField.utils";
 
 afterEach(cleanup);
 
@@ -19,6 +19,13 @@ describe("NumberField", () => {
     expect(normalizeLocalizedNumber("1.234,50")).toBe("1234.50");
     expect(normalizeLocalizedNumber("1,234.50")).toBe("1234.50");
     expect(normalizeLocalizedNumber("12,5x")).toBeUndefined();
+  });
+
+  it("converts localized currency values to integer minor units", () => {
+    expect(toMinorUnits("12,50")).toBe(1250);
+    expect(toMinorUnits("125")).toBe(12500);
+    expect(toMinorUnits("0")).toBe(0);
+    expect(toMinorUnits("12,5x")).toBeUndefined();
   });
 
   it("associates errors with the input", () => {

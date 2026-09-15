@@ -9,6 +9,45 @@
   margin-bottom: 0;
 }
 
+.booking-types-list {
+  display: grid;
+  gap: var(--space-3);
+  list-style: none;
+  margin: var(--space-6) 0 0;
+  padding: 0;
+}
+
+.booking-type-row {
+  align-items: center;
+  border-bottom: 1px solid var(--color-border);
+  display: flex;
+  gap: var(--space-4);
+  justify-content: space-between;
+  padding: var(--space-4) 0;
+}
+
+.booking-type-row h2,
+.booking-type-row p {
+  margin: 0;
+}
+
+.booking-type-row h2 {
+  font-size: 1rem;
+}
+
+.booking-type-row p {
+  color: var(--color-text-muted);
+}
+
+.booking-type-price {
+  color: var(--color-text) !important;
+  font-variant-numeric: tabular-nums;
+}
+
+.booking-types-empty {
+  margin-top: var(--space-6);
+}
+
 @media (width < 48rem) {
   .booking-types-header {
     align-items: stretch;

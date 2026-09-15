@@ -1,25 +1,34 @@
 import { useState, type FormEvent } from "react";
 import { Button } from "@/components/base/Button";
 import { NumberField } from "@/components/base/NumberField";
-import { normalizeLocalizedNumber } from "@/components/base/NumberField.utils";
+import { toMinorUnits } from "@/components/base/NumberField.utils";
 import "./booking-type-form.css";
+import { useCreateBookingTypeMutation } from "@/hooks/use-booking-types";
 
 export function BookingTypeForm({ onCancel }: { onCancel: () => void }) {
   const [bookingType, setBookingType] = useState("");
   const [hourlyPrice, setHourlyPrice] = useState("");
   const [priceError, setPriceError] = useState("");
   const [submitted, setSubmitted] = useState(false);
+  const mutation = useCreateBookingTypeMutation();
 
-  function submit(event: FormEvent<HTMLFormElement>) {
+  async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!normalizeLocalizedNumber(hourlyPrice)) {
+    const surchargeMinorUnits = toMinorUnits(hourlyPrice);
+    if (surchargeMinorUnits === undefined) {
       setPriceError("Enter a valid hourly price, such as 12.50 or 12,50.");
       setSubmitted(false);
       return;
     }
-
     setPriceError("");
-    setSubmitted(true);
+    setSubmitted(false);
+    mutation.mutate(
+      {
+        name: bookingType,
+        surchargeMinorUnits,
+      },
+      { onSuccess: () => setSubmitted(true) },
+    );
   }
 
   return (
@@ -52,10 +61,15 @@ export function BookingTypeForm({ onCancel }: { onCancel: () => void }) {
           <Button type="button" onClick={onCancel}>
             Cancel
           </Button>
-          <Button type="submit" variant="primary">
-            Create booking type
+          <Button type="submit" variant="primary" disabled={mutation.isPending}>
+            {mutation.isPending ? "Creating booking type..." : "Create booking type"}
           </Button>
         </div>
+        {mutation.error ? (
+          <p role="alert" className="booking-type-form-error">
+            {mutation.error.message}
+          </p>
+        ) : null}
         <p className="booking-type-form-announcement" aria-live="polite">
           {submitted ? "Booking type details are ready to save." : ""}
         </p>

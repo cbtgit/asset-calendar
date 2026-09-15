@@ -5,6 +5,7 @@ const configuration = authConfig.validateAuthConfig(authConfig.readPocketBaseEnv
 const TENANT_FIELD = "tenant";
 const USER_COLLECTION = "users";
 const ORGANIZATIONAL_UNIT_COLLECTION = "organizational_units";
+const BOOKING_TYPE_COLLECTION = "booking_types";
 const PROTECTED_USER_FIELDS = [
   "tenant",
   "role",
@@ -131,6 +132,30 @@ function normalizeOrganizationalUnit(event, info, record, tenantId) {
   record.set(TENANT_FIELD, tenantId);
 }
 
+function normalizeBookingType(event, info, record, tenantId) {
+  const missing = String(Math.random());
+  const raw = new DynamicModel({ name_normalized: missing });
+  event.bindBody(raw);
+  if (raw.name_normalized !== missing) deny();
+
+  const name = Object.prototype.hasOwnProperty.call(info.body, "name")
+    ? info.body.name
+    : record.get("name");
+  if (typeof name !== "string" || name.trim() === "") {
+    throw new BadRequestError("booking_type_name_required");
+  }
+  const trimmedName = name.trim();
+  if (trimmedName.length > 200) {
+    throw new BadRequestError("booking_type_name_too_long");
+  }
+  info.body.name = trimmedName;
+  info.body.name_normalized = trimmedName.toLowerCase();
+  info.body[TENANT_FIELD] = tenantId;
+  record.set("name", trimmedName);
+  record.set("name_normalized", info.body.name_normalized);
+  record.set(TENANT_FIELD, tenantId);
+}
+
 function memberCount(record) {
   return $app.findRecordsByFilter(
     USER_COLLECTION,
@@ -238,6 +263,8 @@ function createRecord(event) {
 
   if (collectionName({ record: event.record }) === ORGANIZATIONAL_UNIT_COLLECTION) {
     normalizeOrganizationalUnit(event, context.info, event.record, context.context.tenant.id);
+  } else if (collectionName({ record: event.record }) === BOOKING_TYPE_COLLECTION) {
+    normalizeBookingType(event, context.info, event.record, context.context.tenant.id);
   } else {
     applyServerTenant(context.info, event.record, context.context.tenant.id);
   }
@@ -253,6 +280,8 @@ function updateRecord(event) {
   protectUserFields(context, event.record);
   if (collectionName({ record: event.record }) === ORGANIZATIONAL_UNIT_COLLECTION) {
     normalizeOrganizationalUnit(event, context.info, event.record, context.context.tenant.id);
+  } else if (collectionName({ record: event.record }) === BOOKING_TYPE_COLLECTION) {
+    normalizeBookingType(event, context.info, event.record, context.context.tenant.id);
   } else {
     applyServerTenant(context.info, event.record, context.context.tenant.id);
   }

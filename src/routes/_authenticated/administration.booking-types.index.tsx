@@ -1,5 +1,6 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { Button } from "@/components/base/Button";
+import { BookingTypesDirectory } from "@/components/administration/booking-types/booking-types-directory";
 import "./administration.booking-types.css";
 
 export const Route = createFileRoute("/_authenticated/administration/booking-types/")({
@@ -15,7 +16,7 @@ function BookingTypesPage() {
       <div className="booking-types-header">
         <div>
           <h1>Booking Types</h1>
-          <p>Booking type administration will be available here.</p>
+          <p>Manage the hourly surcharges used for bookings.</p>
         </div>
         <Button
           variant="primary"
@@ -24,6 +25,7 @@ function BookingTypesPage() {
           New Booking Type
         </Button>
       </div>
+      <BookingTypesDirectory />
     </>
   );
 }
