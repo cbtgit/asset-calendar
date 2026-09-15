@@ -6,14 +6,28 @@ const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const pocketbase = spawn(process.execPath, [resolve(root, "scripts/pocketbase.ts"), "start"], {
   cwd: root,
   stdio: "inherit",
+  detached: process.platform !== "win32",
 });
-const frontend = spawn("vp", ["dev"], { cwd: root, stdio: "inherit" });
+const frontend = spawn("vp", ["dev"], {
+  cwd: root,
+  stdio: "inherit",
+  detached: process.platform !== "win32",
+});
 const children: ChildProcess[] = [pocketbase, frontend];
 let shuttingDown = false;
 
 function stopChildren(): void {
   for (const child of children) {
-    if (!child.killed) child.kill("SIGTERM");
+    if (child.exitCode !== null || child.signalCode !== null) continue;
+    if (process.platform !== "win32" && child.pid) {
+      try {
+        process.kill(-child.pid, "SIGTERM");
+        continue;
+      } catch {
+        // The process may have exited between the status check and the signal.
+      }
+    }
+    child.kill("SIGTERM");
   }
 }
 
@@ -25,6 +39,7 @@ function requestShutdown(): void {
 
 process.once("SIGINT", requestShutdown);
 process.once("SIGTERM", requestShutdown);
+process.once("SIGHUP", requestShutdown);
 
 await new Promise<void>((resolvePromise, rejectPromise) => {
   type ChildResult = {
