@@ -720,10 +720,10 @@ and narrow screens, including list, create, rename, and delete flows.
 
 ---
 
-### F05 - Resource and booking-type administration, pricing, and permanent archival
+### F05 - Resource administration and centralized money formatting
 
-**Can start:** When tenant-scoped administrator authorization and the shared
-application shell are stable
+**Can start:** When tenant-scoped authorization and the shared application
+shell are stable
 
 **Depends on:** F03 and F03.5
 
@@ -731,240 +731,177 @@ application shell are stable
 
 #### Description
 
-Allow administrators to maintain tenant resources, booking types, pricing, and
-permanent archival state. The existing tenant uses DKK and `da-DK`. Future
-tenants use one currency from the initial `DKK`, `EUR`, `USD`, and `GBP`
-allowlist. Currency is immutable after tenant provisioning; the tenant locale
-remains editable and drives localized money formatting and input parsing.
+Deliver administrator resource management as a focused slice of F05 while
+keeping the already-merged booking-type catalog stable. The existing tenant's
+money context is DKK with `da-DK` formatting. Centralize that formatting so
+resource rates and existing booking-type surcharges do not depend on the
+browser's locale or on separate component-level defaults.
 
-The frontend provides resource and booking-type administration, localized rate
-fields, planned archive confirmation, active-resource/type selection data, and
-TanStack Query invalidation inside the shared shell. Regular users never
-receive rates or the booking-type catalog. Resource/type lists, forms, future
-archive confirmation, tenant-locale settings, and rate fields must define a
-usable narrow-screen layout without horizontal scrolling; the same role
-restrictions apply at every viewport size.
+This increment includes resource listing, creation, and editing; localized
+base-rate input and display; tenant-scoped authorization; and the nullable,
+server-managed `archived_at` field required by the resource schema. It does
+not add tenant settings, editable locale or currency, archive actions, archive
+filtering, booking behavior, or changes to booking-type authorization.
 
-#### PocketBase data and backend behavior
+Resource lists, forms, and rate fields must remain usable at the existing
+responsive boundary without horizontal scrolling. The same tenant and role
+rules apply at every viewport size.
 
-A migration extends tenant configuration with a validated immutable currency
-and editable BCP 47 locale, preserving existing tenants with DKK and `da-DK`
-defaults. It creates a tenant-owned resource collection with a trimmed name,
-hidden normalized name, integer `base_rate_minor_units`, archival state,
-timestamps, and a tenant-scoped unique-name index.
+A versioned migration creates a tenant-owned resources collection with:
 
-The migration also creates tenant-owned booking types with a display name,
-hidden normalized name, integer `surcharge_minor_units`, and archival state.
-This branch does not seed prefilled records. Permanent `regular`, `training`,
-and `maintenance` records, protected system semantics, and custom
-resource-blocking behavior are planned follow-up work.
+- A required tenant relation.
+- A trimmed, non-blank display name.
+- A hidden normalized name and tenant-scoped unique index.
+- A safe non-negative integer `base_rate_minor_units` field.
+- A nullable, server-managed `archived_at` field.
+- PocketBase timestamps.
 
-Backend rules and hooks enforce:
+Authenticated users in the resolved tenant may read resource names, rates, and
+`archived_at`. Only same-tenant administrators may create or update resources.
+The tenant is derived from trusted request context, and clients cannot set or
+change the tenant, normalized name, or `archived_at` value.
 
-- Same-tenant administrator writes.
-- Required safe non-negative integer minor-unit values for base rates and
-  surcharges.
-- Currency allowlist and tenant-level currency immutability.
-- Name trimming, non-blank validation, maximum length, and tenant-scoped
-  case-insensitive uniqueness.
-- Permanent one-way archival for resources; booking-type archival is planned.
-- Immutable archived resource configuration; protected built-in type semantics
-  and archived booking-type configuration are planned.
-- Rejection of new bookings for archived resources.
-- Planned rejection of new bookings for archived booking types.
-- Protection of rate fields from regular users.
+Hooks validate trimmed names, safe integer rates, and case-insensitive
+tenant-scoped uniqueness. They reject invalid or client-controlled protected
+fields. This increment does not implement archive transitions, immutable
+archived configuration, active-resource filtering, booking conflicts, or
+booking authorization.
 
-#### Why a safe resource response is needed
+#### Why backend validation is needed
 
-Hiding rates in React is insufficient if raw PocketBase records still contain
-them. Regular-user resource requests must return a projection without rate
-fields, and regular users must not receive the booking-type catalog. Direct
-collection reads remain disabled for application users; custom tenant-scoped
-projections are the application read path.
+React forms and TypeScript mutation types do not protect PocketBase from direct
+requests. Collection rules and hooks must enforce tenant isolation,
+administrator-only writes, normalized-name uniqueness, valid minor-unit rates,
+and preservation of the server-managed archival field independently of the
+frontend.
 
-Archival is used instead of deletion because bookings retain resource
-and booking-type relationships. Resource/type name and pricing snapshots
-protect historical exports from later configuration changes.
+Resource prices and metadata are not secret in this increment, so no resource
+response projection or rate redaction is needed. Projection remains available
+for later workflows that contain genuinely private data.
 
 #### Completion outcome
 
-Administrators can manage resources, booking types, tenant locale, and pricing.
-Archived resources and types reject new bookings, existing bookings remain
-usable, and regular users cannot retrieve rates or type metadata. Currency is
-single-valued per tenant and exports use that tenant currency without foreign-
-exchange conversion.
+Administrators can create, rename, and reprice resources in their tenant, while
+same-tenant authenticated users can read the resource data needed by later
+calendar work. Existing booking-type administration continues to work, and
+all money values use one application-level `da-DK` policy until tenant settings
+are introduced in a later feature.
 
 #### Settled decisions
 
-- Store money as safe non-negative integer minor units with no arbitrary
-  business maximum; display and input remain localized currency values.
-- The initial currency allowlist is `DKK`, `EUR`, `USD`, and `GBP`. Currency is
-  immutable per tenant; locale remains editable without a booking-based lock.
-- Resource and booking-type names are trimmed, non-blank, at most 200
-  characters, and unique per tenant after lowercasing for comparison.
-- Archived resources and types remain visible to administrators and historical
-  booking views, but cannot be selected for new bookings.
-- Archived resources and custom types cannot be renamed, repriced, unarchived,
-  or deleted. Resources may be archived regardless of existing bookings.
-- The application accepts only unambiguous input in the current tenant locale,
-  such as `1.234,50` for `da-DK` or `1,234.50` for `en-US`; mixed or malformed
-  separators are rejected.
-- Booking-type reads are administrator-only, and raw collection reads remain
-  disabled in favor of safe projections.
+- Tenant settings are explicitly excluded: no tenant currency or locale
+  migration, settings endpoint, settings route, or editable locale/currency UI.
+- Until tenant settings exist, `da-DK` is the application-level number locale
+  and the existing tenant's currency context is DKK.
+- Money is stored as safe non-negative integer minor units. Editable fields use
+  localized numeric text; read-only values use the centralized formatter.
+- Resource names are trimmed, non-blank, at most 200 characters, and unique
+  per tenant after lowercasing for comparison.
+- Resources include nullable, server-managed `archived_at`, but this slice has
+  no archive action, transition, filtering, or immutable archived workflow.
+- Resource prices and metadata are not secret. Same-tenant authenticated users
+  may read them; administrator authorization still protects writes.
+- Booking types are already delivered and remain administrator-read and
+  administrator-write. Only their money-formatting call sites and tests are
+  updated to use the centralized policy.
+- Booking creation, calendar behavior, booking snapshots, invoicing,
+  projections, rate redaction, tenant settings, and booking-type archival or
+  system-type follow-up work remain outside this increment.
 
 #### F05 implementation issue drafts
 
 The following local draft identifiers are planning references only. They are
-not GitHub issue numbers or metadata. Each draft stays within the F05 contract;
-booking creation, booking snapshots, calendar behavior, and user
-administration remain owned by later features.
+not GitHub issue numbers or metadata. Each draft stays within this narrowed
+resource contract; booking creation, booking snapshots, calendar behavior,
+tenant settings, and booking-type follow-up work remain owned by later work.
 
 ```mermaid
 flowchart TD
-  F05([F05 Resource and booking-type administration]) --> T01[F05-T01 Schema and tenant configuration]
-  T01 --> T02[F05-T02 Resource backend and safe projections]
-  T01 --> T03[F05-T03 Booking-type backend and safe projections]
-  T02 --> T04[F05-T04 Typed API and optimistic mutations]
-  T03 --> T04
-  T04 --> T05[F05-T05 Resource and tenant settings UI]
-  T04 --> T06[F05-T06 Booking-type administration UI]
-  T02 --> T07[F05-T07 Regression and integration coverage]
-  T03 --> T07
-  T05 --> T07
-  T06 --> T07
+  F05([F05 Resource administration]) --> T01[F05-T01 Centralize money formatting]
+  T01 --> T02[F05-T02 Resource schema and backend]
+  T02 --> T03[F05-T03 Resource API and optimistic mutations]
+  T03 --> T04[F05-T04 Resource administration UI]
+  T04 --> T05[F05-T05 Focused regression coverage]
+  T01 --> T05
+  T02 --> T05
+  T03 --> T05
 ```
 
-##### F05-T01 - Add resource, booking-type, and tenant configuration schema
+##### F05-T01 - Centralize the application money policy
 
-**Depends on:** F03
+**Depends on:** F03.5
 
-**Description:** Add the versioned PocketBase migration for tenant currency
-and locale configuration, tenant-owned resources, and tenant-owned booking
-types. Preserve existing tenants with `DKK` and `da-DK`, validate the currency
-allowlist and locale shape, and add normalized-name fields and tenant-scoped
-unique indexes. The migration creates the booking-type schema without
-prefilled records; system-type seeding and booking-type archival are planned
-follow-up work. Encode the fields needed by later server and frontend work,
-including archival state, integer minor-unit fields, and timestamps. Keep
-production data out of integration-only fixtures.
+**Description:** Add one parameterized money-formatting utility under
+`src/lib/` with `da-DK` as the application default and DKK as the current
+currency context. Keep localized input text compatible with the existing
+number parser and provide a separate read-only currency display operation.
+Update the booking-type form and directory to use the utility without
+changing booking-type behavior or access rules.
 
-**When this issue is done, the user can:** start from a clean database or the
-existing tenant data and find the complete F05 schema with deterministic
-defaults and indexes, without the migration inventing prefilled booking-type
-records.
+**When this issue is done, the user can:** see consistent Danish formatting in
+resource and booking-type money fields regardless of the browser locale.
 
-##### F05-T02 - Enforce resource rules and safe resource projections
+##### F05-T02 - Add and enforce the resource collection
 
 **Depends on:** F05-T01
 
-**Description:** Implement the server-side resource administration contract.
-Restrict reads and writes to same-tenant administrators, derive tenant scope
-from trusted request context, normalize trimmed non-blank names, validate
-safe non-negative integer base rates, and enforce tenant-scoped
-case-insensitive uniqueness. Add permanent one-way archival with immutable
-configuration after archival, reject archived resources from active-selection
-responses, and expose administrator and regular-user projections that omit
-rates from regular-user responses. Keep raw application reads disabled and
-provide the active-resource data shape required by F07 without adding calendar
-behavior.
+**Description:** Add the versioned resource migration and server-side rules.
+Allow same-tenant authenticated reads and same-tenant administrator writes.
+Normalize and validate names, validate safe non-negative integer base rates,
+enforce tenant-scoped case-insensitive uniqueness, and explicitly reject
+client-controlled tenant, normalized-name, and `archived_at` values. Include
+the archival field in the schema without adding archive behavior.
 
-**When this issue is done, the user can:** administer only their tenant's
-resources, archive a resource permanently, and use a resource selection list
-without receiving pricing when they are not an administrator.
+**When this issue is done, the user can:** access only their tenant's resource
+records, while invalid writes and protected-field changes are rejected by
+PocketBase.
 
-##### F05-T03 - Enforce booking-type rules and safe booking-type projections
+##### F05-T03 - Add typed resource access and optimistic mutations
 
-**Depends on:** F05-T01
+**Depends on:** F05-T02
 
-Description:** Implement the server-side booking-type administration
-contract. Restrict booking-type reads and writes to same-tenant
-administrators, validate names and non-negative integer surcharges, and enforce
-tenant-scoped case-insensitive uniqueness. The current branch covers the
-administrator catalog for existing records and create/update operations. The
-planned follow-up will add permanent built-in semantics, custom-type archival,
-one-way archival rules, and exclusion of archived types from new-booking
-selection data. Keep the type catalog out of regular-user responses and leave
-booking creation authorization to F08 and F10.
+**Description:** Add resource types, query keys, PocketBase API functions, and
+TanStack Query hooks by adapting the booking-type implementation. Include
+`archived_at` in response types but omit it from client-writable payloads.
+Create and update mutations must cancel affected queries, snapshot cached data,
+apply an optimistic update, roll back and surface failures, then invalidate or
+reconcile after settlement. Do not add archive mutations, projections, or
+active-resource selection queries.
 
-**When this issue is done, the user can:** maintain the administrator-only
-booking-type catalog while permanent system behavior and regular-user privacy
-remain enforced by PocketBase.
+**When this issue is done, the user can:** see resource changes immediately,
+with failed mutations restoring the previous cache and successful mutations
+reconciling with PocketBase.
 
-##### F05-T04 - Add typed API boundaries and optimistic administration mutations
+##### F05-T04 - Build the administrator resource workflow
 
-**Depends on:** F05-T02 and F05-T03
+**Depends on:** F03.5 and F05-T03
 
-Description:** Add the hand-written types, query keys, PocketBase API
-functions, and TanStack Query options for tenant settings, resources,
-booking types, administrator projections, and regular-user active-resource
-selection. Components must not call the PocketBase SDK directly. The current
-branch provides create and update booking-type mutations; archive mutations
-remain planned. Mutations must use affected-query cancellation, snapshots,
-immediate cache updates, rollback and surfaced errors on failure, and
-invalidation or reconciliation after settlement. Keep rates and the
-booking-type catalog absent from regular-user query responses, and preserve
-the API shapes needed by later calendar and booking features.
+**Description:** Add resource list, create, and edit routes and components by
+adapting the existing booking-type structure. Use the centralized formatter
+for `da-DK` base-rate input initialization and read-only display. Preserve
+server-provided `archived_at` as display-only when populated, without archive
+controls or filtering. Keep the list and forms usable below 768px without
+horizontal scrolling and with established labels, focus behavior, and touch
+targets.
 
-**When this issue is done, the user can:** see resource and booking-type
-changes immediately in the administration interface while failed mutations
-restore the previous data and successful mutations reconcile with PocketBase.
+**When this issue is done, the user can:** create, rename, and reprice tenant
+resources from the administrator area on desktop and narrow screens.
 
-##### F05-T05 - Build resource and tenant settings administration
+##### F05-T05 - Verify the narrowed resource slice
 
-**Depends on:** F03.5 and F05-T04
+**Depends on:** F05-T01, F05-T02, F05-T03, and F05-T04
 
-**Description:** Add the administrator resource workflow inside the shared
-shell. Add the resource list, create and
-edit forms, localized base-rate input, tenant locale editing, immutable
-currency display, validation and server-error states, and permanent archive
-confirmation. Format and parse money using the tenant locale, accepting only
-unambiguous values such as `1.234,50` for `da-DK` or `1,234.50` for `en-US`.
-Keep archived resources visible to administrators but unavailable for new
-selection. Make the list and full-width or full-screen forms usable on narrow
-screens without horizontal scrolling, with labels, keyboard focus, and touch
-targets preserved.
+**Description:** Add focused utility, migration, hook, API, route, and
+component coverage for centralized `da-DK` formatting, localized numeric
+input, tenant isolation, administrator-only writes, normalized-name conflicts,
+invalid and unsafe rates, protected-field rejection including `archived_at`,
+optimistic success and rollback, responsive resource workflows, and the
+absence of archive and tenant-settings controls. Preserve booking-type
+formatting regressions. Do not add projection or rate-redaction tests.
 
-**When this issue is done, the user can:** create, rename, reprice, and
-permanently archive tenant resources, edit locale settings without changing
-currency, and complete the workflow on desktop or a narrow screen.
-
-##### F05-T06 - Build booking-type administration and pricing controls
-
-**Depends on:** F03.5 and F05-T04
-
-Description:** Add the administrator booking-type workflow inside the shared
-shell. The current branch provides the list, creation form, and edit form for
-tenant-owned records. Planned follow-up work will render permanent system
-types and protected behavior, add one-way archive confirmation for custom
-types, prevent edits to archived or protected configurations, and keep
-booking-type data and rates inaccessible to regular users. Define loading,
-empty, validation, authorization, conflict, and mutation-error states without
-adding booking creation. Make lists, forms, and future confirmations usable
-on narrow screens without horizontal scrolling.
-
-**When this issue is done, the user can:** configure permitted booking types
-and surcharges through the current list, create, and edit workflow. A later
-follow-up will add protected system types and custom-type archival without
-weakening the backend rules or exposing the catalog to regular users.
-
-##### F05-T07 - Verify F05 rules, projections, and responsive workflows
-
-**Depends on:** F05-T02, F05-T03, F05-T05, and F05-T06
-
-**Description:** Add focused migration, hook, API, and component coverage for
-tenant defaults, currency immutability, locale validation, normalized-name
-uniqueness, safe minor-unit handling, tenant isolation, administrator-only
-booking-type reads, protected system types, one-way archival, and projection
-field exclusion. Exercise optimistic success and rollback paths and confirm
-that archived resources and types remain visible to administrators but are
-excluded from new-selection data. Cover the 768px boundary and narrow-screen
-resource, settings, booking-type, rate, and confirmation workflows in the
-existing test setup; browser end-to-end testing remains deferred as specified
-by F01.
-
-**When this issue is done, the user can:** rely on F05 administration and
-selection data to preserve tenant boundaries, pricing privacy, archival
-invariants, localized input behavior, and usable desktop and narrow-screen
+**When this issue is done, the user can:** rely on the resource administration
+slice to preserve tenant boundaries, money-formatting consistency, protected
+fields, optimistic mutation behavior, and usable desktop and narrow-screen
 interactions.
 
 ---

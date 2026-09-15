@@ -132,6 +132,26 @@ async function createBookingType(
   return response;
 }
 
+async function createResource(
+  pocketbase: PocketBase,
+  tenant: string | undefined,
+  name: string,
+  baseRateMinorUnits = 1250,
+  host = "tenant.localhost",
+  extra: Record<string, unknown> = {},
+): Promise<Response> {
+  return request(pocketbase, "/api/collections/resources/records", {
+    method: "POST",
+    host,
+    body: {
+      ...(tenant === undefined ? {} : { tenant }),
+      name,
+      base_rate_minor_units: baseRateMinorUnits,
+      ...extra,
+    },
+  });
+}
+
 const originalTenantHosts = process.env.ASSET_CALENDAR_TENANT_HOSTS;
 
 beforeAll(async () => {
@@ -149,6 +169,114 @@ afterAll(async () => {
   } else {
     process.env.ASSET_CALENDAR_TENANT_HOSTS = originalTenantHosts;
   }
+});
+
+// oxlint-disable-next-line eslint(max-lines-per-function)
+it("enforces resource reads, writes, validation, and server-managed fields", async () => {
+  const admin = new PocketBase(harness.baseUrl);
+  await authenticate(admin, "admin-a@example.test");
+  const authRecord = admin.authStore.model;
+  if (!authRecord) throw new Error("Expected the administrator auth record.");
+
+  const adminB = new PocketBase(harness.baseUrl);
+  await authenticate(adminB, "admin-b@example.test", "other.localhost");
+  const otherAuthRecord = adminB.authStore.model;
+  if (!otherAuthRecord) throw new Error("Expected the second administrator auth record.");
+
+  const regular = new PocketBase(harness.baseUrl);
+  await authenticate(regular, "regular-a@example.test");
+
+  const emptyRead = await request(regular, "/api/collections/resources/records", {
+    host: "tenant.localhost",
+  });
+  expect(emptyRead.status).toBe(200);
+  expect((await emptyRead.json()).items).toHaveLength(0);
+
+  const wrongTenant = await createResource(
+    admin,
+    otherAuthRecord.tenant,
+    "Wrong tenant",
+    1250,
+    "tenant.localhost",
+  );
+  expect(wrongTenant.status).toBe(403);
+
+  const normalizedOverride = await createResource(
+    admin,
+    authRecord.tenant,
+    "Protected name",
+    1250,
+    "tenant.localhost",
+    { name_normalized: "injected" },
+  );
+  expect(normalizedOverride.status).toBe(403);
+
+  const archivedOverride = await createResource(
+    admin,
+    authRecord.tenant,
+    "Protected archive",
+    1250,
+    "tenant.localhost",
+    { archived_at: "2026-01-01 00:00:00.000Z" },
+  );
+  expect(archivedOverride.status).toBe(403);
+
+  const invalidName = await createResource(admin, authRecord.tenant, "   ");
+  expect([400, 403]).toContain(invalidName.status);
+  const negativeRate = await createResource(admin, authRecord.tenant, "Negative", -1);
+  expect([400, 403]).toContain(negativeRate.status);
+  const unsafeRate = await createResource(admin, authRecord.tenant, "Unsafe", 9007199254740992);
+  expect([400, 403]).toContain(unsafeRate.status);
+
+  const created = await createResource(admin, undefined, "  Room A  ", 1250);
+  expect(created.status).toBe(200);
+  const resource = await created.json();
+  expect(resource).toMatchObject({
+    name: "Room A",
+    base_rate_minor_units: 1250,
+    tenant: authRecord.tenant,
+    archived_at: "",
+  });
+
+  const regularRead = await request(regular, "/api/collections/resources/records", {
+    host: "tenant.localhost",
+  });
+  expect(regularRead.status).toBe(200);
+  expect((await regularRead.json()).items).toHaveLength(1);
+
+  const regularWrite = await createResource(regular, undefined, "Unauthorized");
+  expect(regularWrite.status).toBe(400);
+
+  const duplicate = await createResource(admin, undefined, "room a");
+  expect(duplicate.status).toBe(400);
+  const otherTenantResource = await createResource(
+    adminB,
+    undefined,
+    "Room A",
+    1500,
+    "other.localhost",
+  );
+  expect(otherTenantResource.status).toBe(200);
+  const foreign = await otherTenantResource.json();
+  const crossTenantView = await request(admin, `/api/collections/resources/records/${foreign.id}`, {
+    host: "tenant.localhost",
+  });
+  expect(crossTenantView.status).toBe(404);
+
+  const updated = await request(admin, `/api/collections/resources/records/${resource.id}`, {
+    method: "PATCH",
+    host: "tenant.localhost",
+    body: { name: "Updated room", base_rate_minor_units: 1500 },
+  });
+  expect(updated.status).toBe(200);
+  expect((await updated.json()).archived_at).toBe("");
+
+  const archiveUpdate = await request(admin, `/api/collections/resources/records/${resource.id}`, {
+    method: "PATCH",
+    host: "tenant.localhost",
+    body: { archived_at: "2026-01-01 00:00:00.000Z" },
+  });
+  expect(archiveUpdate.status).toBe(403);
 });
 
 // oxlint-disable-next-line eslint(max-lines-per-function)

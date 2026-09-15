@@ -21,6 +21,14 @@ export function AdministrationRail() {
       >
         Booking Types
       </Link>
+      <Link
+        className="shell-rail-link"
+        to="/administration/resources"
+        activeOptions={{ exact: false }}
+        activeProps={{ "data-active": "true" }}
+      >
+        Resources
+      </Link>
     </nav>
   );
 }

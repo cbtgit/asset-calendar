@@ -6,6 +6,7 @@ const TENANT_FIELD = "tenant";
 const USER_COLLECTION = "users";
 const ORGANIZATIONAL_UNIT_COLLECTION = "organizational_units";
 const BOOKING_TYPE_COLLECTION = "booking_types";
+const RESOURCE_COLLECTION = "resources";
 const PROTECTED_USER_FIELDS = [
   "tenant",
   "role",
@@ -156,6 +157,48 @@ function normalizeBookingType(event, info, record, tenantId) {
   record.set(TENANT_FIELD, tenantId);
 }
 
+function normalizeResource(event, info, record, tenantId) {
+  const missing = String(Math.random());
+  const raw = new DynamicModel({ name_normalized: missing });
+  event.bindBody(raw);
+  if (raw.name_normalized !== missing) deny();
+  if (Object.prototype.hasOwnProperty.call(info.body, TENANT_FIELD)) deny();
+  if (Object.prototype.hasOwnProperty.call(info.body, "name_normalized")) deny();
+  if (
+    Object.prototype.hasOwnProperty.call(info.body, "archived_at") &&
+    info.body.archived_at !== ""
+  ) {
+    deny();
+  }
+
+  const name = Object.prototype.hasOwnProperty.call(info.body, "name")
+    ? info.body.name
+    : record.get("name");
+  if (typeof name !== "string" || name.trim() === "") {
+    throw new BadRequestError("resource_name_required");
+  }
+  const trimmedName = name.trim();
+  if (trimmedName.length > 200) {
+    throw new BadRequestError("resource_name_too_long");
+  }
+
+  const rate = Object.prototype.hasOwnProperty.call(info.body, "base_rate_minor_units")
+    ? info.body.base_rate_minor_units
+    : record.get("base_rate_minor_units");
+  if (typeof rate !== "number" || !Number.isSafeInteger(rate) || rate < 0) {
+    throw new BadRequestError("resource_base_rate_invalid");
+  }
+
+  info.body.name = trimmedName;
+  info.body.name_normalized = trimmedName.toLowerCase();
+  info.body.base_rate_minor_units = rate;
+  info.body[TENANT_FIELD] = tenantId;
+  record.set("name", trimmedName);
+  record.set("name_normalized", info.body.name_normalized);
+  record.set("base_rate_minor_units", rate);
+  record.set(TENANT_FIELD, tenantId);
+}
+
 function memberCount(record) {
   return $app.findRecordsByFilter(
     USER_COLLECTION,
@@ -265,6 +308,8 @@ function createRecord(event) {
     normalizeOrganizationalUnit(event, context.info, event.record, context.context.tenant.id);
   } else if (collectionName({ record: event.record }) === BOOKING_TYPE_COLLECTION) {
     normalizeBookingType(event, context.info, event.record, context.context.tenant.id);
+  } else if (collectionName({ record: event.record }) === RESOURCE_COLLECTION) {
+    normalizeResource(event, context.info, event.record, context.context.tenant.id);
   } else {
     applyServerTenant(context.info, event.record, context.context.tenant.id);
   }
@@ -282,6 +327,8 @@ function updateRecord(event) {
     normalizeOrganizationalUnit(event, context.info, event.record, context.context.tenant.id);
   } else if (collectionName({ record: event.record }) === BOOKING_TYPE_COLLECTION) {
     normalizeBookingType(event, context.info, event.record, context.context.tenant.id);
+  } else if (collectionName({ record: event.record }) === RESOURCE_COLLECTION) {
+    normalizeResource(event, context.info, event.record, context.context.tenant.id);
   } else {
     applyServerTenant(context.info, event.record, context.context.tenant.id);
   }

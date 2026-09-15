@@ -1,14 +1,6 @@
 import { Link } from "@tanstack/react-router";
 import { useBookingTypesQuery } from "@/hooks/use-booking-types";
-
-const priceFormatter = new Intl.NumberFormat(undefined, {
-  minimumFractionDigits: 2,
-  maximumFractionDigits: 2,
-});
-
-function formatSurcharge(minorUnits: number): string {
-  return priceFormatter.format(minorUnits / 100);
-}
+import { formatMinorUnitsForDisplay } from "@/lib/money";
 
 export function BookingTypesDirectory() {
   const bookingTypes = useBookingTypesQuery();
@@ -32,7 +24,7 @@ export function BookingTypesDirectory() {
           </div>
           <div className="booking-type-price">
             <span className="booking-type-label">Hourly price</span>
-            <span>{formatSurcharge(bookingType.surcharge_minor_units)}</span>
+            <span>{formatMinorUnitsForDisplay(bookingType.surcharge_minor_units)}</span>
           </div>
           <Link
             className="booking-type-edit"

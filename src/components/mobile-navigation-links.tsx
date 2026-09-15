@@ -46,6 +46,13 @@ export function MobileNavigationLinks({
           >
             Booking Types
           </Link>
+          <Link
+            className="shell-mobile-child-link"
+            to="/administration/resources"
+            onClick={onSelectRoute}
+          >
+            Resources
+          </Link>
         </MobileNavigationModuleSection>
       ) : null}
     </nav>

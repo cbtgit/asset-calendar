@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import type { BookingType } from "@/api/booking-types";
-import { ApplicationError } from "@/api/errors";
+import { ApplicationError, hasValidationCode } from "@/api/errors";
 import { Button } from "@/components/base/Button";
 import { NumberField } from "@/components/base/NumberField";
-import { DEFAULT_NUMBER_LOCALE, toMinorUnits } from "@/components/base/NumberField.utils";
+import { toMinorUnits } from "@/components/base/NumberField.utils";
+import { DEFAULT_MONEY_LOCALE, formatMinorUnitsForInput } from "@/lib/money";
 import "./booking-type-form.css";
 import {
   useCreateBookingTypeMutation,
@@ -18,36 +19,9 @@ type BookingTypeFormProps = {
   locale?: string;
 };
 
-function duplicateNameCode(error: ApplicationError): string | undefined {
-  if (typeof error.cause !== "object" || error.cause === null) return undefined;
-
-  const directData = Reflect.get(error.cause, "data");
-  const response = Reflect.get(error.cause, "response");
-  const data =
-    typeof directData === "object" && directData !== null
-      ? directData
-      : typeof response === "object" && response !== null
-        ? Reflect.get(response, "data")
-        : undefined;
-  if (typeof data !== "object" || data === null) return undefined;
-
-  const field = Reflect.get(data, "name_normalized");
-  if (typeof field !== "object" || field === null) return undefined;
-
-  const code = Reflect.get(field, "code");
-  return typeof code === "string" ? code : undefined;
-}
-
 function initialHourlyPrice(bookingType: BookingType | undefined, locale: string): string {
   if (!bookingType) return "";
-  try {
-    return new Intl.NumberFormat(locale, {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    }).format(bookingType.surcharge_minor_units / 100);
-  } catch {
-    return String(bookingType.surcharge_minor_units / 100);
-  }
+  return formatMinorUnitsForInput(bookingType.surcharge_minor_units, locale);
 }
 
 export function BookingTypeForm({
@@ -55,7 +29,7 @@ export function BookingTypeForm({
   initialBookingType,
   onCancel,
   onSuccess,
-  locale = DEFAULT_NUMBER_LOCALE,
+  locale = DEFAULT_MONEY_LOCALE,
 }: BookingTypeFormProps) {
   const [bookingType, setBookingType] = useState(initialBookingType?.name ?? "");
   const [hourlyPrice, setHourlyPrice] = useState(initialHourlyPrice(initialBookingType, locale));
@@ -70,7 +44,7 @@ export function BookingTypeForm({
     mutation.error instanceof ApplicationError &&
     (mutation.error.kind === "conflict" ||
       (mutation.error.kind === "validation" &&
-        duplicateNameCode(mutation.error) === "validation_not_unique"))
+        hasValidationCode(mutation.error, "validation_not_unique")))
       ? "A booking type with this name already exists."
       : undefined;
 
@@ -91,7 +65,7 @@ export function BookingTypeForm({
 
     const surchargeMinorUnits = toMinorUnits(hourlyPrice, locale);
     if (surchargeMinorUnits === undefined) {
-      setPriceError("Enter a valid hourly price, such as 12.50 or 12,50.");
+      setPriceError("Enter a valid hourly price, such as 1.234,50.");
       setSubmitted(false);
       return;
     }
