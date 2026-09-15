@@ -63,3 +63,22 @@ export function toAppError(cause: unknown): ApplicationError {
 
   return new ApplicationError(kind, message, cause);
 }
+
+export function hasValidationCode(error: ApplicationError, code: string): boolean {
+  const seen = new Set<object>();
+
+  function contains(value: unknown, depth: number): boolean {
+    if (depth > 6 || typeof value !== "object" || value === null) return false;
+    if (seen.has(value)) return false;
+    seen.add(value);
+
+    for (const key of Object.getOwnPropertyNames(value)) {
+      const nested = Reflect.get(value, key);
+      if (key === "code" && nested === code) return true;
+      if (contains(nested, depth + 1)) return true;
+    }
+    return false;
+  }
+
+  return contains(error.cause, 0);
+}

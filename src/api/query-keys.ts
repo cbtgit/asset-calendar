@@ -19,3 +19,9 @@ export const bookingTypesKeys = {
   list: () => [...bookingTypesKeys.all, "list"] as const,
   detail: (id: string) => [...bookingTypesKeys.all, "detail", id] as const,
 };
+
+export const resourcesKeys = {
+  all: ["resources"] as const,
+  list: () => [...resourcesKeys.all, "list"] as const,
+  detail: (id: string) => [...resourcesKeys.all, "detail", id] as const,
+};

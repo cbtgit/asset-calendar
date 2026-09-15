@@ -1,4 +1,6 @@
-export const DEFAULT_NUMBER_LOCALE = "da-DK";
+import { DEFAULT_MONEY_LOCALE } from "@/lib/money";
+
+export const DEFAULT_NUMBER_LOCALE = DEFAULT_MONEY_LOCALE;
 
 export function normalizeLocalizedNumber(
   value: string,

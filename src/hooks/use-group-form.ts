@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
-import { ApplicationError } from "@/api/errors";
+import { ApplicationError, hasValidationCode } from "@/api/errors";
 import { useCreateGroupMutation, useRenameGroupMutation } from "./use-groups";
 
 export type GroupFormProps =
@@ -19,26 +19,6 @@ function validateName(value: string): string | undefined {
   return undefined;
 }
 
-function duplicateNameCode(error: ApplicationError): string | undefined {
-  if (typeof error.cause !== "object" || error.cause === null) return undefined;
-
-  const directData = Reflect.get(error.cause, "data");
-  const response = Reflect.get(error.cause, "response");
-  const data =
-    typeof directData === "object" && directData !== null
-      ? directData
-      : typeof response === "object" && response !== null
-        ? Reflect.get(response, "data")
-        : undefined;
-  if (typeof data !== "object" || data === null) return undefined;
-
-  const field = Reflect.get(data, "name_normalized");
-  if (typeof field !== "object" || field === null) return undefined;
-
-  const code = Reflect.get(field, "code");
-  return typeof code === "string" ? code : undefined;
-}
-
 export function useGroupForm(props: GroupFormProps) {
   const [name, setName] = useState(props.initialName ?? "");
   const [validationError, setValidationError] = useState<string>();
@@ -51,7 +31,7 @@ export function useGroupForm(props: GroupFormProps) {
     mutation.error instanceof ApplicationError &&
     (mutation.error.kind === "conflict" ||
       (mutation.error.kind === "validation" &&
-        duplicateNameCode(mutation.error) === "validation_not_unique"))
+        hasValidationCode(mutation.error, "validation_not_unique")))
       ? "A group with this name already exists."
       : undefined;
 

@@ -82,6 +82,7 @@ it("shows the administration module and rail for administrators", () => {
     "Administration",
     "Groups",
     "Booking Types",
+    "Resources",
   ]);
 });
 
