@@ -38,6 +38,7 @@ export function BookingTypesDirectory() {
             className="booking-type-edit"
             to="/administration/booking-types/$bookingTypeId/edit"
             params={{ bookingTypeId: bookingType.id }}
+            aria-label={`Edit ${bookingType.name}`}
           >
             Edit
           </Link>
