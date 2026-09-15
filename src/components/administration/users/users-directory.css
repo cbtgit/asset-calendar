@@ -73,7 +73,7 @@
   padding: 0.5rem 0.75rem;
 }
 
-@media (max-width: 760px) {
+@media (width < 48rem) {
   .users-directory-row {
     display: block;
   }
