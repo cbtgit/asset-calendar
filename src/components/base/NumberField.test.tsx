@@ -14,18 +14,31 @@ describe("NumberField", () => {
     expect(input.getAttribute("inputmode")).toBe("decimal");
   });
 
-  it("normalizes comma and grouped decimal values", () => {
+  it("normalizes values using the locale separators", () => {
     expect(normalizeLocalizedNumber("12,50")).toBe("12.50");
     expect(normalizeLocalizedNumber("1.234,50")).toBe("1234.50");
-    expect(normalizeLocalizedNumber("1,234.50")).toBe("1234.50");
-    expect(normalizeLocalizedNumber("12,5x")).toBeUndefined();
+    expect(normalizeLocalizedNumber("1,234.50", "en-US")).toBe("1234.50");
+    expect(normalizeLocalizedNumber("12.50", "en-US")).toBe("12.50");
+  });
+
+  it("rejects malformed or incorrectly grouped values", () => {
+    expect(normalizeLocalizedNumber("1,234.50")).toBeUndefined();
+    expect(normalizeLocalizedNumber("12.50")).toBeUndefined();
+    expect(normalizeLocalizedNumber("1.23,45")).toBeUndefined();
+    expect(normalizeLocalizedNumber("1.234,5x")).toBeUndefined();
+    expect(normalizeLocalizedNumber("1,23", "en-US")).toBeUndefined();
+    expect(normalizeLocalizedNumber("12,345", "en-US")).toBe("12345");
+    expect(normalizeLocalizedNumber("12,345", "en_US")).toBeUndefined();
   });
 
   it("converts localized currency values to integer minor units", () => {
     expect(toMinorUnits("12,50")).toBe(1250);
     expect(toMinorUnits("125")).toBe(12500);
+    expect(toMinorUnits("1,234.50", "en-US")).toBe(123450);
     expect(toMinorUnits("0")).toBe(0);
     expect(toMinorUnits("12,5x")).toBeUndefined();
+    expect(toMinorUnits("90071992547409,91")).toBe(Number.MAX_SAFE_INTEGER);
+    expect(toMinorUnits("90071992547409,92")).toBeUndefined();
   });
 
   it("associates errors with the input", () => {

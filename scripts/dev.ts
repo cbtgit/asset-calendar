@@ -3,13 +3,16 @@ import { fileURLToPath } from "node:url";
 import { dirname, resolve } from "node:path";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
+const detached = process.platform !== "win32";
 const pocketbase = spawn(process.execPath, [resolve(root, "scripts/pocketbase.ts"), "start"], {
   cwd: root,
   stdio: "inherit",
+  detached,
 });
 const frontend = spawn("vp", ["dev"], {
   cwd: root,
   stdio: "inherit",
+  detached,
 });
 const children: ChildProcess[] = [pocketbase, frontend];
 const CHILD_SHUTDOWN_TIMEOUT_MS = 2_000;

@@ -7,6 +7,10 @@ export const Route = createFileRoute("/_authenticated/administration/booking-typ
   component: BookingTypesPage,
 });
 
+function focusHeading(heading: HTMLHeadingElement | null) {
+  heading?.focus();
+}
+
 function BookingTypesPage() {
   const navigate = useNavigate();
 
@@ -15,7 +19,9 @@ function BookingTypesPage() {
       <p className="eyebrow">Administration</p>
       <div className="booking-types-header">
         <div>
-          <h1>Booking Types</h1>
+          <h1 ref={focusHeading} tabIndex={-1}>
+            Booking Types
+          </h1>
           <p>Manage the hourly surcharges used for bookings.</p>
         </div>
         <Button
