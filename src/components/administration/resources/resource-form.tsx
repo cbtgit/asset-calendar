@@ -61,7 +61,7 @@ export function ResourceForm({
 
     const baseRateMinorUnits = toMinorUnits(baseRate, locale);
     if (baseRateMinorUnits === undefined) {
-      setRateError("Enter a valid base rate, such as 1.234,50.");
+      setRateError(`Enter a valid base rate, such as ${formatMinorUnitsForInput(123450, locale)}.`);
       return;
     }
     setRateError("");
