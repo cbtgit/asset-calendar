@@ -33,7 +33,7 @@ async function renderGroups() {
   saveAdministrator();
   const router = createRouter({
     routeTree,
-    history: createMemoryHistory({ initialEntries: ["/groups"] }),
+    history: createMemoryHistory({ initialEntries: ["/administration/groups"] }),
   });
   await router.load();
   render(

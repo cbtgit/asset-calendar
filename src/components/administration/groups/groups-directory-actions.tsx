@@ -21,7 +21,7 @@ export function GroupsDirectoryActions({
     <div className="groups-directory-actions">
       <Link
         className="groups-directory-action"
-        to="/groups/$groupId/edit"
+        to="/administration/groups/$groupId/edit"
         params={{ groupId: group.id }}
         aria-label={`Rename ${group.name}`}
       >

@@ -1,7 +1,7 @@
 import { useState } from "react";
 import type { Group } from "@/api/groups";
 import { useDeleteGroupMutation, useGroupsQuery } from "@/hooks/use-groups";
-import { DeleteGroupDialog } from "./delete-group-dialog";
+import { DeleteGroupDialog } from "../../delete-group-dialog";
 import { GroupsDirectoryHeader } from "./groups-directory-header";
 import { GroupsDirectoryList } from "./groups-directory-list";
 import { GroupsDirectoryLoadError } from "./groups-directory-load-error";

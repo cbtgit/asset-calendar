@@ -2,7 +2,7 @@ import { cleanup, render, screen } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { afterEach, expect, it, vi } from "vite-plus/test";
 import { pocketbase } from "@/api/client";
-import { useNavigate, useRouterState } from "@tanstack/react-router";
+import { useMatches, useNavigate, useRouterState } from "@tanstack/react-router";
 import { AppShell } from "./app-shell";
 
 vi.mock("@tanstack/react-router", () => ({
@@ -16,6 +16,7 @@ vi.mock("@tanstack/react-router", () => ({
     </a>
   ),
   Outlet: () => <p>Groups destination</p>,
+  useMatches: vi.fn(),
   useNavigate: vi.fn(),
   useRouterState: vi.fn(),
 }));
@@ -26,11 +27,18 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-it("does not expose future administration destinations from the Groups shell", () => {
+it("exposes the current administration destinations from the Groups shell", () => {
   vi.mocked(useNavigate).mockReturnValue(vi.fn() as never);
+  vi.mocked(useMatches).mockReturnValue([
+    { routeId: "/_authenticated/administration" },
+    { routeId: "/_authenticated/administration/groups" },
+  ] as never);
   vi.mocked(useRouterState).mockImplementation(((options?: {
     select?: (state: unknown) => unknown;
-  }) => options?.select?.({ location: { pathname: "/groups", href: "/groups" } })) as never);
+  }) =>
+    options?.select?.({
+      location: { pathname: "/administration/groups", href: "/administration/groups" },
+    })) as never);
   pocketbase.authStore.save("token", {
     id: "admin-1",
     collectionId: "users",
@@ -41,8 +49,7 @@ it("does not expose future administration destinations from the Groups shell", (
 
   render(<AppShell />);
 
-  expect(screen.queryByRole("link", { name: "Billing" })).toBeNull();
-  expect(screen.queryByRole("link", { name: "Resource Registry" })).toBeNull();
-  expect(screen.queryByRole("link", { name: "Users & Roles" })).toBeNull();
+  expect(screen.getByRole("link", { name: "Groups" })).toBeTruthy();
+  expect(screen.getByRole("link", { name: "Booking Types" })).toBeTruthy();
   expect(screen.queryByRole("combobox", { name: /status/i })).toBeNull();
 });

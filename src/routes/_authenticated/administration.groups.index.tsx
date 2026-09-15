@@ -1,8 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useRef } from "react";
-import { GroupsDirectory } from "@/components/groups-directory";
+import { GroupsDirectory } from "@/components/administration/groups/groups-directory";
 
-export const Route = createFileRoute("/_authenticated/groups/")({
+export const Route = createFileRoute("/_authenticated/administration/groups/")({
   component: GroupsIndexPage,
 });
 

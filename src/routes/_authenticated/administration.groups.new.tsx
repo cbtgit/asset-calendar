@@ -1,7 +1,7 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { GroupForm } from "@/components/administration/groups/group-form";
 
-export const Route = createFileRoute("/_authenticated/groups/new")({
+export const Route = createFileRoute("/_authenticated/administration/groups/new")({
   component: NewGroupPage,
 });
 
