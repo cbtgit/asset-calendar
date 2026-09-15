@@ -1,7 +1,7 @@
 import { afterEach, expect, it, vi } from "vite-plus/test";
 import * as auth from "@/api/auth";
 import { Route as AuthenticatedRoute } from "./_authenticated";
-import { Route as GroupsRoute } from "./_authenticated/administration.groups";
+import { Route as AdministrationRoute } from "./_authenticated/administration";
 import { Route as AuthenticatedIndexRoute } from "./_authenticated/index";
 import { Route as SignInRoute } from "./sign-in";
 
@@ -32,33 +32,33 @@ it("redirects an unavailable tenant context away from protected content", async 
   });
 });
 
-it("keeps the groups destination administrator-only", async () => {
+it("keeps the administration destination administrator-only", async () => {
   vi.spyOn(auth, "getAuthSnapshot").mockReturnValue({
     status: "authenticated",
     user: { role: "regular" } as auth.AuthUser,
   });
 
-  await expect(runBeforeLoad(GroupsRoute)).rejects.toMatchObject({
+  await expect(runBeforeLoad(AdministrationRoute)).rejects.toMatchObject({
     options: { to: "/calendar" },
   });
 });
 
-it("allows administrators through the groups guard", async () => {
+it("allows administrators through the administration guard", async () => {
   vi.spyOn(auth, "getAuthSnapshot").mockReturnValue({
     status: "authenticated",
     user: { role: "administrator" } as auth.AuthUser,
   });
 
-  await expect(runBeforeLoad(GroupsRoute)).resolves.toBeUndefined();
+  await expect(runBeforeLoad(AdministrationRoute)).resolves.toBeUndefined();
 });
 
-it("protects nested groups routes through the groups layout guard", async () => {
+it("protects nested administration routes through the administration guard", async () => {
   vi.spyOn(auth, "getAuthSnapshot").mockReturnValue({
     status: "authenticated",
     user: { role: "regular" } as auth.AuthUser,
   });
 
-  await expect(runBeforeLoad(GroupsRoute)).rejects.toMatchObject({
+  await expect(runBeforeLoad(AdministrationRoute)).rejects.toMatchObject({
     options: { to: "/calendar" },
   });
 });
@@ -69,7 +69,7 @@ it("does not treat users without an administrator role as administrators", async
     user: {} as auth.AuthUser,
   });
 
-  await expect(runBeforeLoad(GroupsRoute)).rejects.toMatchObject({
+  await expect(runBeforeLoad(AdministrationRoute)).rejects.toMatchObject({
     options: { to: "/calendar" },
   });
 });

@@ -15,7 +15,8 @@
     "pocketbase:reset": "node --env-file-if-exists=.env scripts/pocketbase.ts reset",
     "dev:all": "node --env-file-if-exists=.env scripts/dev.ts",
     "dev:full": "node --env-file-if-exists=.env scripts/dev.ts",
-    "prepare": "vp config"
+    "prepare": "vp config",
+    "verify": "vp check && vp test && vp build"
   },
   "dependencies": {
     "@tanstack/react-query": "5.102.8",

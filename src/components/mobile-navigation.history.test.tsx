@@ -18,7 +18,7 @@ const rootRoute = createRootRoute({
     return (
       <>
         <ShellHeader
-          activeModule={pathname === "/groups" ? "administration" : "calendar"}
+          activeModule={pathname.startsWith("/administration") ? "administration" : "calendar"}
           isAdministrator
           navigationKey={href}
         />
@@ -32,12 +32,20 @@ const calendarRoute = createRoute({
   path: "/calendar",
   component: () => <p>Calendar destination</p>,
 });
-const groupsRoute = createRoute({
+const administrationRoute = createRoute({
   getParentRoute: () => rootRoute,
+  path: "/administration",
+  component: () => <Outlet />,
+});
+const groupsRoute = createRoute({
+  getParentRoute: () => administrationRoute,
   path: "/groups",
   component: () => <p>Groups destination</p>,
 });
-const routeTree = rootRoute.addChildren([calendarRoute, groupsRoute]);
+const routeTree = rootRoute.addChildren([
+  calendarRoute,
+  administrationRoute.addChildren([groupsRoute]),
+]);
 
 afterEach(() => {
   cleanup();
@@ -63,11 +71,11 @@ it("keeps the selected route after the drawer closes without traversing history"
   fireEvent.click(screen.getByRole("link", { name: "Groups" }));
 
   await waitFor(() => {
-    expect(router.state.location.pathname).toBe("/groups");
-    expect(window.location.pathname).toBe("/groups");
+    expect(router.state.location.pathname).toBe("/administration/groups");
+    expect(window.location.pathname).toBe("/administration/groups");
   });
   await new Promise((resolve) => window.setTimeout(resolve, 10));
 
-  expect(router.state.location.pathname).toBe("/groups");
-  expect(window.location.pathname).toBe("/groups");
+  expect(router.state.location.pathname).toBe("/administration/groups");
+  expect(window.location.pathname).toBe("/administration/groups");
 });
