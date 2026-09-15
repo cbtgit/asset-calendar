@@ -1,0 +1,134 @@
+.users-directory-list {
+  display: grid;
+  gap: 0.75rem;
+  list-style: none;
+  margin: 1.5rem 0 0;
+  padding: 0;
+}
+
+.users-directory-row {
+  align-items: center;
+  background: var(--surface-raised, #fff);
+  border: 1px solid var(--border-subtle, #d7dce2);
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: minmax(12rem, 2fr) minmax(8rem, 1fr) minmax(8rem, 1fr) minmax(
+      8rem,
+      1fr
+    ) auto;
+  padding: 1rem;
+}
+
+.users-directory-row p,
+.users-directory-row small {
+  color: var(--text-muted, #5d6672);
+  display: block;
+  margin: 0.2rem 0 0;
+}
+
+.users-directory-label {
+  color: var(--text-muted, #5d6672);
+  display: block;
+  font-size: 0.75rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.users-directory-details,
+.users-directory-status-actions {
+  display: contents;
+}
+
+.users-directory-status-value {
+  display: block;
+  margin-top: 0.2rem;
+}
+
+.users-directory-edit {
+  align-items: center;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  color: var(--color-brand-dark);
+  cursor: pointer;
+  display: inline-flex;
+  flex: 0 0 auto;
+  font: inherit;
+  font-weight: 650;
+  justify-content: center;
+  min-height: 2.25rem;
+  padding: 0 var(--space-3);
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.users-directory-state {
+  align-items: flex-start;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.users-directory-state button {
+  padding: 0.5rem 0.75rem;
+}
+
+@media (max-width: 760px) {
+  .users-directory-row {
+    display: block;
+  }
+
+  .users-directory-details {
+    border-top: 1px solid var(--border-subtle, #d7dce2);
+    display: grid;
+    gap: 1rem;
+    grid-template-columns: minmax(0, 1fr) auto;
+    margin-top: 0.75rem;
+    padding-top: 0.75rem;
+  }
+
+  .users-directory-details > div {
+    min-width: 0;
+  }
+
+  .users-directory-details > div > span:not(.users-directory-label) {
+    display: block;
+    margin-top: 0.2rem;
+  }
+
+  .users-directory-status-actions {
+    border-top: 1px solid var(--border-subtle, #d7dce2);
+    display: grid;
+    gap: 0;
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-rows: auto auto auto;
+    margin-top: 0.75rem;
+    padding-top: 0.75rem;
+  }
+
+  .users-directory-status {
+    display: contents;
+  }
+
+  .users-directory-status-actions .users-directory-label {
+    grid-column: 1;
+    grid-row: 1;
+  }
+
+  .users-directory-status-actions .users-directory-status-value {
+    grid-column: 1;
+    grid-row: 2;
+  }
+
+  .users-directory-status-actions small {
+    grid-column: 1;
+    grid-row: 3;
+  }
+
+  .users-directory-status-actions > .users-directory-edit {
+    align-self: center;
+    grid-column: 2;
+    grid-row: 1 / span 2;
+    justify-self: stretch;
+  }
+}

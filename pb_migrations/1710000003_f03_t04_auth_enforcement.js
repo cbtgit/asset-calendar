@@ -49,11 +49,11 @@ migrate(
     });
 
     setRules(users, {
-      listRule: `${authenticated} && @request.auth.tenant = tenant`,
-      viewRule: `${authenticated} && @request.auth.tenant = tenant`,
-      createRule: administrator,
-      updateRule: `${authenticated} && @request.auth.tenant = tenant && (@request.auth.role = "administrator" || @request.auth.id = id)`,
-      deleteRule: `${administrator} && @request.auth.tenant = tenant`,
+      listRule: null,
+      viewRule: `${authenticated} && @request.auth.id = id`,
+      createRule: null,
+      updateRule: null,
+      deleteRule: null,
     });
 
     app.saveNoValidate(tenants);

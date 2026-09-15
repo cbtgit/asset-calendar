@@ -41,6 +41,13 @@ export function MobileNavigationLinks({
           </Link>
           <Link
             className="shell-mobile-child-link"
+            to="/administration/users"
+            onClick={onSelectRoute}
+          >
+            Users
+          </Link>
+          <Link
+            className="shell-mobile-child-link"
             to="/administration/booking-types"
             onClick={onSelectRoute}
           >
