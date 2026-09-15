@@ -8,6 +8,8 @@ const ORGANIZATIONAL_UNIT_COLLECTION = "organizational_units";
 const BOOKING_TYPE_COLLECTION = "booking_types";
 const RESOURCE_COLLECTION = "resources";
 const PROTECTED_USER_FIELDS = [
+  "email",
+  "email_normalized",
   "tenant",
   "role",
   "active",
@@ -343,11 +345,24 @@ function rejectInactive(event) {
   return event.next();
 }
 
+function administratorContext(event) {
+  const context = applicationContext({
+    ...event,
+    collection: {
+      name: USER_COLLECTION,
+      fields: [{ name: TENANT_FIELD }],
+    },
+  });
+  if (!context || context.auth.get("role") !== "administrator") deny();
+  return context;
+}
+
 module.exports = {
   checkRecords,
   createRecord,
   deleteRecord,
   groupsProjectionRoute,
+  administratorContext,
   rejectInactive,
   updateRecord,
 };

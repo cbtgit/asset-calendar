@@ -104,8 +104,9 @@ Each user has one role within their tenant:
   - May view and edit resource rates in the resource administration form.
   - May manage booking-type names and surcharges, and edit the tenant locale.
 
-The system must always retain at least one active administrator per tenant.
-Administrators cannot deactivate or demote the last active administrator.
+Administrators may demote or deactivate themselves through the normal mutation
+path. A tenant may temporarily have zero active administrators; PocketBase
+operator access is the documented recovery path.
 
 ### 4.3 User lifecycle and authentication
 
@@ -424,7 +425,7 @@ Administrators have access to an administration area for:
   - Create regular and administrator users.
   - Assign a group.
   - Send an invitation email so the user can create a password.
-  - Change role and deactivate users, subject to the last-admin rule.
+  - Change role, activate, deactivate, and resend invitations for users.
 - Exports.
   - Select a start date/time and end date/time.
   - Export CSV or Excel (`.xlsx`).
@@ -669,7 +670,7 @@ Automated tests must cover:
 - Administrator permissions.
 - Training and maintenance booking permissions.
 - Resource archive behavior.
-- User deactivation and last-administrator protection.
+- User deactivation, reactivation, and active-user selection.
 - Group deletion protection.
 - Rate, booker name, booker email, resource name, and group
   snapshots.

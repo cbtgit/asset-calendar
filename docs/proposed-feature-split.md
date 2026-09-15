@@ -906,7 +906,7 @@ interactions.
 
 ---
 
-### F06 - Tenant user administration and administrator protection
+### F06 - Tenant user administration and active-user selection
 
 **Can start:** When authentication, groups, and the shared
 application shell are stable
@@ -918,11 +918,11 @@ application shell are stable
 #### Description
 
 Allow administrators to create and manage tenant users while retaining booking
-history and always preserving at least one active administrator.
+history and providing active-user selection data for future booking workflows.
 
 The feature includes user listing, creation, group assignment, role changes,
-deactivation, invitation email delivery, password setup, and active-user
-selection data.
+reversible deactivation, invitation email delivery, password setup, and
+active-user selection data.
 
 #### PocketBase data and backend behavior
 
@@ -931,10 +931,11 @@ role, active status, and password-setup state.
 
 A creation hook derives the tenant server-side, verifies the selected group is
 in that tenant, normalizes the email, and sends the invitation email with a
-one-time password-setup link.
+one-time password-setup link. Email is immutable after creation.
 
-Before demotion or deactivation, a hook counts the other active administrators
-in the tenant and rejects the operation if none remain.
+Administrators may demote or deactivate themselves through the normal mutation
+path. A tenant may temporarily have zero active administrators; PocketBase
+operator access is the documented recovery path.
 
 Deactivation preserves the user and bookings but excludes that user from new
 booking selectors and booking creation.
@@ -947,27 +948,17 @@ confirmation behavior as desktop.
 
 #### Why hooks are needed
 
-Last-administrator protection depends on multiple records and current database
-state. UI controls cannot safely enforce it, especially under concurrent or
-direct requests. Tenant assignment must also come from trusted server context
-rather than a submitted tenant ID.
+Tenant assignment must come from trusted server context rather than a submitted
+tenant ID. Server-owned projections also prevent raw PocketBase auth metadata
+from becoming part of the browser contract.
 
 #### Completion outcome
 
 Administrators can manage same-tenant users without privilege escalation,
-cross-tenant assignment, historical deletion, or loss of the final active
-administrator. The complete user-management workflow is usable inside the
+cross-tenant assignment, or historical deletion. Inactive users remain editable
+but cannot sign in, start new protected actions, or appear in active-user
+selection data. The complete user-management workflow is usable inside the
 shared shell on desktop and narrow screens.
-
-#### Missing decisions
-
-- Whether email addresses can be changed.
-- Whether deactivation is reversible.
-- Whether inactive users may still be edited.
-- Name and email normalization rules.
-- Whether an administrator may deactivate themselves when another active
-  administrator exists.
-- Exact behavior of existing sessions after deactivation.
 
 ---
 
@@ -1369,8 +1360,8 @@ The feature includes:
 
 - Direct PocketBase tests for tenant, role, ownership, relationship, and
   protected-field attacks.
-- Booking boundary, overlap, snapshot, archive, deactivation, and
-  last-administrator tests.
+- Booking boundary, overlap, snapshot, archive, deactivation, reactivation,
+  and zero-active-administrator tests.
 - Maintenance privacy tests against raw responses.
 - Export authorization, timezone, DST, decimal, and parity tests.
 - TanStack Router guard and URL-state tests.

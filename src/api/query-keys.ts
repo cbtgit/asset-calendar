@@ -25,3 +25,10 @@ export const resourcesKeys = {
   list: () => [...resourcesKeys.all, "list"] as const,
   detail: (id: string) => [...resourcesKeys.all, "detail", id] as const,
 };
+
+export const usersKeys = {
+  all: ["users"] as const,
+  list: () => [...usersKeys.all, "list"] as const,
+  detail: (id: string) => [...usersKeys.all, "detail", id] as const,
+  active: () => [...usersKeys.all, "active"] as const,
+};

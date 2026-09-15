@@ -12,6 +12,14 @@ export function AdministrationRail() {
       >
         Groups
       </Link>
+      <Link
+        className="shell-rail-link"
+        to="/administration/users"
+        activeOptions={{ exact: false }}
+        activeProps={{ "data-active": "true" }}
+      >
+        Users
+      </Link>
 
       <Link
         className="shell-rail-link"

@@ -117,7 +117,7 @@ it("creates an invitation with a generic result without exposing its message", a
   const auth = await login.json();
   admin.authStore.save(auth.token, auth.record);
 
-  const usersResponse = await request(admin, "/api/collections/users/records", {
+  const usersResponse = await request(admin, "/api/users", {
     host: "tenant.localhost",
   });
   expect(usersResponse.status).toBe(200);

@@ -418,29 +418,44 @@ it("enforces the resolved tenant and role boundary on direct requests", async ()
   );
   expect(regularUserBookingTypeCreate.status).toBe(400);
 
-  const usersResponse = await request(admin, "/api/collections/users/records?page=1&perPage=50", {
-    host: "tenant.localhost",
-  });
+  const rawUsersResponse = await request(
+    admin,
+    "/api/collections/users/records?page=1&perPage=50",
+    {
+      host: "tenant.localhost",
+    },
+  );
+  expect(rawUsersResponse.status).toBe(403);
+
+  const usersResponse = await request(admin, "/api/users", { host: "tenant.localhost" });
   expect(usersResponse.status).toBe(200);
   const users = await usersResponse.json();
   expect(users.items).toHaveLength(4);
-
-  const foreignFilter = await request(
-    admin,
-    "/api/collections/users/records?filter=tenant='foreign-tenant'",
-    { host: "tenant.localhost" },
+  expect(users.items[0]).toEqual(
+    expect.objectContaining({
+      email: expect.any(String),
+      group: expect.any(String),
+      role: expect.any(String),
+      active: expect.any(Boolean),
+    }),
   );
-  expect(foreignFilter.status).toBe(200);
-  expect((await foreignFilter.json()).items).toHaveLength(0);
+  expect(users.items[0]).not.toHaveProperty("tenant");
+  expect(users.items[0]).not.toHaveProperty("email_normalized");
 
-  const foreignHost = await request(admin, "/api/collections/users/records", {
+  const foreignFilter = await request(admin, "/api/users?filter=tenant='foreign-tenant'", {
+    host: "tenant.localhost",
+  });
+  expect(foreignFilter.status).toBe(200);
+  expect((await foreignFilter.json()).items).toHaveLength(4);
+
+  const foreignHost = await request(admin, "/api/users", {
     host: "other.localhost",
   });
 
-  const unknownHost = await request(admin, "/api/collections/users/records", {
+  const unknownHost = await request(admin, "/api/users", {
     host: "missing.localhost",
   });
-  const rootHost = await request(admin, "/api/collections/users/records", {
+  const rootHost = await request(admin, "/api/users", {
     host: "localhost",
   });
   expect([foreignHost.status, unknownHost.status, rootHost.status]).toEqual([403, 403, 403]);
@@ -475,9 +490,9 @@ it("enforces the resolved tenant and role boundary on direct requests", async ()
     host: "tenant.localhost",
     body: { first_name: "Updated" },
   });
-  expect(ownUpdate.status).toBe(200);
+  expect(ownUpdate.status).toBe(403);
 
-  const deactivate = await request(admin, `/api/collections/users/records/${regularRecord.id}`, {
+  const deactivate = await request(admin, `/api/users/${regularRecord.id}`, {
     method: "PATCH",
     host: "tenant.localhost",
     body: { active: false },
@@ -499,6 +514,123 @@ it("enforces the resolved tenant and role boundary on direct requests", async ()
     host: "tenant.localhost",
   });
   expect(inactiveRequest.status).toBe(403);
+});
+
+it("manages users through projections and keeps active selection separate", async () => {
+  const admin = new PocketBase(harness.baseUrl);
+  await authenticate(admin, "admin-a@example.test");
+  const authRecord = admin.authStore.model;
+  if (!authRecord) throw new Error("Expected the administrator auth record.");
+
+  const createdResponse = await request(admin, "/api/users", {
+    method: "POST",
+    host: "tenant.localhost",
+    body: {
+      first_name: "  New  ",
+      last_name: "  Person  ",
+      email: "  New.Person@Example.Test  ",
+      group: authRecord.organizational_unit,
+      role: "administrator",
+      tenant: "client-selected-tenant-is-ignored",
+    },
+  });
+  expect(createdResponse.status).toBe(200);
+  const created = await createdResponse.json();
+  expect(created).toMatchObject({
+    first_name: "New",
+    last_name: "Person",
+    display_name: "New Person",
+    email: "new.person@example.test",
+    group: authRecord.organizational_unit,
+    role: "administrator",
+    active: true,
+    password_setup_pending: true,
+  });
+  expect(created).not.toHaveProperty("tenant");
+  expect(created).not.toHaveProperty("email_normalized");
+  expect(created).not.toHaveProperty("password");
+  expect(created).not.toHaveProperty("tokenKey");
+
+  const activeBeforeDeactivation = await request(admin, "/api/users/active", {
+    host: "tenant.localhost",
+  });
+  expect(activeBeforeDeactivation.status).toBe(200);
+  expect((await activeBeforeDeactivation.json()).items).toContainEqual(
+    expect.objectContaining({ id: created.id, email: "new.person@example.test" }),
+  );
+
+  const emailChange = await request(admin, `/api/users/${created.id}`, {
+    method: "PATCH",
+    host: "tenant.localhost",
+    body: { email: "changed@example.test" },
+  });
+  expect(emailChange.status).toBe(403);
+
+  const deactivated = await request(admin, `/api/users/${created.id}`, {
+    method: "PATCH",
+    host: "tenant.localhost",
+    body: { active: false, role: "regular" },
+  });
+  expect(deactivated.status).toBe(200);
+  expect(await deactivated.json()).toMatchObject({ active: false, role: "regular" });
+
+  const activeAfterDeactivation = await request(admin, "/api/users/active", {
+    host: "tenant.localhost",
+  });
+  expect((await activeAfterDeactivation.json()).items).not.toContainEqual(
+    expect.objectContaining({ id: created.id }),
+  );
+
+  const reactivated = await request(admin, `/api/users/${created.id}`, {
+    method: "PATCH",
+    host: "tenant.localhost",
+    body: { active: true },
+  });
+  expect(reactivated.status).toBe(200);
+
+  const invitationRecordsPath = `/api/collections/user_invitations/records?filter=${encodeURIComponent(
+    `user = '${created.id}'`,
+  )}`;
+  const invitationsBeforeInvalidResend = await request(admin, invitationRecordsPath, {
+    host: "tenant.localhost",
+  });
+  expect(invitationsBeforeInvalidResend.status).toBe(200);
+  const invitationsBeforeInvalidResendBody = await invitationsBeforeInvalidResend.json();
+
+  const invalidResend = await request(admin, `/api/users/${created.id}`, {
+    method: "PATCH",
+    host: "tenant.localhost",
+    body: { action: "resend_invitation", typo: true },
+  });
+  expect(invalidResend.status).toBe(400);
+  expect((await invalidResend.text()).toLowerCase()).toContain("unknown_user_field");
+
+  const invitationsAfterInvalidResend = await request(admin, invitationRecordsPath, {
+    host: "tenant.localhost",
+  });
+  expect(invitationsAfterInvalidResend.status).toBe(200);
+  expect(await invitationsAfterInvalidResend.json()).toEqual(invitationsBeforeInvalidResendBody);
+
+  const resend = await request(admin, `/api/users/${created.id}`, {
+    method: "PATCH",
+    host: "tenant.localhost",
+    body: { action: "resend_invitation" },
+  });
+  expect(resend.status).toBe(200);
+
+  const duplicate = await request(admin, "/api/users", {
+    method: "POST",
+    host: "tenant.localhost",
+    body: {
+      first_name: "Another",
+      last_name: "Person",
+      email: " NEW.PERSON@example.test ",
+      group: authRecord.organizational_unit,
+      role: "regular",
+    },
+  });
+  expect(duplicate.status).toBe(400);
+  expect((await duplicate.text()).toLowerCase()).toContain("email_already_exists");
 });
 
 it("derives booking type normalization on the server", async () => {
