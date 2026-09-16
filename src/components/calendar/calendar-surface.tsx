@@ -61,7 +61,7 @@ export function CalendarSurface({ search }: CalendarSurfaceProps) {
 
   useEffect(() => {
     if (resources.isPending || resources.isError) return;
-    if (search.resource) return;
+    if (search.resource || activeResources.length !== 1) return;
 
     const nextResource = firstActiveResourceId;
     if (nextResource === search.resource) return;
@@ -70,7 +70,14 @@ export function CalendarSurface({ search }: CalendarSurfaceProps) {
       search: (current) => ({ ...current, resource: nextResource }),
       replace: true,
     });
-  }, [firstActiveResourceId, navigate, resources.isError, resources.isPending, search.resource]);
+  }, [
+    activeResources.length,
+    firstActiveResourceId,
+    navigate,
+    resources.isError,
+    resources.isPending,
+    search.resource,
+  ]);
 
   useEffect(() => {
     if (isMobile && search.view !== "day") {
