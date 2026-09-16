@@ -26,6 +26,11 @@ export const resourcesKeys = {
   detail: (id: string) => [...resourcesKeys.all, "detail", id] as const,
 };
 
+export const calendarKeys = {
+  all: ["calendar"] as const,
+  resources: () => [...calendarKeys.all, "resources"] as const,
+};
+
 export const usersKeys = {
   all: ["users"] as const,
   list: () => [...usersKeys.all, "list"] as const,

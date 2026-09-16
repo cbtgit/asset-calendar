@@ -12,7 +12,12 @@ type ShellHeaderProps = {
 export function ShellHeader({ activeModule, isAdministrator, navigationKey }: ShellHeaderProps) {
   return (
     <header className="shell-header">
-      <Link className="shell-brand" to="/calendar" aria-label="Asset Calendar home">
+      <Link
+        className="shell-brand"
+        to="/calendar"
+        search={{ date: "", view: "week", resource: "" }}
+        aria-label="Asset Calendar home"
+      >
         <span className="shell-brand-mark" aria-hidden="true">
           AC
         </span>
@@ -23,6 +28,7 @@ export function ShellHeader({ activeModule, isAdministrator, navigationKey }: Sh
           className="shell-module-link"
           data-active={activeModule === "calendar" ? "true" : undefined}
           to="/calendar"
+          search={{ date: "", view: "week", resource: "" }}
         >
           Calendar
         </Link>

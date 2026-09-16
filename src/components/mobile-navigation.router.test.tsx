@@ -107,7 +107,10 @@ it("logs out without traversing drawer history or revisiting guarded content", a
   });
   await router.load();
   saveAdministrator();
-  await router.navigate({ to: "/calendar" });
+  await router.navigate({
+    to: "/calendar",
+    search: { date: "", view: "week", resource: "" },
+  });
   render(
     <QueryClientProvider client={new QueryClient()}>
       <RouterProvider router={router} />
