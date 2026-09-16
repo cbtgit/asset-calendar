@@ -17,6 +17,7 @@ import { Route as UnavailableRouteImport } from './routes/unavailable'
 import { Route as AuthenticatedIndexRouteImport } from './routes/_authenticated/index'
 import { Route as AuthenticatedAdministrationRouteImport } from './routes/_authenticated/administration'
 import { Route as AuthenticatedCalendarRouteImport } from './routes/_authenticated/calendar'
+import { Route as AuthenticatedAdministrationBillingRouteImport } from './routes/_authenticated/administration.billing'
 import { Route as AuthenticatedAdministrationBookingTypesRouteImport } from './routes/_authenticated/administration.booking-types'
 import { Route as AuthenticatedAdministrationGroupsRouteImport } from './routes/_authenticated/administration.groups'
 import { Route as AuthenticatedAdministrationResourcesRouteImport } from './routes/_authenticated/administration.resources'
@@ -75,6 +76,12 @@ const AuthenticatedCalendarRoute = AuthenticatedCalendarRouteImport.update({
   path: '/calendar',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
+const AuthenticatedAdministrationBillingRoute =
+  AuthenticatedAdministrationBillingRouteImport.update({
+    id: '/billing',
+    path: '/billing',
+    getParentRoute: () => AuthenticatedAdministrationRoute,
+  } as any)
 const AuthenticatedAdministrationBookingTypesRoute =
   AuthenticatedAdministrationBookingTypesRouteImport.update({
     id: '/booking-types',
@@ -185,6 +192,7 @@ export interface FileRoutesByFullPath {
   '/unavailable': typeof UnavailableRoute
   '/administration': typeof AuthenticatedAdministrationRouteWithChildren
   '/calendar': typeof AuthenticatedCalendarRoute
+  '/administration/billing': typeof AuthenticatedAdministrationBillingRoute
   '/administration/booking-types': typeof AuthenticatedAdministrationBookingTypesRouteWithChildren
   '/administration/groups': typeof AuthenticatedAdministrationGroupsRouteWithChildren
   '/administration/resources': typeof AuthenticatedAdministrationResourcesRouteWithChildren
@@ -211,6 +219,7 @@ export interface FileRoutesByTo {
   '/administration': typeof AuthenticatedAdministrationRouteWithChildren
   '/calendar': typeof AuthenticatedCalendarRoute
   '/': typeof AuthenticatedIndexRoute
+  '/administration/billing': typeof AuthenticatedAdministrationBillingRoute
   '/groups/new': typeof AuthenticatedGroupsNewRoute
   '/administration/booking-types/new': typeof AuthenticatedAdministrationBookingTypesNewRoute
   '/administration/groups/new': typeof AuthenticatedAdministrationGroupsNewRoute
@@ -235,6 +244,7 @@ export interface FileRoutesById {
   '/_authenticated/administration': typeof AuthenticatedAdministrationRouteWithChildren
   '/_authenticated/calendar': typeof AuthenticatedCalendarRoute
   '/_authenticated/': typeof AuthenticatedIndexRoute
+  '/_authenticated/administration/billing': typeof AuthenticatedAdministrationBillingRoute
   '/_authenticated/administration/booking-types': typeof AuthenticatedAdministrationBookingTypesRouteWithChildren
   '/_authenticated/administration/groups': typeof AuthenticatedAdministrationGroupsRouteWithChildren
   '/_authenticated/administration/resources': typeof AuthenticatedAdministrationResourcesRouteWithChildren
@@ -263,6 +273,7 @@ export interface FileRouteTypes {
     | '/unavailable'
     | '/administration'
     | '/calendar'
+    | '/administration/billing'
     | '/administration/booking-types'
     | '/administration/groups'
     | '/administration/resources'
@@ -289,6 +300,7 @@ export interface FileRouteTypes {
     | '/administration'
     | '/calendar'
     | '/'
+    | '/administration/billing'
     | '/groups/new'
     | '/administration/booking-types/new'
     | '/administration/groups/new'
@@ -312,6 +324,7 @@ export interface FileRouteTypes {
     | '/_authenticated/administration'
     | '/_authenticated/calendar'
     | '/_authenticated/'
+    | '/_authenticated/administration/billing'
     | '/_authenticated/administration/booking-types'
     | '/_authenticated/administration/groups'
     | '/_authenticated/administration/resources'
@@ -396,6 +409,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/calendar'
       preLoaderRoute: typeof AuthenticatedCalendarRouteImport
       parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/administration/billing': {
+      id: '/_authenticated/administration/billing'
+      path: '/billing'
+      fullPath: '/administration/billing'
+      preLoaderRoute: typeof AuthenticatedAdministrationBillingRouteImport
+      parentRoute: typeof AuthenticatedAdministrationRoute
     }
     '/_authenticated/administration/booking-types': {
       id: '/_authenticated/administration/booking-types'
@@ -604,6 +624,7 @@ const AuthenticatedAdministrationUsersRouteWithChildren =
   )
 
 interface AuthenticatedAdministrationRouteChildren {
+  AuthenticatedAdministrationBillingRoute: typeof AuthenticatedAdministrationBillingRoute
   AuthenticatedAdministrationBookingTypesRoute: typeof AuthenticatedAdministrationBookingTypesRouteWithChildren
   AuthenticatedAdministrationGroupsRoute: typeof AuthenticatedAdministrationGroupsRouteWithChildren
   AuthenticatedAdministrationResourcesRoute: typeof AuthenticatedAdministrationResourcesRouteWithChildren
@@ -612,6 +633,8 @@ interface AuthenticatedAdministrationRouteChildren {
 
 const AuthenticatedAdministrationRouteChildren: AuthenticatedAdministrationRouteChildren =
   {
+    AuthenticatedAdministrationBillingRoute:
+      AuthenticatedAdministrationBillingRoute,
     AuthenticatedAdministrationBookingTypesRoute:
       AuthenticatedAdministrationBookingTypesRouteWithChildren,
     AuthenticatedAdministrationGroupsRoute:

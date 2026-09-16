@@ -10,20 +10,23 @@
 }
 
 .booking-types-list {
+  align-content: start;
   display: grid;
   gap: var(--space-3);
   list-style: none;
   margin: var(--space-6) 0 0;
+  min-width: 0;
   padding: 0;
 }
 
 .booking-type-row {
   align-items: center;
-  border-bottom: 1px solid var(--color-border);
+  background: var(--surface-raised, #fff);
+  border: 1px solid var(--border-subtle, #d7dce2);
   display: flex;
   gap: var(--space-4);
   justify-content: space-between;
-  padding: var(--space-4) 0;
+  padding: 1rem;
 }
 
 .booking-type-name {
@@ -54,6 +57,7 @@
   flex: 0 0 auto;
   color: var(--color-text) !important;
   font-variant-numeric: tabular-nums;
+  text-align: right;
 }
 
 .booking-type-edit {
@@ -93,5 +97,11 @@
 
   .booking-type-price {
     display: none;
+  }
+}
+
+@media (width >= 48rem) {
+  .booking-type-edit {
+    padding-inline: calc(var(--space-3) - 2px);
   }
 }

@@ -1,5 +1,6 @@
 import { useEffect, useRef } from "react";
 import { Button } from "@/components/base/Button";
+import { CloseButton } from "@/components/base/CloseButton";
 import type { CalendarBooking } from "@/api/bookings";
 import { utcToApplicationDateTime } from "@/lib/time";
 
@@ -40,9 +41,12 @@ export function BookingDetail({
           <p className="eyebrow">Booking details</p>
           <h2 id="booking-detail-title">{booking.booker_display_name}</h2>
         </div>
-        <Button type="button" size="compact" onClick={onClose}>
-          Close
-        </Button>
+        <CloseButton
+          className="booking-form-close"
+          size="compact"
+          label="Close booking details"
+          onClick={onClose}
+        />
       </header>
       <dl className="booking-detail-list">
         <div>

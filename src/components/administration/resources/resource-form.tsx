@@ -16,7 +16,7 @@ type ResourceFormProps = {
   locale?: string;
 };
 
-function initialBaseRate(resource: Resource | undefined, locale: string): string {
+function initialHourlyPrice(resource: Resource | undefined, locale: string): string {
   return resource ? formatMinorUnitsForInput(resource.base_rate_minor_units, locale) : "";
 }
 
@@ -28,7 +28,7 @@ export function ResourceForm({
   locale = DEFAULT_MONEY_LOCALE,
 }: ResourceFormProps) {
   const [name, setName] = useState(initialResource?.name ?? "");
-  const [baseRate, setBaseRate] = useState(initialBaseRate(initialResource, locale));
+  const [hourlyPrice, setHourlyPrice] = useState(initialHourlyPrice(initialResource, locale));
   const [nameError, setNameError] = useState("");
   const [rateError, setRateError] = useState("");
   const [submitted, setSubmitted] = useState(false);
@@ -59,13 +59,15 @@ export function ResourceForm({
       return;
     }
 
-    const baseRateMinorUnits = toMinorUnits(baseRate, locale);
-    if (baseRateMinorUnits === undefined) {
-      setRateError(`Enter a valid base rate, such as ${formatMinorUnitsForInput(123450, locale)}.`);
+    const hourlyPriceMinorUnits = toMinorUnits(hourlyPrice, locale);
+    if (hourlyPriceMinorUnits === undefined) {
+      setRateError(
+        `Enter a valid hourly price, such as ${formatMinorUnitsForInput(123450, locale)}.`,
+      );
       return;
     }
     setRateError("");
-    const input = { name: trimmedName, baseRateMinorUnits };
+    const input = { name: trimmedName, baseRateMinorUnits: hourlyPriceMinorUnits };
     if (mode === "edit" && initialResource) {
       updateMutation.mutate({ id: initialResource.id, input }, { onSuccess: () => onSuccess?.() });
     } else {
@@ -103,14 +105,14 @@ export function ResourceForm({
           </p>
         ) : null}
         <NumberField
-          id="resource-base-rate"
-          label="Base rate"
-          name="baseRate"
-          value={baseRate}
+          id="resource-hourly-price"
+          label="Hourly price"
+          name="hourlyPrice"
+          value={hourlyPrice}
           required
           error={rateError || undefined}
           onChange={(event) => {
-            setBaseRate(event.target.value);
+            setHourlyPrice(event.target.value);
             setRateError("");
           }}
         />

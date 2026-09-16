@@ -1,5 +1,5 @@
 .groups-directory {
-  max-width: 62rem;
+  width: 100%;
 }
 
 .groups-directory-header {
@@ -24,7 +24,7 @@
 .groups-directory-dialog-actions button,
 .groups-directory-state button {
   display: inline-flex;
-  min-height: 2.75rem;
+  min-height: 2.5rem;
   align-items: center;
   justify-content: center;
   padding: 0 var(--space-4);
@@ -46,20 +46,23 @@
 }
 
 .groups-directory-list {
+  align-content: start;
   display: grid;
-  gap: 0;
+  gap: 0.75rem;
   margin: var(--space-6) 0 0;
+  min-width: 0;
   padding: 0;
   list-style: none;
 }
 
 .groups-directory-row {
   align-items: center;
+  background: var(--surface-raised, #fff);
+  border: 1px solid var(--border-subtle, #d7dce2);
   display: flex;
   gap: var(--space-4);
   justify-content: space-between;
-  padding: var(--space-4) 0;
-  border-bottom: 1px solid var(--color-border);
+  padding: 1rem;
 }
 
 .groups-directory-label {
@@ -195,5 +198,11 @@
 
   .groups-directory-hint {
     text-align: left;
+  }
+}
+
+@media (width >= 48rem) {
+  .groups-directory-action {
+    padding-inline: calc(var(--space-3) - 2px);
   }
 }

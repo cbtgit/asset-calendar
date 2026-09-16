@@ -31,6 +31,7 @@ it("shows the current user and toggles a single-action menu", () => {
   renderAccountMenu();
 
   const trigger = screen.getByRole("button", { name: "Person Example" });
+  expect(trigger.querySelector(".shell-account-chevron")).toBeTruthy();
   expect(screen.queryByRole("menu")).toBeNull();
   fireEvent.click(trigger);
   expect(screen.getByRole("menu")).toBeTruthy();

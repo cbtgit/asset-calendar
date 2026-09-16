@@ -6,6 +6,7 @@ import {
   calendarSlotBookingRange,
   calendarDateStringToApplicationDateTime,
   formatApplicationDate,
+  formatApplicationDateTime,
   utcToApplicationDateTime,
 } from "./time";
 
@@ -22,6 +23,10 @@ it("preserves FullCalendar's application-local slot time when converting to UTC"
   expect(localStart).toBe("2026-09-17T09:00");
   expect(utcStart).toBe("2026-09-17T07:00:00.000Z");
   expect(utcToApplicationDateTime(utcStart)).toBe("2026-09-17T09:00");
+});
+
+it("formats UTC values in the application locale and timezone", () => {
+  expect(formatApplicationDateTime("2026-09-17T06:00:00.000Z")).toBe("17.09.2026, 08.00");
 });
 
 it("adds a booking hour in Copenhagen across the spring DST transition", () => {

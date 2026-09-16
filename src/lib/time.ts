@@ -1,6 +1,7 @@
 import dayjs from "dayjs";
 import timezone from "dayjs/plugin/timezone";
 import utc from "dayjs/plugin/utc";
+import { DEFAULT_MONEY_LOCALE } from "./money";
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
@@ -47,4 +48,12 @@ export function calendarDateStringToApplicationDateTime(value: string): string {
 
 export function utcToApplicationDateTime(value: string): string {
   return dayjs.utc(value).tz(APPLICATION_TIME_ZONE).format("YYYY-MM-DDTHH:mm");
+}
+
+export function formatApplicationDateTime(value: string): string {
+  return new Intl.DateTimeFormat(DEFAULT_MONEY_LOCALE, {
+    dateStyle: "short",
+    timeStyle: "short",
+    timeZone: APPLICATION_TIME_ZONE,
+  }).format(new Date(value));
 }
