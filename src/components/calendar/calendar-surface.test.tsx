@@ -2,10 +2,14 @@ import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, expect, it, vi } from "vite-plus/test";
 import { useNavigate } from "@tanstack/react-router";
 import { useCalendarResourcesQuery } from "@/hooks/use-calendar-resources";
+import { useAuth } from "@/hooks/use-auth";
+import { useBookingsQuery } from "@/hooks/use-bookings";
 import { CalendarSurface } from "./calendar-surface";
 
 vi.mock("@tanstack/react-router", () => ({ useNavigate: vi.fn() }));
 vi.mock("@/hooks/use-calendar-resources", () => ({ useCalendarResourcesQuery: vi.fn() }));
+vi.mock("@/hooks/use-auth", () => ({ useAuth: vi.fn() }));
+vi.mock("@/hooks/use-bookings", () => ({ useBookingsQuery: vi.fn() }));
 
 afterEach(() => {
   cleanup();
@@ -14,6 +18,15 @@ afterEach(() => {
 
 beforeEach(() => {
   vi.mocked(useNavigate).mockReturnValue(vi.fn() as never);
+  vi.mocked(useAuth).mockReturnValue({
+    status: "authenticated",
+    user: { role: "regular" },
+  } as never);
+  vi.mocked(useBookingsQuery).mockReturnValue({
+    data: [],
+    isPending: false,
+    isError: false,
+  } as never);
   vi.mocked(useCalendarResourcesQuery).mockReturnValue({
     data: [
       { id: "resource-1", name: "Studio A" },

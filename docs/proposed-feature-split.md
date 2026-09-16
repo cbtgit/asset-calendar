@@ -1032,34 +1032,43 @@ current URL state, and view only permitted booking information.
 
 #### Description
 
-Allow regular users to create future regular bookings and allow tenant users to
-view the permitted booking details.
+Allow regular users to create bookings and allow tenant users to view the
+permitted booking details.
 
 The frontend provides a reusable booking form opened from day/week slots or a
-month date. The selected resource is implicit, regular type is automatic, and
-prices are absent.
+month date. The selected resource is implicit, regular-user bookings have a
+null booking type, and prices are absent. Administrators see additional user
+and booking-type selectors; regular users do not.
 
 The booking form is responsive from its first implementation. On desktop it
-uses the right-hand content pane while the resource pane remains available. On
-narrow screens it becomes a full-width or full-screen experience with the same
-field order, labels, validation, focus behavior, and authorization rules.
+uses the existing right-hand calendar pane as a contextual create/detail
+surface while the resource pane remains available. On narrow screens it
+becomes a full-width or full-screen experience with the same field order,
+labels, validation, focus behavior, and authorization rules.
 
 #### PocketBase data and backend behavior
 
 A booking migration creates tenant, resource, booked-for user, created-by user,
-type, UTC start and end, resource base-rate snapshot, booking-type surcharge
-snapshot, effective-rate snapshot, booker snapshots, resource/type-name
-snapshots, and timestamps.
+an optional booking type, UTC start and end, resource base-rate snapshot,
+booking-type surcharge snapshot, effective-rate snapshot, booker snapshots,
+resource and optional booking-type name snapshots, and timestamps. Regular-user
+bookings have a null booking type, a zero booking-type surcharge, and no
+booking-type name snapshot.
 
 A creation hook:
 
 1. Resolves the authenticated user and tenant.
-2. Derives tenant, ownership, type, and creator values server-side.
+2. Derives tenant, ownership, booking type, and creator values server-side.
+   Regular users are always assigned a null booking type; administrators may
+   select an allowed booking type.
 3. Rejects cross-tenant or archived relationships.
-4. Validates future start, positive duration, and 15-minute boundaries.
+4. Validates parseable start and end values, positive duration, and 15-minute
+   boundaries. Start times may be past, present, or future.
 5. Checks overlap on the same resource using end-exclusive intervals.
-6. Loads the applicable trusted resource base rate and booking-type surcharge.
-7. Copies booker, group, email, resource, type, and pricing snapshots.
+6. Loads the applicable trusted resource base rate and booking-type surcharge;
+   a null booking type contributes zero surcharge.
+7. Copies booker, group, email, resource, optional booking-type name, and
+   pricing snapshots.
 8. Rejects client attempts to supply protected values.
 
 Overlap is detected when:
@@ -1071,9 +1080,10 @@ AND existing.end > proposed.start
 
 #### Why hooks and snapshots are needed
 
-A user can bypass form validation and submit another tenant's resource, a
-privileged type, or a manipulated rate. The server must derive protected values
-from authenticated identity and trusted records.
+A user can bypass form validation and submit another tenant's resource, an
+administrator-only booking type, a forged booking type for a regular booking,
+or a manipulated rate. The server must derive protected values from
+authenticated identity and trusted records.
 
 Snapshots prevent later name, group, email, resource, booking-type, or pricing
 changes from rewriting historical invoicing data. Tenant currency is immutable,
@@ -1084,12 +1094,12 @@ database-level serialization is explicitly out of scope.
 
 #### Completion outcome
 
-A regular user can create a valid future booking. PocketBase independently
-enforces time, tenant, ownership, resource, conflict, and snapshot rules.
+A regular user can create a valid booking at any permitted time. PocketBase
+independently enforces interval, tenant, ownership, resource, conflict, and
+snapshot rules.
 
 #### Missing decisions
 
-- Grace and precision for the future-start check.
 - Default month-view start and end times.
 - Maximum practical booking duration.
 - Exact booking information shown on events versus details.

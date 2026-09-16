@@ -145,29 +145,27 @@ the booker.
 
 ### 5.1 Booking types
 
-Booking types are tenant-owned records. The intended MVP defines these
-permanent types for every tenant, but the current branch does not seed
-prefilled records:
+Booking types are tenant-owned records used for administrator-selected
+bookings. Regular bookings do not reference a booking type. The intended MVP
+supports these administrator-selectable types, but the current branch does not
+seed prefilled records:
 
-1. **Regular** - the default type for regular users and administrators, with a
-   zero surcharge.
-2. **Training** - available only to administrators, with an administrator-
+1. **Training** - available only to administrators, with an administrator-
    configurable name and surcharge.
-3. **Maintenance** - available only to administrators, always non-billable,
+2. **Maintenance** - available only to administrators, always non-billable,
    and used to block a resource.
 
 Administrators may create additional custom booking types. Custom types are
 billable, block the selected resource, and have an administrator-configurable
 name and surcharge. No booking type may be deleted. In the intended MVP,
 custom types may be archived permanently; archived types cannot be used for
-new bookings but remain available for historical records. The built-in types
-remain permanent; regular and maintenance semantics cannot be changed. The
-current branch has no archive action yet.
+new bookings but remain available for historical records. The current branch
+has no archive action yet.
 
 Regular users do not see a booking type field or the booking-type catalog. Their
-bookings are assigned the regular type automatically. Administrators may select
-any active type permitted for the workflow. Booking type cannot be changed
-after creation.
+bookings store a null booking type, a zero booking-type surcharge, and no
+booking-type name snapshot. Administrators may select an active booking type
+permitted for the workflow. Booking type cannot be changed after creation.
 
 ### 5.2 Time and availability
 
@@ -175,7 +173,8 @@ after creation.
 - Bookings must have a positive duration; the practical minimum is 15 minutes.
 - There is no configurable maximum duration.
 - Bookings may span midnight.
-- All new bookings must start in the future.
+- New bookings may start in the past, present, or future. No business-hours or
+  future-start eligibility check is applied.
 - Bookings are immediately confirmed after successful validation.
 - A resource supports one booking at a time.
 - Overlapping bookings are rejected, including overlaps with maintenance
@@ -245,7 +244,7 @@ For stable historical exports, the booking also stores:
 - The booker's group snapshot.
 - The booker's email snapshot.
 - The resource-name snapshot.
-- The booking-type name and system-kind snapshot.
+- The optional booking-type name snapshot.
 - The resource base-rate snapshot in integer minor units.
 - The booking-type surcharge snapshot in integer minor units.
 - The effective hourly-rate snapshot in integer minor units.
@@ -516,7 +515,6 @@ The MVP data model should include at least:
 - ID
 - Tenant ID
 - Display name
-- System kind: regular, training, maintenance, or custom
 - Surcharge in integer currency minor units
 - Active/archived status
 

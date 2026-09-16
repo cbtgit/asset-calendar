@@ -31,6 +31,12 @@ export const calendarKeys = {
   resources: () => [...calendarKeys.all, "resources"] as const,
 };
 
+export const bookingsKeys = {
+  all: ["bookings"] as const,
+  visible: (resourceId: string, start: string, end: string) =>
+    [...bookingsKeys.all, "visible", resourceId, start, end] as const,
+};
+
 export const usersKeys = {
   all: ["users"] as const,
   list: () => [...usersKeys.all, "list"] as const,

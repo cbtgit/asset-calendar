@@ -19,3 +19,9 @@ routerAdd("GET", "/api/groups/{id}", (event) =>
 routerAdd("GET", "/api/calendar/resources", (event) =>
   require(`${__hooks}/record-access.cjs`).calendarResourcesRoute(event),
 );
+routerAdd("GET", "/api/calendar/bookings", (event) =>
+  require(`${__hooks}/record-access.cjs`).calendarBookingsRoute(event),
+);
+routerAdd("POST", "/api/calendar/bookings", (event) =>
+  require(`${__hooks}/record-access.cjs`).calendarBookingCreateRoute(event),
+);
