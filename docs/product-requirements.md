@@ -90,18 +90,21 @@ Each user has one role within their tenant:
   - Edit and permanently delete their own bookings when the existing and
     proposed start times are at least 24 hours in the future.
   - Cannot edit or delete another user's booking.
-  - Cannot create training or maintenance bookings.
+  - Cannot create administrator-selected booking types, including
+    non-billable types.
   - Must not see prices in booking views or forms.
 - **Administrator**
   - View, create, and edit any booking.
   - Permanently delete any booking regardless of its current start time.
-  - Create regular, training, and maintenance bookings.
-  - Choose any active tenant user as the booker for a non-maintenance booking.
+  - Create regular and administrator-selected typed bookings.
+  - Choose any active tenant user as the booker for an administrator-selected
+    booking, including a non-billable booking.
   - Manage resources, groups, and users.
   - Export booking data as CSV or Excel.
   - May view booking type in booking details and administration forms.
   - May view and edit resource rates in the resource administration form.
-  - May manage booking-type names and surcharges, and edit the tenant locale.
+  - May manage booking-type names, surcharges, and the non-billable capability,
+    and edit the tenant locale.
 
 Administrators may demote or deactivate themselves through the normal mutation
 path. A tenant may temporarily have zero active administrators; PocketBase
@@ -145,28 +148,31 @@ the booker.
 ### 5.1 Booking types
 
 Booking types are tenant-owned records used for administrator-selected
-bookings. Regular bookings do not reference a booking type. The intended MVP
-supports these administrator-selectable types, but the current branch does not
-seed prefilled records:
+bookings. Each booking type has an administrator-configurable name, surcharge,
+and `nonbillable` capability flag. The flag defaults to `false`, so booking
+types are billable unless explicitly configured otherwise. Regular bookings do
+not reference a booking type.
 
-1. **Training** - available only to administrators, with an administrator-
-   configurable name and surcharge.
-2. **Maintenance** - available only to administrators, always non-billable,
-   and used to block a resource.
+The intended MVP supports training, maintenance, and custom booking types, but
+the current branch does not seed prefilled records. These labels describe
+administrator workflow conventions; billing behavior is controlled by the
+`nonbillable` flag rather than by a booking type's name. A non-billable type
+has no billable surcharge or effective rate, while a billable type uses its
+configured surcharge. Both kinds block the selected resource and otherwise
+follow the same booking workflow.
 
-Administrators may create additional custom booking types. Custom types are
-billable, block the selected resource, and have an administrator-configurable
-name and surcharge. No booking type may be deleted. In the intended MVP,
-custom types may be archived permanently; archived types cannot be used for
-new bookings but remain available for historical records. The current branch
-has no archive action yet.
+No booking type may be deleted. In the intended MVP, booking types may be
+archived permanently; archived types cannot be used for new bookings but
+remain available for historical records. The current branch has no archive
+action yet.
 
 Regular users do not see a booking type field or the booking-type catalog. Their
 bookings store a null booking type, a zero booking-type surcharge, and no
 booking-type name snapshot. Administrators may select an active booking type
-permitted for the workflow. Regular users cannot change booking type after
-creation. Administrators may change it while editing, with snapshots and rate
-fields recalculated using the same trusted calculation as booking creation.
+permitted for the workflow and must still select an active user for the booking.
+Regular users cannot change booking type after creation. Administrators may
+change it while editing, with snapshots and rate fields recalculated using the
+same trusted calculation as booking creation.
 
 ### 5.2 Time and availability
 
@@ -211,6 +217,10 @@ calculation as booking creation.
 - Each active billable booking type has one non-negative surcharge stored as an
   exact integer number of currency minor units. The effective hourly rate is
   the resource base rate plus the selected booking-type surcharge.
+- A non-billable booking type has a zero surcharge and zero effective hourly
+  rate, regardless of any client-submitted value. Non-billable bookings still
+  participate in resource conflict checks and use the normal booking ownership
+  and visibility rules.
 - User-facing rate fields display the tenant currency using `Intl.NumberFormat`.
   Input accepts only the current tenant locale's unambiguous decimal and
   grouping syntax; malformed, mixed-separator, negative, fractional-minor,
@@ -228,8 +238,9 @@ calculation as booking creation.
   number of fractional digits using exact decimal half-up arithmetic.
 - Duration and billing calculations use actual elapsed time between the stored
   UTC instants, including across daylight-saving transitions.
-- Maintenance bookings have no billable rate or amount. Their stored rate
-  components are zero or absent according to the booking schema contract.
+- A booking configured with a non-billable type has no billable rate or amount.
+  Its stored rate components are zero or absent according to the booking
+  schema contract.
 - Prices must never appear in calendar views, booking details, or regular-user
   forms.
 - Resource base rates and booking-type surcharges are visible only in
@@ -349,9 +360,10 @@ resource pane remains available on the left. On mobile, the form is full-screen.
   shown as a form field.
 - Regular users see date and time fields only; booking type is hidden and
   defaults to regular.
-- Administrators see the booking type field and, for non-maintenance bookings,
-  may select the active user the booking is for.
-- Maintenance bookings use the creating administrator as the booker.
+- Administrators see the booking type field and may select the active user the
+  booking is for. This user selection remains required for non-billable types.
+- Non-billable types use the same user assignment, ownership, and presentation
+  rules as other booking types for now.
 - The form does not show prices.
 
 ### 6.5 Viewing, editing, and deleting bookings
@@ -365,8 +377,9 @@ Regular users see:
 - Booker's display name.
 - Booking start and end time.
 - Edit/delete actions only when the 24-hour rule permits them.
-- Maintenance bookings appear only as generic unavailable blocks, without the
-  booking type or administrator identity.
+- Non-billable bookings currently appear like other bookings. Maintenance-
+  specific generic unavailable rendering and administrator-identity hiding are
+  separate follow-up behavior.
 
 Administrators may additionally see booking type and may edit or delete any
 booking. Administrators may change the booked-for user and booking type while
@@ -410,9 +423,12 @@ Administrators have access to an administration area for:
 - Booking types.
   - View existing booking types. The current branch does not provide seeded
     regular, training, or maintenance records.
-  - Configure the training name and surcharge.
-  - Create and edit custom billable booking types. Permanent archival is part
-    of the intended MVP but is not implemented in the current branch.
+  - Create and edit booking types, including their name, surcharge, and
+    non-billable capability.
+  - Configure the training name and surcharge when the type is billable.
+  - Create and edit custom billable or non-billable booking types. Permanent
+    archival is part of the intended MVP but is not implemented in the current
+    branch.
   - View archived types for administration and historical records; archived
     types cannot be used for new bookings.
   - Regular and maintenance semantics are protected, and no type can be
@@ -443,8 +459,8 @@ Administrators have access to an administration area for:
 Administrators use the regular booking area to create, edit, and permanently
 delete eligible future bookings. The administration area does not contain a
 separate booking management screen. From the regular booking area,
-administrators can create bookings for active users and create training or
-maintenance bookings.
+administrators can create bookings for active users and select a billable or
+non-billable booking type.
 
 The administration area uses the shared authenticated shell and is responsive
 from the first administration feature. Groups administration
@@ -462,7 +478,7 @@ authorization and tenant scoping.
 
 The selected interval uses the application timezone, with an inclusive start
 and exclusive end. Include bookings whose start time is greater than or equal
-to the selected start and less than the selected end. Exclude maintenance and
+to the selected start and less than the selected end. Exclude non-billable and
 permanently deleted bookings.
 
 Each exported booking row contains:
@@ -677,7 +693,9 @@ Automated tests must cover:
 - End-exclusive overlap detection.
 - Regular-user ownership and 24-hour rules.
 - Administrator permissions.
-- Training and maintenance booking permissions.
+- Administrator-selected billable and non-billable booking-type permissions.
+- Non-billable booking types produce zero surcharge and zero effective rate and
+  remain ordinary user-assigned bookings.
 - Resource archive behavior.
 - User deactivation, reactivation, and active-user selection.
 - Group deletion protection.
@@ -705,8 +723,10 @@ The MVP is ready when:
    inside the 24-hour window.
 6. A regular user cannot edit/delete another user's booking.
 7. An administrator can create, edit, and permanently delete any booking.
-8. An administrator can create training and maintenance bookings.
-9. Maintenance blocks the resource but does not appear in invoicing exports.
+8. An administrator can create bookings with billable and non-billable types
+   for active users.
+9. Non-billable bookings block the resource but do not appear in invoicing
+   exports.
 10. Calendar behavior works in desktop day/week/month views and mobile daily
     view.
 11. Mobile uses a compact resource selector and no drag-and-drop.

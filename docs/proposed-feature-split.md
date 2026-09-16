@@ -9,8 +9,9 @@ The non-secret production operator boundary is defined in the
 
 The current `create-booking-type` branch covers the administrator booking-type
 catalog for listing, creating, and editing records. It does not seed
-prefilled booking types, and booking-type archival is not implemented yet.
-The F05 descriptions below retain the planned follow-up work where noted.
+prefilled booking types, expose a non-billable capability yet, or implement
+booking-type archival. The F05 descriptions below retain the planned
+follow-up work where noted.
 
 ## 1. Purpose
 
@@ -802,11 +803,15 @@ are introduced in a later feature.
 - Resource prices and metadata are not secret. Same-tenant authenticated users
   may read them; administrator authorization still protects writes.
 - Booking types are already delivered and remain administrator-read and
-  administrator-write. Only their money-formatting call sites and tests are
-  updated to use the centralized policy.
+  administrator-write. The booking-type contract includes an explicit
+  `nonbillable` capability that defaults to `false`; non-billable types have
+  zero surcharge and zero effective billing rate while retaining normal user
+  assignment, conflict, calendar, and detail behavior.
 - Booking creation, calendar behavior, booking snapshots, invoicing,
   projections, rate redaction, tenant settings, and booking-type archival or
-  system-type follow-up work remain outside this increment.
+  system-type follow-up work remain outside this increment. The non-billable
+  capability is a billing concern and does not by itself add maintenance
+  privacy or generic-unavailable rendering.
 
 #### F05 implementation issue drafts
 
@@ -1191,49 +1196,46 @@ or protected history.
 #### Description
 
 Extend booking creation for administrators. Administrators can create regular
-or training bookings for an active user and maintenance blocks for a resource.
+or typed bookings for an active user. Booking types carry an explicit
+`nonbillable` capability rather than relying on a name such as Maintenance.
 
-Training uses the resource base rate plus the training-type surcharge.
-Maintenance has no rate, is not billable, participates in conflicts, and
-appears to regular users only as a generic unavailable interval. Custom types
-use the resource base rate plus their tenant-wide surcharge.
+Billable types use the resource base rate plus the selected type surcharge.
+Non-billable types have zero surcharge and zero effective billing rate, still
+participate in conflicts, and otherwise appear and behave like ordinary
+bookings for now. The existing administrator user selector remains required.
 
-Administrative, training, and maintenance creation uses the same responsive
+Administrative and typed booking creation uses the same responsive
 booking surfaces established by F08 and F09. On narrow screens, administrators
-can select the booking type and active user where applicable, complete the
-form, view permitted details, and confirm destructive actions without
-horizontal scrolling or a separate authorization path.
+can select the booking type and active user, complete the form, view permitted
+details, and confirm destructive actions without horizontal scrolling or a
+separate authorization path.
 
 #### PocketBase and backend behavior
 
 The booking hook verifies administrator role and same-tenant relationships.
-For regular, training, and custom billable bookings, it sets the selected
-active user as owner, the administrator as creator, and selects the correct
-trusted resource base rate and booking-type surcharge.
+For typed bookings, it sets the selected active user as owner, the
+administrator as creator, and selects the correct trusted resource base rate
+and booking-type surcharge. For a non-billable type, the server stores zero
+surcharge and zero effective rate regardless of client input.
 
-For maintenance, it records the creating administrator as required by the PRD,
-stores no rate, and includes the interval in overlap checks.
-
-Regular-user responses must be sanitized so they do not contain maintenance
-type or administrator identity. Administrators receive the permitted full
-detail.
+Non-billable bookings include the interval in overlap checks and continue to
+use the existing booking projection. Maintenance-specific ownership,
+administrator-identity hiding, and generic unavailable rendering are separate
+follow-up behavior and are not implied by the `nonbillable` flag.
 
 #### Why rate selection and privacy belong on the backend
 
 The client selects a booking type, not a numeric rate. PocketBase loads the
-resource and type configuration and derives the effective rate, preventing
-manipulated or stale snapshots.
-
-Changing an administrator name to "Unavailable" in React does not protect the
-identity if the raw response contains it. Role-aware projection must happen
-before the data reaches the browser.
+resource and type configuration and derives the effective rate, forcing zero
+for non-billable types and preventing manipulated or stale snapshots.
 
 #### Completion outcome
 
-Administrators can create all booking types. Training and custom billable types
-use the resource base rate plus the selected type surcharge, maintenance blocks
-the resource and remains non-billable, and regular users cannot discover
-private maintenance information.
+Administrators can create all configured booking types. Billable types use the
+resource base rate plus the selected type surcharge. Non-billable types block
+the resource without a billable rate and remain ordinary visible bookings for
+now. Maintenance-specific privacy and generic unavailable behavior remain
+outside this capability change.
 
 #### Missing decisions
 

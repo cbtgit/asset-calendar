@@ -83,6 +83,21 @@ it("creates a booking type with a tenant-scoped payload", async () => {
     tenant: "tenant-id",
     name: "Training",
     surcharge_minor_units: 1250,
+    nonbillable: false,
+  });
+});
+
+it("creates a non-billable booking type with an explicit capability", async () => {
+  const create = vi.fn().mockResolvedValue({});
+  vi.spyOn(pocketbase, "collection").mockReturnValue({ create } as never);
+
+  await createBookingType({ name: "Maintenance", nonbillable: true });
+
+  expect(create).toHaveBeenCalledWith({
+    tenant: "tenant-id",
+    name: "Maintenance",
+    surcharge_minor_units: 0,
+    nonbillable: true,
   });
 });
 
@@ -117,5 +132,6 @@ it("updates a booking type without changing its tenant", async () => {
   expect(update).toHaveBeenCalledWith("booking-type-1", {
     name: "Updated training",
     surcharge_minor_units: 1500,
+    nonbillable: false,
   });
 });

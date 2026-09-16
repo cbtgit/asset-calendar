@@ -14,6 +14,7 @@ const bookingType: BookingType = {
   name: "Operations",
   name_normalized: "operations",
   surcharge_minor_units: 1250,
+  nonbillable: false,
   archived_at: "",
   created: "2026-01-01T00:00:00Z",
   updated: "2026-01-01T00:00:00Z",

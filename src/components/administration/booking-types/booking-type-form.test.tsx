@@ -31,6 +31,7 @@ function renderEditForm() {
           name: "Operations",
           name_normalized: "operations",
           surcharge_minor_units: 1250,
+          nonbillable: false,
           archived_at: "",
           created: "2026-01-01T00:00:00Z",
           updated: "2026-01-01T00:00:00Z",
@@ -177,7 +178,34 @@ describe("BookingTypeForm", () => {
       expect(updateBookingType).toHaveBeenCalledWith("booking-type-1", {
         name: "Updated operations",
         surchargeMinorUnits: 1250,
+        nonbillable: false,
       }),
     );
+  });
+
+  it("submits non-billable booking types without a surcharge", async () => {
+    const createBookingType = vi
+      .spyOn(bookingTypesApi, "createBookingType")
+      .mockResolvedValue({} as never);
+    renderForm();
+
+    fireEvent.change(screen.getByLabelText("Booking type"), {
+      target: { value: "Maintenance" },
+    });
+    fireEvent.change(screen.getByLabelText("Hourly price"), {
+      target: { value: "125" },
+    });
+    fireEvent.click(screen.getByLabelText("Non-billable booking type"));
+
+    expect(screen.getByLabelText("Hourly price")).toHaveProperty("disabled", true);
+    expect((screen.getByLabelText("Hourly price") as HTMLInputElement).value).toBe("");
+    fireEvent.submit(screen.getByRole("button", { name: "Save" }).closest("form")!);
+
+    await waitFor(() => expect(createBookingType).toHaveBeenCalled());
+    expect(createBookingType.mock.calls[0][0]).toEqual({
+      name: "Maintenance",
+      surchargeMinorUnits: 0,
+      nonbillable: true,
+    });
   });
 });

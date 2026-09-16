@@ -20,7 +20,13 @@ export function BookingTypesDirectory() {
           <div className="booking-type-name">
             <span className="booking-type-label">Booking type</span>
             <strong>{bookingType.name}</strong>
-            <p>{bookingType.archived_at ? "Archived" : "Active"}</p>
+            <p>
+              {bookingType.archived_at
+                ? "Archived"
+                : bookingType.nonbillable
+                  ? "Non-billable"
+                  : "Billable"}
+            </p>
           </div>
           <div className="booking-type-price">
             <span className="booking-type-label">Hourly price</span>

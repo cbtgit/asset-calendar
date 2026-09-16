@@ -152,11 +152,31 @@ function normalizeBookingType(event, info, record, tenantId) {
   if (trimmedName.length > 200) {
     throw new BadRequestError("booking_type_name_too_long");
   }
+  const nonbillable = hasField(info.body, "nonbillable")
+    ? info.body.nonbillable
+    : record.get("nonbillable") === true;
+  if (typeof nonbillable !== "boolean") {
+    throw new BadRequestError("booking_type_nonbillable_invalid");
+  }
+  const configuredSurcharge = hasField(info.body, "surcharge_minor_units")
+    ? info.body.surcharge_minor_units
+    : record.get("surcharge_minor_units") || 0;
+  if (
+    typeof configuredSurcharge !== "number" ||
+    !Number.isSafeInteger(configuredSurcharge) ||
+    configuredSurcharge < 0
+  ) {
+    throw new BadRequestError("booking_type_surcharge_invalid");
+  }
   info.body.name = trimmedName;
   info.body.name_normalized = trimmedName.toLowerCase();
+  info.body.nonbillable = nonbillable;
+  info.body.surcharge_minor_units = nonbillable ? 0 : configuredSurcharge;
   info.body[TENANT_FIELD] = tenantId;
   record.set("name", trimmedName);
   record.set("name_normalized", info.body.name_normalized);
+  record.set("nonbillable", nonbillable);
+  record.set("surcharge_minor_units", info.body.surcharge_minor_units);
   record.set(TENANT_FIELD, tenantId);
 }
 
@@ -382,13 +402,16 @@ function normalizeBooking(event, info, record, context) {
     resource.get("base_rate_minor_units"),
     "booking_resource_rate_invalid",
   );
-  const bookingTypeSurcharge = bookingType
-    ? ensureBookingRate(
-        bookingType.get("surcharge_minor_units") || 0,
-        "booking_type_surcharge_invalid",
-      )
-    : 0;
-  const effectiveRate = resourceRate + bookingTypeSurcharge;
+  const nonbillable = bookingType?.get("nonbillable") === true;
+  const storedResourceRate = nonbillable ? 0 : resourceRate;
+  const bookingTypeSurcharge =
+    bookingType && !nonbillable
+      ? ensureBookingRate(
+          bookingType.get("surcharge_minor_units") || 0,
+          "booking_type_surcharge_invalid",
+        )
+      : 0;
+  const effectiveRate = storedResourceRate + bookingTypeSurcharge;
   if (!Number.isSafeInteger(effectiveRate)) {
     throw new BadRequestError("booking_effective_rate_invalid");
   }
@@ -402,7 +425,7 @@ function normalizeBooking(event, info, record, context) {
   info.body.booking_type = bookingType?.id ?? "";
   info.body.start = startValue;
   info.body.end = endValue;
-  info.body.resource_base_rate_minor_units = resourceRate;
+  info.body.resource_base_rate_minor_units = storedResourceRate;
   info.body.booking_type_surcharge_minor_units = bookingTypeSurcharge;
   info.body.effective_rate_minor_units = effectiveRate;
   info.body.booker_display_name_snapshot = userDisplayName(bookedForUser);
@@ -418,7 +441,7 @@ function normalizeBooking(event, info, record, context) {
   record.set("booking_type", bookingType?.id ?? "");
   record.set("start", startValue);
   record.set("end", endValue);
-  record.set("resource_base_rate_minor_units", resourceRate);
+  record.set("resource_base_rate_minor_units", storedResourceRate);
   record.set("booking_type_surcharge_minor_units", bookingTypeSurcharge);
   record.set("effective_rate_minor_units", effectiveRate);
   record.set("booker_display_name_snapshot", userDisplayName(bookedForUser));
@@ -536,13 +559,16 @@ function normalizeBookingUpdate(event, info, record, context, storedRecord = rec
     resource.get("base_rate_minor_units"),
     "booking_resource_rate_invalid",
   );
-  const bookingTypeSurcharge = bookingType
-    ? ensureBookingRate(
-        bookingType.get("surcharge_minor_units") || 0,
-        "booking_type_surcharge_invalid",
-      )
-    : 0;
-  const effectiveRate = resourceRate + bookingTypeSurcharge;
+  const nonbillable = bookingType?.get("nonbillable") === true;
+  const storedResourceRate = nonbillable ? 0 : resourceRate;
+  const bookingTypeSurcharge =
+    bookingType && !nonbillable
+      ? ensureBookingRate(
+          bookingType.get("surcharge_minor_units") || 0,
+          "booking_type_surcharge_invalid",
+        )
+      : 0;
+  const effectiveRate = storedResourceRate + bookingTypeSurcharge;
   if (!Number.isSafeInteger(effectiveRate)) {
     throw new BadRequestError("booking_effective_rate_invalid");
   }
@@ -551,7 +577,7 @@ function normalizeBookingUpdate(event, info, record, context, storedRecord = rec
   const bookingTypeName = bookingType?.get("name") ?? "";
   info.body.booked_for_user = bookedForUser.id;
   info.body.booking_type = bookingType?.id ?? "";
-  info.body.resource_base_rate_minor_units = resourceRate;
+  info.body.resource_base_rate_minor_units = storedResourceRate;
   info.body.booking_type_surcharge_minor_units = bookingTypeSurcharge;
   info.body.effective_rate_minor_units = effectiveRate;
   info.body.booker_display_name_snapshot = userDisplayName(bookedForUser);
@@ -562,7 +588,7 @@ function normalizeBookingUpdate(event, info, record, context, storedRecord = rec
 
   record.set("booked_for_user", bookedForUser.id);
   record.set("booking_type", bookingType?.id ?? "");
-  record.set("resource_base_rate_minor_units", resourceRate);
+  record.set("resource_base_rate_minor_units", storedResourceRate);
   record.set("booking_type_surcharge_minor_units", bookingTypeSurcharge);
   record.set("effective_rate_minor_units", effectiveRate);
   record.set("booker_display_name_snapshot", userDisplayName(bookedForUser));

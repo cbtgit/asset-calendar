@@ -195,6 +195,24 @@ it("creates role-safe bookings with snapshots and end-exclusive conflicts", asyn
   expect(bookingTypeResponse.status).toBe(200);
   const bookingType = await bookingTypeResponse.json();
 
+  const nonbillableTypeResponse = await request(admin, "/api/collections/booking_types/records", {
+    method: "POST",
+    host: "tenant.localhost",
+    body: {
+      tenant: adminRecord.tenant,
+      name: "Maintenance",
+      surcharge_minor_units: 9000,
+      nonbillable: true,
+    },
+  });
+  expect(nonbillableTypeResponse.status).toBe(200);
+  const nonbillableType = await nonbillableTypeResponse.json();
+  expect(nonbillableType).toMatchObject({
+    name: "Maintenance",
+    surcharge_minor_units: 0,
+    nonbillable: true,
+  });
+
   const regularBooking = await createBooking(regular, {
     resource: resource.id,
     start: scenarioTime(),
@@ -267,13 +285,31 @@ it("creates role-safe bookings with snapshots and end-exclusive conflicts", asyn
   });
   expect(administratorBookingBody).not.toHaveProperty("effective_rate_minor_units");
 
+  const nonbillableBooking = await createBooking(admin, {
+    resource: resource.id,
+    booked_for_user: regularRecord.id,
+    booking_type: nonbillableType.id,
+    start: scenarioTime(5),
+    end: scenarioTime(6),
+  });
+  expect(nonbillableBooking.status).toBe(200);
+  const nonbillableBookingBody = await nonbillableBooking.json();
+  expect(nonbillableBookingBody).toMatchObject({
+    resource: resource.id,
+    booked_for_user: regularRecord.id,
+    created_by_user: adminRecord.id,
+    booking_type: nonbillableType.id,
+    booking_type_name: "Maintenance",
+  });
+
   const privileged = new PocketBase(harness.baseUrl);
   await authenticateSuperuser(privileged);
   const storedBookings = await request(privileged, "/api/collections/bookings/records", {
     host: "tenant.localhost",
   });
   expect(storedBookings.status).toBe(200);
-  const storedBooking = (await storedBookings.json()).items.find(
+  const storedBookingItems = (await storedBookings.json()).items;
+  const storedBooking = storedBookingItems.find(
     (item: { id: string }) => item.id === regularBookingBody.id,
   );
   expect(storedBooking).toMatchObject({
@@ -290,17 +326,27 @@ it("creates role-safe bookings with snapshots and end-exclusive conflicts", asyn
     resource_name_snapshot: "Room A",
     booking_type_name_snapshot: "",
   });
+  const storedNonbillableBooking = storedBookingItems.find(
+    (item: { id: string }) => item.id === nonbillableBookingBody.id,
+  );
+  expect(storedNonbillableBooking).toMatchObject({
+    resource_base_rate_minor_units: 0,
+    booking_type_surcharge_minor_units: 0,
+    effective_rate_minor_units: 0,
+    booked_for_user: regularRecord.id,
+    created_by_user: adminRecord.id,
+  });
 
   const regularVisible = await request(
     regular,
     "/api/calendar/bookings?resource=" +
       encodeURIComponent(resource.id) +
-      `&start=${encodeURIComponent(scenarioTime(-1))}&end=${encodeURIComponent(scenarioTime(5))}`,
+      `&start=${encodeURIComponent(scenarioTime(-1))}&end=${encodeURIComponent(scenarioTime(7))}`,
     { host: "tenant.localhost" },
   );
   expect(regularVisible.status).toBe(200);
   const regularVisibleBody = await regularVisible.json();
-  expect(regularVisibleBody.items).toHaveLength(3);
+  expect(regularVisibleBody.items).toHaveLength(4);
   expect(regularVisibleBody.items[0]).toMatchObject({
     resource: resource.id,
     booker_display_name: "Regular A",
@@ -312,7 +358,7 @@ it("creates role-safe bookings with snapshots and end-exclusive conflicts", asyn
     admin,
     "/api/calendar/bookings?resource=" +
       encodeURIComponent(resource.id) +
-      `&start=${encodeURIComponent(scenarioTime(-1))}&end=${encodeURIComponent(scenarioTime(5))}`,
+      `&start=${encodeURIComponent(scenarioTime(-1))}&end=${encodeURIComponent(scenarioTime(7))}`,
     { host: "tenant.localhost" },
   );
   expect(administratorVisible.status).toBe(200);

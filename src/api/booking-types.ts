@@ -11,6 +11,7 @@ export type BookingType = {
   name: string;
   name_normalized: string;
   surcharge_minor_units: number;
+  nonbillable: boolean;
   archived_at: string;
   created: string;
   updated: string;
@@ -19,6 +20,7 @@ export type BookingType = {
 export type BookingTypeCreate = {
   name: string;
   surchargeMinorUnits?: number;
+  nonbillable?: boolean;
 };
 
 export type BookingTypeUpdate = BookingTypeCreate;
@@ -29,6 +31,7 @@ type BookingTypePayload = {
   tenant: string;
   name: string;
   surcharge_minor_units: number;
+  nonbillable: boolean;
 };
 
 function records() {
@@ -67,6 +70,7 @@ function toBookingTypePayload(input: BookingTypeCreate, tenant: string): Booking
     tenant,
     name,
     surcharge_minor_units: input.surchargeMinorUnits ?? 0,
+    nonbillable: input.nonbillable ?? false,
   };
 }
 
@@ -92,6 +96,7 @@ export async function updateBookingType(
     return await records().update(id, {
       name: input.name.trim(),
       surcharge_minor_units: input.surchargeMinorUnits ?? 0,
+      nonbillable: input.nonbillable ?? false,
     });
   } catch (cause) {
     throw toAppError(cause);
