@@ -1,3 +1,4 @@
+import dayjs from "dayjs";
 import { expect, it } from "vite-plus/test";
 import {
   APPLICATION_TIME_ZONE,
@@ -20,4 +21,14 @@ it("preserves FullCalendar's application-local slot time when converting to UTC"
   expect(localStart).toBe("2026-09-17T09:00");
   expect(utcStart).toBe("2026-09-17T07:00:00.000Z");
   expect(utcToApplicationDateTime(utcStart)).toBe("2026-09-17T09:00");
+});
+
+it("adds a booking hour in Copenhagen across the spring DST transition", () => {
+  const localStart = calendarDateStringToApplicationDateTime("2026-03-29T01:00:00+01:00");
+  const localEnd = dayjs
+    .tz(localStart, APPLICATION_TIME_ZONE)
+    .add(1, "hour")
+    .format("YYYY-MM-DDTHH:mm");
+
+  expect(localEnd).toBe("2026-03-29T03:00");
 });

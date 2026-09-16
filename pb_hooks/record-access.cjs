@@ -256,6 +256,10 @@ function parseBookingDate(value, code) {
   return date;
 }
 
+function pocketBaseDateValue(date) {
+  return date.toISOString().replace("T", " ");
+}
+
 function userDisplayName(record) {
   return [record.get("first_name"), record.get("last_name")]
     .map((value) => (typeof value === "string" ? value.trim() : ""))
@@ -359,7 +363,12 @@ function normalizeBooking(event, info, record, context) {
     "",
     0,
     0,
-    { tenant: tenantId, resource: resource.id, start: startValue, end: endValue },
+    {
+      tenant: tenantId,
+      resource: resource.id,
+      start: pocketBaseDateValue(start),
+      end: pocketBaseDateValue(end),
+    },
   );
   const overlaps = existingBookings.some((existing) => {
     const existingStart = Date.parse(String(existing.get("start")));

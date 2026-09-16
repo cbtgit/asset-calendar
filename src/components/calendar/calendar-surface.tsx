@@ -264,7 +264,10 @@ export function CalendarSurface({ search }: CalendarSurfaceProps) {
                         return;
                       }
                       const localStart = calendarDateStringToApplicationDateTime(click.dateStr);
-                      const localEnd = dayjs(localStart).add(1, "hour").format("YYYY-MM-DDTHH:mm");
+                      const localEnd = dayjs
+                        .tz(localStart, APPLICATION_TIME_ZONE)
+                        .add(1, "hour")
+                        .format("YYYY-MM-DDTHH:mm");
                       setBookingDraft({
                         kind: "create",
                         start: applicationDateTimeToUtc(localStart),
