@@ -27,6 +27,18 @@ function initialDateTime(value: string | undefined) {
   return { date: local.slice(0, 10), time: local.slice(11, 16) };
 }
 
+function submittedDateTime(
+  date: string,
+  time: string,
+  originalValue: string | undefined,
+  originalDateTime: { date: string; time: string },
+): string {
+  if (originalValue && date === originalDateTime.date && time === originalDateTime.time) {
+    return originalValue;
+  }
+  return applicationDateTimeToUtc(`${date}T${time}`);
+}
+
 function bookingErrorMessage(error: unknown): string {
   if (!error) return "";
   const applicationError = toAppError(error);
@@ -60,12 +72,12 @@ function bookingErrorMessage(error: unknown): string {
     return "Enter valid start and end dates and times.";
   }
   if (applicationError.kind === "unauthorized") {
-    return "You are not allowed to create this booking.";
+    return "You are not allowed to save this booking.";
   }
   if (applicationError.kind === "network" || applicationError.kind === "server") {
     return "We could not save the booking. Try again.";
   }
-  return "We could not create the booking. Check the details and try again.";
+  return "We could not save the booking. Check the details and try again.";
 }
 
 export function BookingForm({
@@ -111,8 +123,8 @@ export function BookingForm({
       return;
     }
 
-    const startValue = applicationDateTimeToUtc(`${startDate}T${startTime}`);
-    const endValue = applicationDateTimeToUtc(`${endDate}T${endTime}`);
+    const startValue = submittedDateTime(startDate, startTime, initialStart, start);
+    const endValue = submittedDateTime(endDate, endTime, initialEnd, end);
     if (new Date(endValue) <= new Date(startValue)) {
       setFormError("The end must be after the start.");
       return;

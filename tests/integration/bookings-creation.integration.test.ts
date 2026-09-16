@@ -13,6 +13,19 @@ import {
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
 const productionMigrations = resolve(root, "pb_migrations");
 const password = "Correct horse battery staple!";
+const scenarioStart = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+scenarioStart.setUTCMinutes(0, 0, 0);
+
+function scenarioTime(hours = 0, minutes = 0): string {
+  const value = new Date(scenarioStart);
+  value.setUTCHours(value.getUTCHours() + hours);
+  value.setUTCMinutes(value.getUTCMinutes() + minutes);
+  return value.toISOString();
+}
+
+function pocketBaseDate(value: string): string {
+  return value.replace("T", " ");
+}
 
 let harness: PocketBaseIntegrationHarness;
 let migrationsDir: string;
@@ -184,8 +197,8 @@ it("creates role-safe bookings with snapshots and end-exclusive conflicts", asyn
 
   const regularBooking = await createBooking(regular, {
     resource: resource.id,
-    start: "2026-11-30T09:00:00.000Z",
-    end: "2026-11-30T10:00:00.000Z",
+    start: scenarioTime(),
+    end: scenarioTime(1),
   });
   expect(regularBooking.status).toBe(200);
   const regularBookingBody = await regularBooking.json();
@@ -202,37 +215,37 @@ it("creates role-safe bookings with snapshots and end-exclusive conflicts", asyn
   const foreignOwner = await createBooking(regular, {
     resource: resource.id,
     booked_for_user: adminRecord.id,
-    start: "2026-11-30T10:00:00.000Z",
-    end: "2026-11-30T11:00:00.000Z",
+    start: scenarioTime(1),
+    end: scenarioTime(2),
   });
   expect(foreignOwner.status).toBe(403);
 
   const privilegedType = await createBooking(regular, {
     resource: resource.id,
     booking_type: bookingType.id,
-    start: "2026-11-30T10:00:00.000Z",
-    end: "2026-11-30T11:00:00.000Z",
+    start: scenarioTime(1),
+    end: scenarioTime(2),
   });
   expect(privilegedType.status).toBe(403);
 
   const invalidAlignment = await createBooking(regular, {
     resource: resource.id,
-    start: "2026-11-30T10:05:00.000Z",
-    end: "2026-11-30T11:00:00.000Z",
+    start: scenarioTime(1, 5),
+    end: scenarioTime(2),
   });
   expect(invalidAlignment.status).toBe(400);
 
   const adjacentBooking = await createBooking(regular, {
     resource: resource.id,
-    start: "2026-11-30T10:00:00.000Z",
-    end: "2026-11-30T11:00:00.000Z",
+    start: scenarioTime(1),
+    end: scenarioTime(2),
   });
   expect(adjacentBooking.status).toBe(200);
 
   const overlap = await createBooking(regular, {
     resource: resource.id,
-    start: "2026-11-30T10:45:00.000Z",
-    end: "2026-11-30T11:45:00.000Z",
+    start: scenarioTime(1, 45),
+    end: scenarioTime(2, 45),
   });
   expect(overlap.status).toBe(400);
 
@@ -240,8 +253,8 @@ it("creates role-safe bookings with snapshots and end-exclusive conflicts", asyn
     resource: resource.id,
     booked_for_user: regularRecord.id,
     booking_type: bookingType.id,
-    start: "2026-11-30T12:00:00.000Z",
-    end: "2026-11-30T13:00:00.000Z",
+    start: scenarioTime(3),
+    end: scenarioTime(4),
   });
   expect(administratorBooking.status).toBe(200);
   const administratorBookingBody = await administratorBooking.json();
@@ -282,7 +295,7 @@ it("creates role-safe bookings with snapshots and end-exclusive conflicts", asyn
     regular,
     "/api/calendar/bookings?resource=" +
       encodeURIComponent(resource.id) +
-      "&start=2026-11-30T08:00:00.000Z&end=2026-11-30T14:00:00.000Z",
+      `&start=${encodeURIComponent(scenarioTime(-1))}&end=${encodeURIComponent(scenarioTime(5))}`,
     { host: "tenant.localhost" },
   );
   expect(regularVisible.status).toBe(200);
@@ -299,7 +312,7 @@ it("creates role-safe bookings with snapshots and end-exclusive conflicts", asyn
     admin,
     "/api/calendar/bookings?resource=" +
       encodeURIComponent(resource.id) +
-      "&start=2026-11-30T08:00:00.000Z&end=2026-11-30T14:00:00.000Z",
+      `&start=${encodeURIComponent(scenarioTime(-1))}&end=${encodeURIComponent(scenarioTime(5))}`,
     { host: "tenant.localhost" },
   );
   expect(administratorVisible.status).toBe(200);
@@ -311,14 +324,14 @@ it("creates role-safe bookings with snapshots and end-exclusive conflicts", asyn
     method: "PATCH",
     host: "tenant.localhost",
     body: {
-      start: "2026-12-01T09:00:00.000Z",
-      end: "2026-12-01T10:00:00.000Z",
+      start: scenarioTime(24),
+      end: scenarioTime(25),
     },
   });
   expect(regularUpdate.status).toBe(200);
   expect(await regularUpdate.json()).toMatchObject({
     id: regularBookingBody.id,
-    start: "2026-12-01 09:00:00.000Z",
+    start: pocketBaseDate(scenarioTime(24)),
     can_edit: true,
     can_delete: true,
   });
@@ -331,8 +344,8 @@ it("creates role-safe bookings with snapshots and end-exclusive conflicts", asyn
       host: "tenant.localhost",
       body: {
         resource: archivedResource.id,
-        start: "2026-12-01T09:00:00.000Z",
-        end: "2026-12-01T10:00:00.000Z",
+        start: scenarioTime(24),
+        end: scenarioTime(25),
       },
     },
   );
@@ -424,8 +437,8 @@ it("creates role-safe bookings with snapshots and end-exclusive conflicts", asyn
 
   const archived = await createBooking(regular, {
     resource: archivedResource.id,
-    start: "2026-11-30T14:00:00.000Z",
-    end: "2026-11-30T15:00:00.000Z",
+    start: scenarioTime(5),
+    end: scenarioTime(6),
   });
   expect(archived.status).toBe(400);
 
@@ -439,8 +452,8 @@ it("creates role-safe bookings with snapshots and end-exclusive conflicts", asyn
     host: "tenant.localhost",
     body: {
       resource: resource.id,
-      start: "2026-11-30T15:00:00.000Z",
-      end: "2026-11-30T16:00:00.000Z",
+      start: scenarioTime(6),
+      end: scenarioTime(7),
     },
   });
   expect(rawCreate.status).toBe(403);

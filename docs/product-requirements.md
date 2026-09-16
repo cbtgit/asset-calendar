@@ -164,7 +164,9 @@ has no archive action yet.
 Regular users do not see a booking type field or the booking-type catalog. Their
 bookings store a null booking type, a zero booking-type surcharge, and no
 booking-type name snapshot. Administrators may select an active booking type
-permitted for the workflow. Booking type cannot be changed after creation.
+permitted for the workflow. Regular users cannot change booking type after
+creation. Administrators may change it while editing, with snapshots and rate
+fields recalculated using the same trusted calculation as booking creation.
 
 ### 5.2 Time and availability
 

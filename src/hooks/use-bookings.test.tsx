@@ -33,7 +33,14 @@ function setup() {
     <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
   );
   queryClient.setQueryData(
-    bookingsKeys.visible("tenant-id", range.resourceId, range.start, range.end),
+    bookingsKeys.visible(
+      "tenant-id",
+      "user-1",
+      "regular",
+      range.resourceId,
+      range.start,
+      range.end,
+    ),
     [booking],
   );
   return { queryClient, wrapper };
@@ -79,7 +86,12 @@ it("optimistically adds a booking and rolls it back on failure", async () => {
   });
   expect(
     queryClient.getQueryData<CalendarBooking[]>(
-      bookingsKeys.visible("tenant-id", ...(Object.values(range) as [string, string, string])),
+      bookingsKeys.visible(
+        "tenant-id",
+        "user-1",
+        "regular",
+        ...(Object.values(range) as [string, string, string]),
+      ),
     ),
   ).toHaveLength(2);
 
@@ -87,7 +99,14 @@ it("optimistically adds a booking and rolls it back on failure", async () => {
   await expect(mutation).rejects.toThrow("Conflict");
   expect(
     queryClient.getQueryData<CalendarBooking[]>(
-      bookingsKeys.visible("tenant-id", range.resourceId, range.start, range.end),
+      bookingsKeys.visible(
+        "tenant-id",
+        "user-1",
+        "regular",
+        range.resourceId,
+        range.start,
+        range.end,
+      ),
     ),
   ).toEqual([booking]);
 });
@@ -115,7 +134,12 @@ it("optimistically removes a booking when an update leaves the visible range", a
 
   expect(
     queryClient.getQueryData(
-      bookingsKeys.visible("tenant-id", ...(Object.values(range) as [string, string, string])),
+      bookingsKeys.visible(
+        "tenant-id",
+        "user-1",
+        "regular",
+        ...(Object.values(range) as [string, string, string]),
+      ),
     ),
   ).toEqual([]);
   resolveUpdate({ ...booking, start: "2026-12-01T09:00:00.000Z", end: "2026-12-01T10:00:00.000Z" });
@@ -139,7 +163,12 @@ it("optimistically deletes a booking and restores it on failure", async () => {
   });
   expect(
     queryClient.getQueryData(
-      bookingsKeys.visible("tenant-id", ...(Object.values(range) as [string, string, string])),
+      bookingsKeys.visible(
+        "tenant-id",
+        "user-1",
+        "regular",
+        ...(Object.values(range) as [string, string, string]),
+      ),
     ),
   ).toEqual([]);
 
@@ -147,7 +176,12 @@ it("optimistically deletes a booking and restores it on failure", async () => {
   await expect(mutation).rejects.toThrow("Delete failed");
   expect(
     queryClient.getQueryData(
-      bookingsKeys.visible("tenant-id", ...(Object.values(range) as [string, string, string])),
+      bookingsKeys.visible(
+        "tenant-id",
+        "user-1",
+        "regular",
+        ...(Object.values(range) as [string, string, string]),
+      ),
     ),
   ).toEqual([booking]);
 });

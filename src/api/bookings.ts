@@ -89,9 +89,16 @@ export async function deleteBooking(id: string): Promise<{ id: string }> {
 }
 
 export function calendarBookingsQueryOptions(range: BookingRange) {
-  const tenantId = getAuthSnapshot().user?.tenant ?? "";
+  const user = getAuthSnapshot().user;
   return queryOptions<CalendarBooking[]>({
-    queryKey: bookingsKeys.visible(tenantId, range.resourceId, range.start, range.end),
+    queryKey: bookingsKeys.visible(
+      user?.tenant ?? "",
+      user?.id ?? "",
+      user?.role ?? "",
+      range.resourceId,
+      range.start,
+      range.end,
+    ),
     queryFn: () => getCalendarBookings(range),
     enabled: Boolean(range.resourceId && range.start && range.end),
   });

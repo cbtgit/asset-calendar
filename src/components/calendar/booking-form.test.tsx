@@ -44,6 +44,8 @@ function renderForm(
         resourceId="resource-1"
         resourceName="Room A"
         isAdministrator={isAdministrator}
+        initialStart={initialBooking?.start}
+        initialEnd={initialBooking?.end}
         initialBooking={initialBooking}
         initialDate="2026-11-30"
         onCancel={vi.fn()}
@@ -154,5 +156,37 @@ it("initializes and submits administrator edit fields", async () => {
     end: "2026-11-30T10:00:00.000Z",
     booked_for_user: "user-2",
     booking_type: "type-1",
+  });
+});
+
+it("preserves an ambiguous autumn DST slot when the edit fields are unchanged", async () => {
+  const mutateAsync = vi.fn().mockResolvedValue({});
+  vi.spyOn(bookingsHook, "useCreateBookingMutation").mockReturnValue({
+    mutateAsync: vi.fn(),
+    isPending: false,
+    error: null,
+  } as never);
+  vi.spyOn(bookingsHook, "useUpdateBookingMutation").mockReturnValue({
+    mutateAsync,
+    isPending: false,
+    error: null,
+  } as never);
+  renderForm(false, {
+    id: "booking-fold",
+    resource: "resource-1",
+    start: "2026-10-25T00:30:00.000Z",
+    end: "2026-10-25T01:30:00.000Z",
+    booker_display_name: "Regular A",
+    can_edit: true,
+    can_delete: true,
+  });
+
+  fireEvent.submit(screen.getByRole("button", { name: "Save changes" }).closest("form")!);
+
+  await waitFor(() => expect(mutateAsync).toHaveBeenCalled());
+  expect(mutateAsync.mock.calls[0][0]).toMatchObject({
+    id: "booking-fold",
+    start: "2026-10-25T00:30:00.000Z",
+    end: "2026-10-25T01:30:00.000Z",
   });
 });

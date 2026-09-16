@@ -50,7 +50,7 @@ function overlaps(leftStart: string, leftEnd: string, rightStart: string, rightE
 
 function isVisibleQuery(
   queryKey: readonly unknown[],
-): queryKey is readonly ["bookings", "visible", string, string, string, string] {
+): queryKey is readonly ["bookings", "visible", string, string, string, string, string, string] {
   return queryKey[0] === "bookings" && queryKey[1] === "visible";
 }
 
@@ -76,7 +76,7 @@ export function useCreateBookingMutation() {
 
       for (const [queryKey, bookings] of previousQueries) {
         if (!bookings || !isVisibleQuery(queryKey)) continue;
-        const [, , , resourceId, rangeStart, rangeEnd] = queryKey;
+        const [, , , , , resourceId, rangeStart, rangeEnd] = queryKey;
         if (
           resourceId === input.resource &&
           overlaps(input.start, input.end, rangeStart, rangeEnd)
@@ -132,7 +132,7 @@ export function useUpdateBookingMutation() {
 
       for (const [queryKey, bookings] of previousQueries) {
         if (!bookings || !isVisibleQuery(queryKey)) continue;
-        const [, , , resourceId, rangeStart, rangeEnd] = queryKey;
+        const [, , , , , resourceId, rangeStart, rangeEnd] = queryKey;
         const current = bookings.find((booking) => booking.id === input.id);
         const updated = optimisticUpdatedBooking(current, input);
         if (!updated) continue;
