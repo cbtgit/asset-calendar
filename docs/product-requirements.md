@@ -94,8 +94,7 @@ Each user has one role within their tenant:
   - Must not see prices in booking views or forms.
 - **Administrator**
   - View, create, and edit any booking.
-  - Permanently delete a booking only while its current start time is in the
-    future.
+  - Permanently delete any booking regardless of its current start time.
   - Create regular, training, and maintenance bookings.
   - Choose any active tenant user as the booker for a non-maintenance booking.
   - Manage resources, groups, and users.
@@ -145,29 +144,29 @@ the booker.
 
 ### 5.1 Booking types
 
-Booking types are tenant-owned records. The intended MVP defines these
-permanent types for every tenant, but the current branch does not seed
-prefilled records:
+Booking types are tenant-owned records used for administrator-selected
+bookings. Regular bookings do not reference a booking type. The intended MVP
+supports these administrator-selectable types, but the current branch does not
+seed prefilled records:
 
-1. **Regular** - the default type for regular users and administrators, with a
-   zero surcharge.
-2. **Training** - available only to administrators, with an administrator-
+1. **Training** - available only to administrators, with an administrator-
    configurable name and surcharge.
-3. **Maintenance** - available only to administrators, always non-billable,
+2. **Maintenance** - available only to administrators, always non-billable,
    and used to block a resource.
 
 Administrators may create additional custom booking types. Custom types are
 billable, block the selected resource, and have an administrator-configurable
 name and surcharge. No booking type may be deleted. In the intended MVP,
 custom types may be archived permanently; archived types cannot be used for
-new bookings but remain available for historical records. The built-in types
-remain permanent; regular and maintenance semantics cannot be changed. The
-current branch has no archive action yet.
+new bookings but remain available for historical records. The current branch
+has no archive action yet.
 
 Regular users do not see a booking type field or the booking-type catalog. Their
-bookings are assigned the regular type automatically. Administrators may select
-any active type permitted for the workflow. Booking type cannot be changed
-after creation.
+bookings store a null booking type, a zero booking-type surcharge, and no
+booking-type name snapshot. Administrators may select an active booking type
+permitted for the workflow. Regular users cannot change booking type after
+creation. Administrators may change it while editing, with snapshots and rate
+fields recalculated using the same trusted calculation as booking creation.
 
 ### 5.2 Time and availability
 
@@ -175,7 +174,8 @@ after creation.
 - Bookings must have a positive duration; the practical minimum is 15 minutes.
 - There is no configurable maximum duration.
 - Bookings may span midnight.
-- All new bookings must start in the future.
+- New bookings may start in the past, present, or future. No business-hours or
+  future-start eligibility check is applied.
 - Bookings are immediately confirmed after successful validation.
 - A resource supports one booking at a time.
 - Overlapping bookings are rejected, including overlaps with maintenance
@@ -190,8 +190,12 @@ after creation.
 
 For a regular user's edit, both the current booking start and the proposed new
 start must be at least 24 hours in the future. Administrators are not subject
-to the 24-hour edit restriction. Administrator deletion follows the separate
-future-start rule in section 5.5.
+to the 24-hour edit restriction. Administrators may change the booked-for user
+and booking type, but the resource remains fixed. Any administrator-selected
+replacement user must be active and belong to the tenant. When an
+administrator changes the booked-for user or booking type, the server
+recalculates the affected snapshots and rate fields using the same trusted
+calculation as booking creation.
 
 ### 5.3 Pricing
 
@@ -245,7 +249,7 @@ For stable historical exports, the booking also stores:
 - The booker's group snapshot.
 - The booker's email snapshot.
 - The resource-name snapshot.
-- The booking-type name and system-kind snapshot.
+- The optional booking-type name snapshot.
 - The resource base-rate snapshot in integer minor units.
 - The booking-type surcharge snapshot in integer minor units.
 - The effective hourly-rate snapshot in integer minor units.
@@ -263,11 +267,13 @@ cutoff, but cannot change its booking type.
 - Deletion is permanent in the MVP.
 - There is no cancellation state.
 - A regular user can permanently delete only their own eligible booking.
-- An administrator can permanently delete a booking only while its current
-  start time is in the future. Deletion eligibility follows the current start
-  time if an administrator reschedules the booking.
+- An administrator can permanently delete any booking regardless of its
+  current start time.
 - Administrators may edit any booking without time restrictions, including
-  changing the dates and times of started or completed bookings.
+  changing the dates and times of started or completed bookings. The resource
+  remains fixed, while the booked-for user and booking type may be changed.
+  Changing either one recalculates the affected snapshots and rate fields
+  using the same trusted calculation as booking creation.
 - Deleted bookings are not included in exports.
 
 ## 6. Calendar and user experience
@@ -363,13 +369,17 @@ Regular users see:
   booking type or administrator identity.
 
 Administrators may additionally see booking type and may edit or delete any
-booking. Prices remain hidden in booking details.
+booking. Administrators may change the booked-for user and booking type while
+editing, but may not change the resource. Prices remain hidden in booking
+details.
 
 The resource remains fixed while editing. Moving a booking to another resource
 is not supported in the MVP.
 
 Deletion requires an explicit confirmation for every user type, including
-regular users and administrators.
+regular users and administrators. Administrator deletion is unrestricted by
+the booking's current start time. Regular deletion still requires ownership
+and a current start at least 24 hours in the future.
 
 ### 6.6 Calendar implementation
 
@@ -516,7 +526,6 @@ The MVP data model should include at least:
 - ID
 - Tenant ID
 - Display name
-- System kind: regular, training, maintenance, or custom
 - Surcharge in integer currency minor units
 - Active/archived status
 
@@ -695,8 +704,7 @@ The MVP is ready when:
 5. A regular user can edit/delete their own eligible booking but is blocked
    inside the 24-hour window.
 6. A regular user cannot edit/delete another user's booking.
-7. An administrator can create and edit any booking, and can delete a booking
-   only while its current start time is in the future.
+7. An administrator can create, edit, and permanently delete any booking.
 8. An administrator can create training and maintenance bookings.
 9. Maintenance blocks the resource but does not appear in invoicing exports.
 10. Calendar behavior works in desktop day/week/month views and mobile daily
