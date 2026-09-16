@@ -6,14 +6,13 @@ import type { DatesSetArg, EventInput } from "@fullcalendar/core";
 import daLocale from "@fullcalendar/core/locales/da";
 import { useNavigate } from "@tanstack/react-router";
 import { useCalendarResourcesQuery } from "@/hooks/use-calendar-resources";
-import type { CalendarView } from "@/routes/_authenticated/calendar";
+import {
+  getCalendarSearchFromDatesSet,
+  type CalendarSearch,
+  type CalendarView,
+} from "@/lib/calendar";
+import { APPLICATION_TIME_ZONE } from "@/lib/time";
 import "./calendar-surface.css";
-
-type CalendarSearch = {
-  date: string;
-  view: CalendarView;
-  resource: string;
-};
 
 type CalendarSurfaceProps = {
   search: CalendarSearch;
@@ -145,6 +144,7 @@ export function CalendarSurface({ search }: CalendarSurfaceProps) {
                 <button
                   className="calendar-resource-button"
                   data-selected={resource.id === selectedResource?.id ? "true" : undefined}
+                  aria-pressed={resource.id === selectedResource?.id}
                   key={resource.id}
                   type="button"
                   onClick={() => updateSearch({ resource: resource.id })}
@@ -161,6 +161,7 @@ export function CalendarSurface({ search }: CalendarSurfaceProps) {
               <FullCalendar
                 key={`${search.date}:${effectiveView}:${selectedResource.id}`}
                 plugins={[dayGridPlugin, timeGridPlugin]}
+                timeZone={APPLICATION_TIME_ZONE}
                 initialDate={search.date}
                 initialView={initialView}
                 firstDay={1}
@@ -184,15 +185,9 @@ export function CalendarSurface({ search }: CalendarSurfaceProps) {
                 eventDurationEditable={false}
                 events={[] satisfies EventInput[]}
                 datesSet={(range: DatesSetArg) => {
-                  const nextView =
-                    range.view.type === "dayGridMonth"
-                      ? "month"
-                      : range.view.type === "timeGridDay"
-                        ? "day"
-                        : "week";
-                  const nextDate = range.startStr.slice(0, 10);
-                  if (nextView !== search.view || nextDate !== search.date) {
-                    updateSearch({ view: nextView, date: nextDate });
+                  const nextSearch = getCalendarSearchFromDatesSet(range);
+                  if (nextSearch.view !== search.view || nextSearch.date !== search.date) {
+                    updateSearch(nextSearch);
                   }
                 }}
               />

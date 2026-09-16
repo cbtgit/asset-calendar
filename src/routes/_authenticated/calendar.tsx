@@ -1,18 +1,20 @@
 import { createFileRoute } from "@tanstack/react-router";
 import dayjs from "dayjs";
 import { CalendarSurface } from "@/components/calendar/calendar-surface";
+import { formatApplicationDate } from "@/lib/time";
+import type { CalendarView } from "@/lib/calendar";
 
-export type CalendarView = "day" | "week" | "month";
+export type { CalendarView } from "@/lib/calendar";
 
 export function normalizeCalendarDate(value: unknown): string {
   if (typeof value !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(value)) {
-    return dayjs().format("YYYY-MM-DD");
+    return formatApplicationDate(new Date());
   }
 
   const parsed = dayjs(value);
   return parsed.isValid() && parsed.format("YYYY-MM-DD") === value
     ? value
-    : dayjs().format("YYYY-MM-DD");
+    : formatApplicationDate(new Date());
 }
 
 export function normalizeCalendarView(value: unknown): CalendarView {
