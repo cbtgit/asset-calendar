@@ -1,4 +1,4 @@
-const USER_COLLECTION = "users";
+const USER_COLLECTION = "_pb_users_auth_";
 const BOOKING_COLLECTION = "bookings";
 
 function ensureIndex(collection, index) {
@@ -21,11 +21,11 @@ migrate(
       users,
       "CREATE INDEX idx_users_tenant_organizational_unit ON users (tenant, organizational_unit)",
     );
-    app.save(users);
+    app.saveNoValidate(users);
 
     const bookings = app.findCollectionByNameOrId(BOOKING_COLLECTION);
     ensureIndex(bookings, "CREATE INDEX idx_bookings_tenant_start ON bookings (tenant, start, id)");
-    app.save(bookings);
+    app.saveNoValidate(bookings);
   },
   () => {},
 );
