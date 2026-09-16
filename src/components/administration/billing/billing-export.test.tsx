@@ -1,6 +1,6 @@
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, expect, it, vi } from "vite-plus/test";
-import { downloadBillingCsv, searchBilling } from "@/api/billing";
+import { downloadBillingCsv, searchBilling, type BillingPreview } from "@/api/billing";
 import { BillingExport } from "./billing-export";
 
 vi.mock("@/api/billing", () => ({
@@ -63,6 +63,33 @@ it("announces invalid intervals without calling the server", () => {
 
   expect(screen.getByRole("alert").textContent).toContain("Select both");
   expect(searchBilling).not.toHaveBeenCalled();
+});
+
+it("disables date fields while a search is pending", async () => {
+  let resolveSearch!: (preview: BillingPreview) => void;
+  vi.mocked(searchBilling).mockReturnValue(
+    new Promise((resolve) => {
+      resolveSearch = resolve;
+    }),
+  );
+
+  render(<BillingExport />);
+  const start = screen.getByLabelText("Start");
+  const end = screen.getByLabelText("End");
+  fireEvent.change(start, { target: { value: "2026-09-01" } });
+  fireEvent.change(end, { target: { value: "2026-10-01" } });
+  fireEvent.click(screen.getByRole("button", { name: "Search" }));
+
+  await waitFor(() => {
+    expect(start).toHaveProperty("disabled", true);
+    expect(end).toHaveProperty("disabled", true);
+  });
+
+  resolveSearch({ start: "2026-09-01", end: "2026-10-01", groups: [], total: "0.00" });
+  await waitFor(() => {
+    expect(start).toHaveProperty("disabled", false);
+    expect(end).toHaveProperty("disabled", false);
+  });
 });
 
 it("keeps CSV download separate from Search", async () => {

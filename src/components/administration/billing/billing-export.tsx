@@ -2,16 +2,13 @@ import { useRef, useState, type FormEvent } from "react";
 import { downloadBillingCsv, searchBilling, type BillingPreview } from "@/api/billing";
 import { ApplicationError } from "@/api/errors";
 import { Button } from "@/components/base/Button";
+import { formatMinorUnitsForDisplay } from "@/lib/money";
 import { formatApplicationDateTime } from "@/lib/time";
 import "./billing-export.css";
 
 type BillingExportProps = {
   onHeadingReady?: (heading: HTMLHeadingElement | null) => void;
 };
-
-function displayAmount(amount: string): string {
-  return `${amount.replace(".", ",")} kr.`;
-}
 
 function errorMessage(error: unknown): string {
   if (error instanceof ApplicationError && error.kind === "validation") {
@@ -99,6 +96,7 @@ export function BillingExport({ onHeadingReady }: BillingExportProps) {
             name="start"
             type="date"
             value={start}
+            disabled={isSearching}
             aria-invalid={Boolean(validationError)}
             aria-describedby={validationError ? "billing-export-error" : undefined}
             onChange={(event) => updateInterval(setStart, event.target.value)}
@@ -111,6 +109,7 @@ export function BillingExport({ onHeadingReady }: BillingExportProps) {
             name="end"
             type="date"
             value={end}
+            disabled={isSearching}
             aria-invalid={Boolean(validationError)}
             aria-describedby={validationError ? "billing-export-error" : undefined}
             onChange={(event) => updateInterval(setEnd, event.target.value)}
@@ -157,7 +156,7 @@ export function BillingExport({ onHeadingReady }: BillingExportProps) {
                 <section className="billing-export-group" key={group.name}>
                   <div className="billing-export-group-header">
                     <h3>{group.name || "Unassigned Group/Org unit"}</h3>
-                    <strong>{displayAmount(group.total)}</strong>
+                    <strong>{formatMinorUnitsForDisplay(Number(group.total) * 100)}</strong>
                   </div>
                   <ul className="billing-export-records">
                     {group.records.map((record) => (
@@ -176,7 +175,7 @@ export function BillingExport({ onHeadingReady }: BillingExportProps) {
                           </span>
                           <span>{record.booking_type || "Standard booking"}</span>
                         </div>
-                        <strong>{displayAmount(record.amount)}</strong>
+                        <strong>{formatMinorUnitsForDisplay(Number(record.amount) * 100)}</strong>
                       </li>
                     ))}
                   </ul>
@@ -186,7 +185,7 @@ export function BillingExport({ onHeadingReady }: BillingExportProps) {
           )}
           <div className="billing-export-total">
             <span>Total for all records</span>
-            <strong>{displayAmount(result.total)}</strong>
+            <strong>{formatMinorUnitsForDisplay(Number(result.total) * 100)}</strong>
           </div>
         </div>
       ) : null}
