@@ -485,7 +485,12 @@
   .shell[data-active-module="administration"] .booking-types-list,
   .shell[data-active-module="administration"] .resources-list,
   .shell[data-active-module="administration"] .groups-directory-list,
-  .shell[data-active-module="administration"] .users-directory-list,
+  .shell[data-active-module="administration"] .users-directory-list {
+    min-height: 0;
+    flex: 1 1 auto;
+    overflow-y: auto;
+  }
+
   .shell[data-active-module="administration"] .billing-export-groups {
     min-height: 0;
     flex: 1 1 auto;
