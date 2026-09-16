@@ -25,6 +25,15 @@ export function applicationDateTimeToUtc(value: string): string {
   return dayjs.tz(value, APPLICATION_TIME_ZONE).toISOString();
 }
 
+export function addApplicationHours(value: string, hours: number): string {
+  const startUtc = applicationDateTimeToUtc(value);
+  return dayjs
+    .utc(startUtc)
+    .add(hours, "hour")
+    .tz(APPLICATION_TIME_ZONE)
+    .format("YYYY-MM-DDTHH:mm");
+}
+
 export function calendarDateStringToApplicationDateTime(value: string): string {
   return dayjs(value).tz(APPLICATION_TIME_ZONE).format("YYYY-MM-DDTHH:mm");
 }

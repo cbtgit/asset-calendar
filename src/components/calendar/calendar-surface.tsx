@@ -20,9 +20,9 @@ import {
   type CalendarSearch,
   type CalendarView,
 } from "@/lib/calendar";
-import dayjs from "dayjs";
 import {
   APPLICATION_TIME_ZONE,
+  addApplicationHours,
   applicationDateTimeToUtc,
   calendarDateStringToApplicationDateTime,
   formatApplicationDate,
@@ -264,10 +264,7 @@ export function CalendarSurface({ search }: CalendarSurfaceProps) {
                         return;
                       }
                       const localStart = calendarDateStringToApplicationDateTime(click.dateStr);
-                      const localEnd = dayjs
-                        .tz(localStart, APPLICATION_TIME_ZONE)
-                        .add(1, "hour")
-                        .format("YYYY-MM-DDTHH:mm");
+                      const localEnd = addApplicationHours(localStart, 1);
                       setBookingDraft({
                         kind: "create",
                         start: applicationDateTimeToUtc(localStart),
