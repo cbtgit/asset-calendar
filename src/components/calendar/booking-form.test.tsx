@@ -12,7 +12,10 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-function renderForm(isAdministrator: boolean) {
+function renderForm(
+  isAdministrator: boolean,
+  initialBooking?: Parameters<typeof BookingForm>[0]["initialBooking"],
+) {
   const queryClient = new QueryClient({ defaultOptions: { mutations: { retry: false } } });
   queryClient.setQueryData(usersKeys.active(), [
     {
@@ -41,6 +44,7 @@ function renderForm(isAdministrator: boolean) {
         resourceId="resource-1"
         resourceName="Room A"
         isAdministrator={isAdministrator}
+        initialBooking={initialBooking}
         initialDate="2026-11-30"
         onCancel={vi.fn()}
         onSuccess={vi.fn()}
@@ -106,4 +110,47 @@ it("shows a descriptive message for a booking conflict", async () => {
       "This resource is already booked during that time. Choose a different time.",
     ),
   );
+});
+
+it("initializes and submits administrator edit fields", async () => {
+  const mutateAsync = vi.fn().mockResolvedValue({});
+  vi.spyOn(bookingsHook, "useCreateBookingMutation").mockReturnValue({
+    mutateAsync: vi.fn(),
+    isPending: false,
+    error: null,
+  } as never);
+  vi.spyOn(bookingsHook, "useUpdateBookingMutation").mockReturnValue({
+    mutateAsync,
+    isPending: false,
+    error: null,
+  } as never);
+  renderForm(true, {
+    id: "booking-1",
+    resource: "resource-1",
+    start: "2026-11-30T08:00:00.000Z",
+    end: "2026-11-30T09:00:00.000Z",
+    booker_display_name: "Regular A",
+    booking_type: "type-1",
+    booking_type_name: "Training",
+    booked_for_user: "user-2",
+    can_edit: true,
+    can_delete: true,
+  });
+
+  expect(screen.getByText("Edit booking")).toBeTruthy();
+  expect(screen.getByLabelText("User")).toHaveProperty("value", "user-2");
+  expect(screen.getByLabelText("Booking type")).toHaveProperty("value", "type-1");
+
+  fireEvent.change(screen.getByLabelText("Start time"), { target: { value: "10:00" } });
+  fireEvent.change(screen.getByLabelText("End time"), { target: { value: "11:00" } });
+  fireEvent.submit(screen.getByRole("button", { name: "Save changes" }).closest("form")!);
+
+  await waitFor(() => expect(mutateAsync).toHaveBeenCalled());
+  expect(mutateAsync.mock.calls[0][0]).toMatchObject({
+    id: "booking-1",
+    start: "2026-11-30T09:00:00.000Z",
+    end: "2026-11-30T10:00:00.000Z",
+    booked_for_user: "user-2",
+    booking_type: "type-1",
+  });
 });

@@ -2,7 +2,8 @@ import { useState } from "react";
 import { toAppError } from "@/api/errors";
 import { activeUsersQueryOptions } from "@/api/users";
 import { bookingTypesQueryOptions } from "@/api/booking-types";
-import { useCreateBookingMutation } from "@/hooks/use-bookings";
+import { useCreateBookingMutation, useUpdateBookingMutation } from "@/hooks/use-bookings";
+import type { CalendarBooking } from "@/api/bookings";
 import { applicationDateTimeToUtc, utcToApplicationDateTime } from "@/lib/time";
 import { Button } from "@/components/base/Button";
 import { useQuery } from "@tanstack/react-query";
@@ -15,6 +16,7 @@ type BookingFormProps = {
   initialStart?: string;
   initialEnd?: string;
   initialDate?: string;
+  initialBooking?: CalendarBooking;
   onCancel: () => void;
   onSuccess: () => void;
 };
@@ -42,6 +44,18 @@ function bookingErrorMessage(error: unknown): string {
   if (message.includes("booking_duration_invalid")) {
     return "The end time must be after the start time.";
   }
+  if (message.includes("booking_edit_window_closed")) {
+    return "This booking can no longer be edited because its current start is too soon.";
+  }
+  if (message.includes("booking_edit_start_too_soon")) {
+    return "Regular bookings must be moved to a start at least 24 hours from now.";
+  }
+  if (message.includes("booking_booked_for_user_inactive")) {
+    return "Select an active user for this booking.";
+  }
+  if (message.includes("booking_type_archived")) {
+    return "Archived booking types cannot be selected.";
+  }
   if (message.includes("booking_start_invalid") || message.includes("booking_end_invalid")) {
     return "Enter valid start and end dates and times.";
   }
@@ -61,6 +75,7 @@ export function BookingForm({
   initialStart,
   initialEnd,
   initialDate,
+  initialBooking,
   onCancel,
   onSuccess,
 }: BookingFormProps) {
@@ -70,10 +85,11 @@ export function BookingForm({
   const [startTime, setStartTime] = useState(start.time);
   const [endDate, setEndDate] = useState(end.date || start.date || initialDate || "");
   const [endTime, setEndTime] = useState(end.time);
-  const [bookedForUser, setBookedForUser] = useState("");
-  const [bookingType, setBookingType] = useState("");
+  const [bookedForUser, setBookedForUser] = useState(initialBooking?.booked_for_user ?? "");
+  const [bookingType, setBookingType] = useState(initialBooking?.booking_type ?? "");
   const [formError, setFormError] = useState("");
-  const mutation = useCreateBookingMutation();
+  const createMutation = useCreateBookingMutation();
+  const updateMutation = useUpdateBookingMutation();
   const activeUsers = useQuery({ ...activeUsersQueryOptions(), enabled: isAdministrator });
   const bookingTypes = useQuery({ ...bookingTypesQueryOptions(), enabled: isAdministrator });
 
@@ -97,27 +113,51 @@ export function BookingForm({
     }
 
     try {
-      await mutation.mutateAsync({
-        resource: resourceId,
-        start: startValue,
-        end: endValue,
-        ...(isAdministrator
-          ? { booked_for_user: bookedForUser, booking_type: bookingType || null }
-          : {}),
-      });
+      if (initialBooking) {
+        const selectedUser = activeUsers.data?.find((user) => user.id === bookedForUser);
+        const selectedType = bookingTypes.data?.find((type) => type.id === bookingType);
+        await updateMutation.mutateAsync({
+          id: initialBooking.id,
+          start: startValue,
+          end: endValue,
+          ...(isAdministrator
+            ? { booked_for_user: bookedForUser, booking_type: bookingType || null }
+            : {}),
+          optimisticBooking: {
+            ...initialBooking,
+            ...(isAdministrator
+              ? {
+                  booker_display_name:
+                    selectedUser?.display_name ?? initialBooking.booker_display_name,
+                  booking_type_name: selectedType?.name ?? null,
+                }
+              : {}),
+          },
+        });
+      } else {
+        await createMutation.mutateAsync({
+          resource: resourceId,
+          start: startValue,
+          end: endValue,
+          ...(isAdministrator
+            ? { booked_for_user: bookedForUser, booking_type: bookingType || null }
+            : {}),
+        });
+      }
       onSuccess();
     } catch {
       // The mutation error is rendered below while preserving the entered form values.
     }
   }
 
+  const mutation = initialBooking ? updateMutation : createMutation;
   const error = formError || bookingErrorMessage(mutation.error);
 
   return (
     <section className="booking-form-surface" aria-labelledby="booking-form-title">
       <header className="booking-form-heading">
         <div>
-          <p className="eyebrow">New booking</p>
+          <p className="eyebrow">{initialBooking ? "Edit booking" : "New booking"}</p>
           <h2 id="booking-form-title">{resourceName}</h2>
         </div>
         <Button type="button" size="compact" onClick={onCancel}>
@@ -178,7 +218,18 @@ export function BookingForm({
                 required
               >
                 <option value="">Select a user</option>
-                {activeUsers.data?.map((user) => (
+                {[
+                  ...(initialBooking?.booked_for_user &&
+                  !activeUsers.data?.some((user) => user.id === initialBooking.booked_for_user)
+                    ? [
+                        {
+                          id: initialBooking.booked_for_user,
+                          display_name: initialBooking.booker_display_name,
+                        },
+                      ]
+                    : []),
+                  ...(activeUsers.data ?? []),
+                ].map((user) => (
                   <option key={user.id} value={user.id}>
                     {user.display_name}
                   </option>
@@ -193,13 +244,23 @@ export function BookingForm({
                 disabled={bookingTypes.isPending}
               >
                 <option value="">No booking type</option>
-                {bookingTypes.data
-                  ?.filter((type) => !type.archived_at)
-                  .map((type) => (
-                    <option key={type.id} value={type.id}>
-                      {type.name}
-                    </option>
-                  ))}
+                {[
+                  ...(initialBooking?.booking_type &&
+                  !bookingTypes.data?.some((type) => type.id === initialBooking.booking_type)
+                    ? [
+                        {
+                          id: initialBooking.booking_type,
+                          name: initialBooking.booking_type_name ?? "Current booking type",
+                          archived_at: "",
+                        },
+                      ]
+                    : []),
+                  ...(bookingTypes.data?.filter((type) => !type.archived_at) ?? []),
+                ].map((type) => (
+                  <option key={type.id} value={type.id}>
+                    {type.name}
+                  </option>
+                ))}
               </select>
             </label>
           </div>
@@ -216,7 +277,7 @@ export function BookingForm({
             Cancel
           </Button>
           <Button type="submit" variant="primary" disabled={mutation.isPending}>
-            {mutation.isPending ? "Saving..." : "Create booking"}
+            {mutation.isPending ? "Saving..." : initialBooking ? "Save changes" : "Create booking"}
           </Button>
         </div>
       </form>

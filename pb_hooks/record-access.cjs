@@ -427,6 +427,159 @@ function normalizeBooking(event, info, record, context) {
   record.set("booking_type_name_snapshot", bookingTypeName);
 }
 
+function normalizeBookingUpdate(event, info, record, context, storedRecord = record) {
+  const body = info.body ?? {};
+  const tenantId = context.context.tenant.id;
+  const administrator = context.auth.get("role") === "administrator";
+  const currentStart = parseBookingDate(storedRecord.get("start"), "booking_start_invalid");
+
+  const allowedFields = administrator
+    ? ["start", "end", "booked_for_user", "booking_type"]
+    : ["start", "end"];
+  for (const field of Object.keys(body)) {
+    if (!allowedFields.includes(field)) deny();
+  }
+  for (const field of PROTECTED_BOOKING_FIELDS) {
+    if (hasField(body, field)) deny();
+  }
+  if (hasField(body, "resource")) deny();
+
+  if (!administrator && (hasField(body, "booked_for_user") || hasField(body, "booking_type"))) {
+    deny();
+  }
+
+  const start = parseBookingDate(
+    hasField(body, "start") ? body.start : storedRecord.get("start"),
+    "booking_start_invalid",
+  );
+  const end = parseBookingDate(
+    hasField(body, "end") ? body.end : storedRecord.get("end"),
+    "booking_end_invalid",
+  );
+  if (end <= start) throw new BadRequestError("booking_duration_invalid");
+
+  if (!administrator) {
+    if (record.get("booked_for_user") !== context.auth.id) deny();
+    if (currentStart.getTime() - Date.now() < 24 * 60 * 60 * 1000) {
+      throw new BadRequestError("booking_edit_window_closed");
+    }
+    if (start.getTime() - Date.now() < 24 * 60 * 60 * 1000) {
+      throw new BadRequestError("booking_edit_start_too_soon");
+    }
+  }
+
+  const existingBookings = $app.findRecordsByFilter(
+    BOOKING_COLLECTION,
+    "tenant = {:tenant} && resource = {:resource} && id != {:id} && start < {:end} && end > {:start}",
+    "",
+    0,
+    0,
+    {
+      tenant: tenantId,
+      resource: storedRecord.get("resource"),
+      id: storedRecord.id,
+      start: pocketBaseDateValue(start),
+      end: pocketBaseDateValue(end),
+    },
+  );
+  const overlaps = existingBookings.some((existing) => {
+    const existingStart = Date.parse(String(existing.get("start")));
+    const existingEnd = Date.parse(String(existing.get("end")));
+    return existingStart < end.getTime() && existingEnd > start.getTime();
+  });
+  if (overlaps) throw new BadRequestError("booking_resource_conflict");
+
+  record.set("start", start.toISOString());
+  record.set("end", end.toISOString());
+  info.body.start = start.toISOString();
+  info.body.end = end.toISOString();
+
+  if (!administrator || (!hasField(body, "booked_for_user") && !hasField(body, "booking_type"))) {
+    return;
+  }
+
+  const bookedForUser = findTenantRecord(
+    USER_COLLECTION,
+    hasField(body, "booked_for_user") ? body.booked_for_user : storedRecord.get("booked_for_user"),
+    tenantId,
+    "booking_booked_for_user_invalid",
+  );
+  if (hasField(body, "booked_for_user") && bookedForUser.get("active") !== true) {
+    throw new BadRequestError("booking_booked_for_user_inactive");
+  }
+
+  const bookingTypeId = relationValue(
+    hasField(body, "booking_type") ? body.booking_type : storedRecord.get("booking_type"),
+    "booking_type_invalid",
+  );
+  let bookingType;
+  if (bookingTypeId) {
+    bookingType = findTenantRecord(
+      BOOKING_TYPE_COLLECTION,
+      bookingTypeId,
+      tenantId,
+      "booking_type_invalid",
+    );
+    if (hasDateValue(bookingType, "archived_at")) {
+      throw new BadRequestError("booking_type_archived");
+    }
+  }
+
+  const resource = findTenantRecord(
+    RESOURCE_COLLECTION,
+    storedRecord.get("resource"),
+    tenantId,
+    "booking_resource_invalid",
+  );
+  const resourceRate = ensureBookingRate(
+    resource.get("base_rate_minor_units"),
+    "booking_resource_rate_invalid",
+  );
+  const bookingTypeSurcharge = bookingType
+    ? ensureBookingRate(
+        bookingType.get("surcharge_minor_units") || 0,
+        "booking_type_surcharge_invalid",
+      )
+    : 0;
+  const effectiveRate = resourceRate + bookingTypeSurcharge;
+  if (!Number.isSafeInteger(effectiveRate)) {
+    throw new BadRequestError("booking_effective_rate_invalid");
+  }
+
+  const groupName = bookingUserGroupName(bookedForUser, tenantId);
+  const bookingTypeName = bookingType?.get("name") ?? "";
+  info.body.booked_for_user = bookedForUser.id;
+  info.body.booking_type = bookingType?.id ?? "";
+  info.body.resource_base_rate_minor_units = resourceRate;
+  info.body.booking_type_surcharge_minor_units = bookingTypeSurcharge;
+  info.body.effective_rate_minor_units = effectiveRate;
+  info.body.booker_display_name_snapshot = userDisplayName(bookedForUser);
+  info.body.booker_group_snapshot = groupName;
+  info.body.booker_email_snapshot = bookedForUser.get("email");
+  info.body.resource_name_snapshot = resource.get("name");
+  info.body.booking_type_name_snapshot = bookingTypeName;
+
+  record.set("booked_for_user", bookedForUser.id);
+  record.set("booking_type", bookingType?.id ?? "");
+  record.set("resource_base_rate_minor_units", resourceRate);
+  record.set("booking_type_surcharge_minor_units", bookingTypeSurcharge);
+  record.set("effective_rate_minor_units", effectiveRate);
+  record.set("booker_display_name_snapshot", userDisplayName(bookedForUser));
+  record.set("booker_group_snapshot", groupName);
+  record.set("booker_email_snapshot", bookedForUser.get("email"));
+  record.set("resource_name_snapshot", resource.get("name"));
+  record.set("booking_type_name_snapshot", bookingTypeName);
+}
+
+function authorizeBookingDelete(record, context) {
+  if (context.auth.get("role") === "administrator") return;
+  if (record.get("booked_for_user") !== context.auth.id) deny();
+  const start = parseBookingDate(record.get("start"), "booking_start_invalid");
+  if (start.getTime() - Date.now() < 24 * 60 * 60 * 1000) {
+    throw new BadRequestError("booking_delete_window_closed");
+  }
+}
+
 function requestQueryValue(event, name) {
   return event.request.url.query().get(name) ?? "";
 }
@@ -438,13 +591,18 @@ function bookingDateRange(event) {
   return { start, end };
 }
 
-function bookingProjection(record, administrator) {
+function bookingProjection(record, administrator, authId) {
+  const currentStart = Date.parse(String(record.get("start")));
+  const regularEligible =
+    record.get("booked_for_user") === authId && currentStart - Date.now() >= 24 * 60 * 60 * 1000;
   const projection = {
     id: record.id,
     resource: record.get("resource"),
     start: String(record.get("start")),
     end: String(record.get("end")),
     booker_display_name: record.get("booker_display_name_snapshot"),
+    can_edit: administrator || regularEligible,
+    can_delete: administrator || regularEligible,
   };
   if (administrator) {
     projection.booking_type = record.get("booking_type") || null;
@@ -490,7 +648,8 @@ function calendarBookingsRoute(event) {
     );
   }
   const items = bookingRecordsForRange(context.context.tenant.id, resourceId, start, end).map(
-    (record) => bookingProjection(record, context.auth.get("role") === "administrator"),
+    (record) =>
+      bookingProjection(record, context.auth.get("role") === "administrator", context.auth.id),
   );
   return event.json(200, { items });
 }
@@ -503,7 +662,57 @@ function calendarBookingCreateRoute(event) {
   const record = new Record(collection);
   normalizeBooking(event, context.info, record, context);
   $app.saveNoValidate(record);
-  return event.json(200, bookingProjection(record, context.auth.get("role") === "administrator"));
+  return event.json(
+    200,
+    bookingProjection(record, context.auth.get("role") === "administrator", context.auth.id),
+  );
+}
+
+function calendarBookingRecord(event, context) {
+  const bookingId = event.request.pathValue("id");
+  try {
+    const record = $app.findRecordById(BOOKING_COLLECTION, bookingId);
+    ensureRecordTenant(record, context.context.tenant.id);
+    return record;
+  } catch {
+    throw new NotFoundError("booking_not_found");
+  }
+}
+
+function calendarBookingDetailRoute(event) {
+  const context = applicationContext({
+    ...event,
+    collection: { name: BOOKING_COLLECTION, fields: [{ name: TENANT_FIELD }] },
+  });
+  if (!context) deny();
+  const record = calendarBookingRecord(event, context);
+  return event.json(
+    200,
+    bookingProjection(record, context.auth.get("role") === "administrator", context.auth.id),
+  );
+}
+
+function calendarBookingUpdateRoute(event) {
+  const collection = $app.findCollectionByNameOrId(BOOKING_COLLECTION);
+  const context = applicationContext({ ...event, collection });
+  if (!context) deny();
+  const record = calendarBookingRecord(event, context);
+  normalizeBookingUpdate(event, context.info, record, context);
+  $app.saveNoValidate(record);
+  return event.json(
+    200,
+    bookingProjection(record, context.auth.get("role") === "administrator", context.auth.id),
+  );
+}
+
+function calendarBookingDeleteRoute(event) {
+  const collection = $app.findCollectionByNameOrId(BOOKING_COLLECTION);
+  const context = applicationContext({ ...event, collection });
+  if (!context) deny();
+  const record = calendarBookingRecord(event, context);
+  authorizeBookingDelete(record, context);
+  $app.delete(record);
+  return event.json(200, { id: record.id });
 }
 
 function memberCount(record) {
@@ -628,6 +837,8 @@ function deleteRecord(event) {
   ensureRecordTenant(event.record, context.context.tenant.id);
   if (collectionName({ record: event.record }) === ORGANIZATIONAL_UNIT_COLLECTION) {
     guardOrganizationalUnitDelete(event.record);
+  } else if (collectionName({ record: event.record }) === BOOKING_COLLECTION) {
+    authorizeBookingDelete(event.record, context);
   }
   return event.next();
 }
@@ -663,6 +874,9 @@ function updateRecord(event) {
     normalizeBookingType(event, context.info, event.record, context.context.tenant.id);
   } else if (collectionName({ record: event.record }) === RESOURCE_COLLECTION) {
     normalizeResource(event, context.info, event.record, context.context.tenant.id);
+  } else if (collectionName({ record: event.record }) === BOOKING_COLLECTION) {
+    const storedBooking = $app.findRecordById(BOOKING_COLLECTION, event.record.id);
+    normalizeBookingUpdate(event, context.info, event.record, context, storedBooking);
   } else {
     applyServerTenant(context.info, event.record, context.context.tenant.id);
   }
@@ -695,7 +909,10 @@ function administratorContext(event) {
 }
 
 module.exports = {
+  calendarBookingDeleteRoute,
+  calendarBookingDetailRoute,
   calendarBookingCreateRoute,
+  calendarBookingUpdateRoute,
   calendarBookingsRoute,
   checkRecords,
   calendarResourcesRoute,

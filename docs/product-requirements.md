@@ -94,8 +94,7 @@ Each user has one role within their tenant:
   - Must not see prices in booking views or forms.
 - **Administrator**
   - View, create, and edit any booking.
-  - Permanently delete a booking only while its current start time is in the
-    future.
+  - Permanently delete any booking regardless of its current start time.
   - Create regular, training, and maintenance bookings.
   - Choose any active tenant user as the booker for a non-maintenance booking.
   - Manage resources, groups, and users.
@@ -189,8 +188,12 @@ permitted for the workflow. Booking type cannot be changed after creation.
 
 For a regular user's edit, both the current booking start and the proposed new
 start must be at least 24 hours in the future. Administrators are not subject
-to the 24-hour edit restriction. Administrator deletion follows the separate
-future-start rule in section 5.5.
+to the 24-hour edit restriction. Administrators may change the booked-for user
+and booking type, but the resource remains fixed. Any administrator-selected
+replacement user must be active and belong to the tenant. When an
+administrator changes the booked-for user or booking type, the server
+recalculates the affected snapshots and rate fields using the same trusted
+calculation as booking creation.
 
 ### 5.3 Pricing
 
@@ -262,11 +265,13 @@ cutoff, but cannot change its booking type.
 - Deletion is permanent in the MVP.
 - There is no cancellation state.
 - A regular user can permanently delete only their own eligible booking.
-- An administrator can permanently delete a booking only while its current
-  start time is in the future. Deletion eligibility follows the current start
-  time if an administrator reschedules the booking.
+- An administrator can permanently delete any booking regardless of its
+  current start time.
 - Administrators may edit any booking without time restrictions, including
-  changing the dates and times of started or completed bookings.
+  changing the dates and times of started or completed bookings. The resource
+  remains fixed, while the booked-for user and booking type may be changed.
+  Changing either one recalculates the affected snapshots and rate fields
+  using the same trusted calculation as booking creation.
 - Deleted bookings are not included in exports.
 
 ## 6. Calendar and user experience
@@ -362,13 +367,17 @@ Regular users see:
   booking type or administrator identity.
 
 Administrators may additionally see booking type and may edit or delete any
-booking. Prices remain hidden in booking details.
+booking. Administrators may change the booked-for user and booking type while
+editing, but may not change the resource. Prices remain hidden in booking
+details.
 
 The resource remains fixed while editing. Moving a booking to another resource
 is not supported in the MVP.
 
 Deletion requires an explicit confirmation for every user type, including
-regular users and administrators.
+regular users and administrators. Administrator deletion is unrestricted by
+the booking's current start time. Regular deletion still requires ownership
+and a current start at least 24 hours in the future.
 
 ### 6.6 Calendar implementation
 
@@ -693,8 +702,7 @@ The MVP is ready when:
 5. A regular user can edit/delete their own eligible booking but is blocked
    inside the 24-hour window.
 6. A regular user cannot edit/delete another user's booking.
-7. An administrator can create and edit any booking, and can delete a booking
-   only while its current start time is in the future.
+7. An administrator can create, edit, and permanently delete any booking.
 8. An administrator can create training and maintenance bookings.
 9. Maintenance blocks the resource but does not appear in invoicing exports.
 10. Calendar behavior works in desktop day/week/month views and mobile daily

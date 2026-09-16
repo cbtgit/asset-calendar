@@ -10,11 +10,13 @@ import daLocale from "@fullcalendar/core/locales/da";
 import { useNavigate } from "@tanstack/react-router";
 import { isAdministrator } from "@/api/auth";
 import type { CalendarBooking } from "@/api/bookings";
+import { toAppError } from "@/api/errors";
 import { BookingDetail } from "@/components/calendar/booking-detail";
 import { BookingForm } from "@/components/calendar/booking-form";
+import { DeleteBookingDialog } from "@/components/calendar/delete-booking-dialog";
 import { useCalendarResourcesQuery } from "@/hooks/use-calendar-resources";
 import { useAuth } from "@/hooks/use-auth";
-import { useBookingsQuery } from "@/hooks/use-bookings";
+import { useBookingsQuery, useDeleteBookingMutation } from "@/hooks/use-bookings";
 import {
   getCalendarSearchFromDatesSet,
   type CalendarSearch,
@@ -35,7 +37,8 @@ type CalendarSurfaceProps = {
 
 type BookingDraft =
   | { kind: "create"; start?: string; end?: string; date?: string }
-  | { kind: "detail"; booking: CalendarBooking };
+  | { kind: "detail"; booking: CalendarBooking }
+  | { kind: "edit"; booking: CalendarBooking };
 
 const MOBILE_QUERY = "(width < 48rem)";
 let mobileMediaQuery: MediaQueryList | undefined;
@@ -67,6 +70,22 @@ function fallbackRange(date: string, view: CalendarView) {
   return { start: start.toISOString(), end: end.toISOString() };
 }
 
+function deletionErrorMessage(error: unknown): string {
+  if (!error) return "";
+  const applicationError = toAppError(error);
+  const message = applicationError.message.toLowerCase();
+  if (message.includes("booking_delete_window_closed")) {
+    return "This booking can no longer be deleted because its start is too soon.";
+  }
+  if (applicationError.kind === "unauthorized") {
+    return "You are not allowed to delete this booking.";
+  }
+  if (applicationError.kind === "network" || applicationError.kind === "server") {
+    return "We could not delete the booking. Try again.";
+  }
+  return "We could not delete the booking. Check the details and try again.";
+}
+
 export function CalendarSurface({ search }: CalendarSurfaceProps) {
   const navigate = useNavigate({ from: "/calendar" });
   const auth = useAuth();
@@ -82,6 +101,8 @@ export function CalendarSurface({ search }: CalendarSurfaceProps) {
   const effectiveView: CalendarView = isMobile ? "day" : search.view;
   const [visibleRange, setVisibleRange] = useState(() => fallbackRange(search.date, effectiveView));
   const [bookingDraft, setBookingDraft] = useState<BookingDraft | null>(null);
+  const [bookingToDelete, setBookingToDelete] = useState<CalendarBooking | null>(null);
+  const deleteMutation = useDeleteBookingMutation();
   const initialView =
     effectiveView === "month"
       ? "dayGridMonth"
@@ -209,6 +230,21 @@ export function CalendarSurface({ search }: CalendarSurfaceProps) {
                     booking={bookingDraft.booking}
                     isAdministrator={isAdministrator(auth.user)}
                     onClose={() => setBookingDraft(null)}
+                    onEdit={() => setBookingDraft({ kind: "edit", booking: bookingDraft.booking })}
+                    onDelete={() => setBookingToDelete(bookingDraft.booking)}
+                  />
+                ) : bookingDraft.kind === "edit" ? (
+                  <BookingForm
+                    resourceId={selectedResource.id}
+                    resourceName={selectedResource.name}
+                    isAdministrator={isAdministrator(auth.user)}
+                    initialStart={bookingDraft.booking.start}
+                    initialEnd={bookingDraft.booking.end}
+                    initialBooking={bookingDraft.booking}
+                    onCancel={() =>
+                      setBookingDraft({ kind: "detail", booking: bookingDraft.booking })
+                    }
+                    onSuccess={() => setBookingDraft(null)}
                   />
                 ) : (
                   <BookingForm
@@ -304,6 +340,25 @@ export function CalendarSurface({ search }: CalendarSurfaceProps) {
           </div>
         </div>
       )}
+      {bookingToDelete ? (
+        <DeleteBookingDialog
+          booking={bookingToDelete}
+          pending={deleteMutation.isPending}
+          error={deletionErrorMessage(deleteMutation.error)}
+          onCancel={() => {
+            if (!deleteMutation.isPending) setBookingToDelete(null);
+          }}
+          onConfirm={() => {
+            void deleteMutation
+              .mutateAsync({ id: bookingToDelete.id })
+              .then(() => {
+                setBookingToDelete(null);
+                setBookingDraft(null);
+              })
+              .catch(() => undefined);
+          }}
+        />
+      ) : null}
     </section>
   );
 }

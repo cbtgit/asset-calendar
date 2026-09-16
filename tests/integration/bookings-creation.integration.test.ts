@@ -269,6 +269,121 @@ it("creates role-safe bookings with snapshots and end-exclusive conflicts", asyn
     expect.objectContaining({ booking_type_name: "Training" }),
   );
 
+  const regularUpdate = await request(regular, `/api/calendar/bookings/${regularBookingBody.id}`, {
+    method: "PATCH",
+    host: "tenant.localhost",
+    body: {
+      start: "2026-12-01T09:00:00.000Z",
+      end: "2026-12-01T10:00:00.000Z",
+    },
+  });
+  expect(regularUpdate.status).toBe(200);
+  expect(await regularUpdate.json()).toMatchObject({
+    id: regularBookingBody.id,
+    start: "2026-12-01 09:00:00.000Z",
+    can_edit: true,
+    can_delete: true,
+  });
+
+  const regularResourceChange = await request(
+    regular,
+    `/api/calendar/bookings/${regularBookingBody.id}`,
+    {
+      method: "PATCH",
+      host: "tenant.localhost",
+      body: {
+        resource: archivedResource.id,
+        start: "2026-12-01T09:00:00.000Z",
+        end: "2026-12-01T10:00:00.000Z",
+      },
+    },
+  );
+  expect(regularResourceChange.status).toBe(403);
+
+  const administratorChange = await request(
+    admin,
+    `/api/calendar/bookings/${administratorBookingBody.id}`,
+    {
+      method: "PATCH",
+      host: "tenant.localhost",
+      body: {
+        booked_for_user: adminRecord.id,
+        booking_type: null,
+        start: "2026-09-01T12:00:00.000Z",
+        end: "2026-09-01T13:00:00.000Z",
+      },
+    },
+  );
+  expect(administratorChange.status).toBe(200);
+  expect(await administratorChange.json()).toMatchObject({
+    id: administratorBookingBody.id,
+    booked_for_user: adminRecord.id,
+    booker_display_name: "Admin A",
+    booking_type: null,
+    booking_type_name: null,
+    start: "2026-09-01 12:00:00.000Z",
+  });
+
+  const administratorResourceChange = await request(
+    admin,
+    `/api/calendar/bookings/${administratorBookingBody.id}`,
+    {
+      method: "PATCH",
+      host: "tenant.localhost",
+      body: {
+        resource: archivedResource.id,
+        start: "2026-09-01T12:00:00.000Z",
+        end: "2026-09-01T13:00:00.000Z",
+      },
+    },
+  );
+  expect(administratorResourceChange.status).toBe(403);
+
+  const administratorDeletePast = await request(
+    admin,
+    `/api/calendar/bookings/${administratorBookingBody.id}`,
+    { method: "DELETE", host: "tenant.localhost" },
+  );
+  expect(administratorDeletePast.status).toBe(200);
+
+  const pastBooking = await createBooking(regular, {
+    resource: resource.id,
+    start: "2026-09-01T14:00:00.000Z",
+    end: "2026-09-01T15:00:00.000Z",
+  });
+  expect(pastBooking.status).toBe(200);
+  const pastBookingBody = await pastBooking.json();
+  const regularDeletePast = await request(regular, `/api/calendar/bookings/${pastBookingBody.id}`, {
+    method: "DELETE",
+    host: "tenant.localhost",
+  });
+  expect(regularDeletePast.status).toBe(400);
+
+  const regularDeleteEligible = await request(
+    regular,
+    `/api/calendar/bookings/${regularBookingBody.id}`,
+    { method: "DELETE", host: "tenant.localhost" },
+  );
+  expect(regularDeleteEligible.status).toBe(200);
+
+  const rawUpdate = await request(
+    regular,
+    `/api/collections/bookings/records/${pastBookingBody.id}`,
+    {
+      method: "PATCH",
+      host: "tenant.localhost",
+      body: { start: "2026-12-02T14:00:00.000Z", end: "2026-12-02T15:00:00.000Z" },
+    },
+  );
+  expect(rawUpdate.status).toBe(403);
+
+  const rawDelete = await request(
+    regular,
+    `/api/collections/bookings/records/${pastBookingBody.id}`,
+    { method: "DELETE", host: "tenant.localhost" },
+  );
+  expect(rawDelete.status).toBe(403);
+
   const archived = await createBooking(regular, {
     resource: archivedResource.id,
     start: "2026-11-30T14:00:00.000Z",

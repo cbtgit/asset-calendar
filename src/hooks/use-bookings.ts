@@ -2,7 +2,10 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   calendarBookingsQueryOptions,
   createBooking,
+  deleteBooking,
+  updateBooking,
   type BookingCreate,
+  type BookingUpdate,
   type CalendarBooking,
   type BookingRange,
 } from "@/api/bookings";
@@ -11,6 +14,10 @@ import { bookingsKeys } from "@/api/query-keys";
 
 type BookingsContext = {
   previousQueries: Array<[readonly unknown[], CalendarBooking[] | undefined]>;
+};
+
+export type BookingUpdateMutationInput = BookingUpdate & {
+  optimisticBooking?: CalendarBooking;
 };
 
 function displayName(): string {
@@ -67,6 +74,100 @@ export function useCreateBookingMutation() {
         ) {
           queryClient.setQueryData(queryKey, [...bookings, optimistic]);
         }
+      }
+
+      return { previousQueries };
+    },
+    onError: (_error, _input, context) => {
+      for (const [queryKey, data] of context?.previousQueries ?? []) {
+        queryClient.setQueryData(queryKey, data);
+      }
+    },
+    onSettled: () => {
+      void queryClient.invalidateQueries({ queryKey: bookingsKeys.all });
+    },
+  });
+}
+
+function optimisticUpdatedBooking(
+  current: CalendarBooking | undefined,
+  input: BookingUpdateMutationInput,
+): CalendarBooking | undefined {
+  const booking = current ? { ...current, ...input.optimisticBooking } : input.optimisticBooking;
+  if (!booking) return undefined;
+
+  return {
+    ...booking,
+    start: input.start,
+    end: input.end,
+    ...(Object.prototype.hasOwnProperty.call(input, "booked_for_user")
+      ? { booked_for_user: input.booked_for_user ?? undefined }
+      : {}),
+    ...(Object.prototype.hasOwnProperty.call(input, "booking_type")
+      ? { booking_type: input.booking_type ?? null, booking_type_name: null }
+      : {}),
+  };
+}
+
+export function useUpdateBookingMutation() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ optimisticBooking: _optimisticBooking, ...input }: BookingUpdateMutationInput) =>
+      updateBooking(input),
+    onMutate: async (input): Promise<BookingsContext> => {
+      await queryClient.cancelQueries({ queryKey: bookingsKeys.all });
+      const previousQueries = queryClient.getQueriesData<CalendarBooking[]>({
+        queryKey: bookingsKeys.all,
+      });
+
+      for (const [queryKey, bookings] of previousQueries) {
+        if (!bookings || !isVisibleQuery(queryKey)) continue;
+        const [, , resourceId, rangeStart, rangeEnd] = queryKey;
+        const current = bookings.find((booking) => booking.id === input.id);
+        const updated = optimisticUpdatedBooking(current, input);
+        if (!updated) continue;
+
+        const remainsVisible =
+          updated.resource === resourceId &&
+          overlaps(updated.start, updated.end, rangeStart, rangeEnd);
+        const withoutCurrent = bookings.filter((booking) => booking.id !== input.id);
+        queryClient.setQueryData(
+          queryKey,
+          remainsVisible ? [...withoutCurrent, updated] : withoutCurrent,
+        );
+      }
+
+      return { previousQueries };
+    },
+    onError: (_error, _input, context) => {
+      for (const [queryKey, data] of context?.previousQueries ?? []) {
+        queryClient.setQueryData(queryKey, data);
+      }
+    },
+    onSettled: () => {
+      void queryClient.invalidateQueries({ queryKey: bookingsKeys.all });
+    },
+  });
+}
+
+export function useDeleteBookingMutation() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ id }: { id: string }) => deleteBooking(id),
+    onMutate: async ({ id }): Promise<BookingsContext> => {
+      await queryClient.cancelQueries({ queryKey: bookingsKeys.all });
+      const previousQueries = queryClient.getQueriesData<CalendarBooking[]>({
+        queryKey: bookingsKeys.all,
+      });
+
+      for (const [queryKey, bookings] of previousQueries) {
+        if (!bookings || !isVisibleQuery(queryKey)) continue;
+        queryClient.setQueryData(
+          queryKey,
+          bookings.filter((booking) => booking.id !== id),
+        );
       }
 
       return { previousQueries };

@@ -3,13 +3,16 @@ import { afterEach, beforeEach, expect, it, vi } from "vite-plus/test";
 import { useNavigate } from "@tanstack/react-router";
 import { useCalendarResourcesQuery } from "@/hooks/use-calendar-resources";
 import { useAuth } from "@/hooks/use-auth";
-import { useBookingsQuery } from "@/hooks/use-bookings";
+import { useBookingsQuery, useDeleteBookingMutation } from "@/hooks/use-bookings";
 import { CalendarSurface } from "./calendar-surface";
 
 vi.mock("@tanstack/react-router", () => ({ useNavigate: vi.fn() }));
 vi.mock("@/hooks/use-calendar-resources", () => ({ useCalendarResourcesQuery: vi.fn() }));
 vi.mock("@/hooks/use-auth", () => ({ useAuth: vi.fn() }));
-vi.mock("@/hooks/use-bookings", () => ({ useBookingsQuery: vi.fn() }));
+vi.mock("@/hooks/use-bookings", () => ({
+  useBookingsQuery: vi.fn(),
+  useDeleteBookingMutation: vi.fn(),
+}));
 
 afterEach(() => {
   cleanup();
@@ -26,6 +29,11 @@ beforeEach(() => {
     data: [],
     isPending: false,
     isError: false,
+  } as never);
+  vi.mocked(useDeleteBookingMutation).mockReturnValue({
+    mutateAsync: vi.fn(),
+    isPending: false,
+    error: null,
   } as never);
   vi.mocked(useCalendarResourcesQuery).mockReturnValue({
     data: [

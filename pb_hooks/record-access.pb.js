@@ -25,3 +25,12 @@ routerAdd("GET", "/api/calendar/bookings", (event) =>
 routerAdd("POST", "/api/calendar/bookings", (event) =>
   require(`${__hooks}/record-access.cjs`).calendarBookingCreateRoute(event),
 );
+routerAdd("GET", "/api/calendar/bookings/{id}", (event) =>
+  require(`${__hooks}/record-access.cjs`).calendarBookingDetailRoute(event),
+);
+routerAdd("PATCH", "/api/calendar/bookings/{id}", (event) =>
+  require(`${__hooks}/record-access.cjs`).calendarBookingUpdateRoute(event),
+);
+routerAdd("DELETE", "/api/calendar/bookings/{id}", (event) =>
+  require(`${__hooks}/record-access.cjs`).calendarBookingDeleteRoute(event),
+);

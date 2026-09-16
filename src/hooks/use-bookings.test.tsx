@@ -7,7 +7,11 @@ import type { CalendarBooking } from "@/api/bookings";
 import * as bookingsApi from "@/api/bookings";
 import { pocketbase } from "@/api/client";
 import { bookingsKeys } from "@/api/query-keys";
-import { useCreateBookingMutation } from "./use-bookings";
+import {
+  useCreateBookingMutation,
+  useDeleteBookingMutation,
+  useUpdateBookingMutation,
+} from "./use-bookings";
 
 const booking: CalendarBooking = {
   id: "booking-1",
@@ -83,6 +87,66 @@ it("optimistically adds a booking and rolls it back on failure", async () => {
   expect(
     queryClient.getQueryData<CalendarBooking[]>(
       bookingsKeys.visible(range.resourceId, range.start, range.end),
+    ),
+  ).toEqual([booking]);
+});
+
+it("optimistically removes a booking when an update leaves the visible range", async () => {
+  let resolveUpdate!: (value: CalendarBooking) => void;
+  vi.spyOn(bookingsApi, "updateBooking").mockReturnValue(
+    new Promise<CalendarBooking>((resolve) => {
+      resolveUpdate = resolve;
+    }),
+  );
+  const { queryClient, wrapper } = setup();
+  const { result } = renderHook(() => useUpdateBookingMutation(), { wrapper });
+
+  let mutation!: Promise<unknown>;
+  await act(async () => {
+    mutation = result.current.mutateAsync({
+      id: booking.id,
+      start: "2026-12-01T09:00:00.000Z",
+      end: "2026-12-01T10:00:00.000Z",
+      optimisticBooking: booking,
+    });
+    await Promise.resolve();
+  });
+
+  expect(
+    queryClient.getQueryData(
+      bookingsKeys.visible(...(Object.values(range) as [string, string, string])),
+    ),
+  ).toEqual([]);
+  resolveUpdate({ ...booking, start: "2026-12-01T09:00:00.000Z", end: "2026-12-01T10:00:00.000Z" });
+  await mutation;
+});
+
+it("optimistically deletes a booking and restores it on failure", async () => {
+  let rejectDelete!: (reason: unknown) => void;
+  vi.spyOn(bookingsApi, "deleteBooking").mockReturnValue(
+    new Promise<{ id: string }>((_resolve, reject) => {
+      rejectDelete = reject;
+    }),
+  );
+  const { queryClient, wrapper } = setup();
+  const { result } = renderHook(() => useDeleteBookingMutation(), { wrapper });
+
+  let mutation!: Promise<unknown>;
+  await act(async () => {
+    mutation = result.current.mutateAsync({ id: booking.id });
+    await Promise.resolve();
+  });
+  expect(
+    queryClient.getQueryData(
+      bookingsKeys.visible(...(Object.values(range) as [string, string, string])),
+    ),
+  ).toEqual([]);
+
+  rejectDelete(new Error("Delete failed"));
+  await expect(mutation).rejects.toThrow("Delete failed");
+  expect(
+    queryClient.getQueryData(
+      bookingsKeys.visible(...(Object.values(range) as [string, string, string])),
     ),
   ).toEqual([booking]);
 });

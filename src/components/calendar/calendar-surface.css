@@ -222,6 +222,44 @@
   font-size: 0.85rem;
 }
 
+.booking-detail-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+}
+
+.booking-delete-dialog-backdrop {
+  position: fixed;
+  z-index: 20;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: var(--space-5);
+  background: rgb(15 23 42 / 42%);
+}
+
+.booking-delete-dialog {
+  display: grid;
+  gap: var(--space-4);
+  width: min(100%, 30rem);
+  padding: var(--space-6);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-header);
+}
+
+.booking-delete-dialog h2,
+.booking-delete-dialog p {
+  margin: 0;
+}
+
+.booking-delete-dialog-actions {
+  display: flex;
+  justify-content: end;
+  gap: var(--space-3);
+}
+
 @media (width < 48rem) {
   .calendar-heading {
     align-items: stretch;
@@ -257,6 +295,16 @@
   .calendar-frame .fc .fc-toolbar-chunk {
     display: flex;
     justify-content: space-between;
+  }
+
+  .booking-detail-actions,
+  .booking-delete-dialog-actions {
+    display: grid;
+  }
+
+  .booking-detail-actions .button,
+  .booking-delete-dialog-actions .button {
+    width: 100%;
   }
 
   .calendar-frame .fc .fc-toolbar-title {

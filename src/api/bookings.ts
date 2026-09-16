@@ -9,6 +9,8 @@ export type CalendarBooking = {
   start: string;
   end: string;
   booker_display_name: string;
+  can_edit?: boolean;
+  can_delete?: boolean;
   booking_type?: string | null;
   booking_type_name?: string | null;
   booked_for_user?: string;
@@ -17,6 +19,14 @@ export type CalendarBooking = {
 
 export type BookingCreate = {
   resource: string;
+  start: string;
+  end: string;
+  booked_for_user?: string | null;
+  booking_type?: string | null;
+};
+
+export type BookingUpdate = {
+  id: string;
   start: string;
   end: string;
   booked_for_user?: string | null;
@@ -55,6 +65,25 @@ export async function createBooking(input: BookingCreate): Promise<CalendarBooki
   return send<CalendarBooking>("/api/calendar/bookings", {
     method: "POST",
     body: input,
+  });
+}
+
+export async function getBooking(id: string): Promise<CalendarBooking> {
+  return send<CalendarBooking>(`/api/calendar/bookings/${encodeURIComponent(id)}`, {
+    method: "GET",
+  });
+}
+
+export async function updateBooking({ id, ...input }: BookingUpdate): Promise<CalendarBooking> {
+  return send<CalendarBooking>(`/api/calendar/bookings/${encodeURIComponent(id)}`, {
+    method: "PATCH",
+    body: input,
+  });
+}
+
+export async function deleteBooking(id: string): Promise<{ id: string }> {
+  return send<{ id: string }>(`/api/calendar/bookings/${encodeURIComponent(id)}`, {
+    method: "DELETE",
   });
 }
 

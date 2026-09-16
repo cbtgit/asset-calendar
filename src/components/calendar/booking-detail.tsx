@@ -6,13 +6,21 @@ type BookingDetailProps = {
   booking: CalendarBooking;
   isAdministrator: boolean;
   onClose: () => void;
+  onEdit: () => void;
+  onDelete: () => void;
 };
 
 function formatDateTime(value: string): string {
   return utcToApplicationDateTime(value).replace("T", " ");
 }
 
-export function BookingDetail({ booking, isAdministrator, onClose }: BookingDetailProps) {
+export function BookingDetail({
+  booking,
+  isAdministrator,
+  onClose,
+  onEdit,
+  onDelete,
+}: BookingDetailProps) {
   return (
     <section className="booking-form-surface" aria-labelledby="booking-detail-title">
       <header className="booking-form-heading">
@@ -40,7 +48,24 @@ export function BookingDetail({ booking, isAdministrator, onClose }: BookingDeta
           </div>
         ) : null}
       </dl>
-      <p className="booking-detail-note">Editing and deletion will be available in a later step.</p>
+      {isAdministrator || booking.can_edit || booking.can_delete ? (
+        <div className="booking-detail-actions">
+          {booking.can_edit || isAdministrator ? (
+            <Button type="button" variant="primary" onClick={onEdit}>
+              Edit booking
+            </Button>
+          ) : null}
+          {booking.can_delete || isAdministrator ? (
+            <Button type="button" variant="danger" onClick={onDelete}>
+              Delete booking
+            </Button>
+          ) : null}
+        </div>
+      ) : (
+        <p className="booking-detail-note">
+          This booking is no longer available to edit or delete.
+        </p>
+      )}
     </section>
   );
 }
