@@ -32,6 +32,7 @@ function renderForm(
       name: "Training",
       name_normalized: "training",
       surcharge_minor_units: 100,
+      nonbillable: false,
       archived_at: "",
       tenant: "tenant-1",
       created: "",

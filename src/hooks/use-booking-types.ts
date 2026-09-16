@@ -22,7 +22,8 @@ function optimisticBookingType(input: BookingTypeCreate): BookingType {
     tenant: getAuthSnapshot().user?.tenant ?? "",
     name,
     name_normalized: name.toLowerCase(),
-    surcharge_minor_units: input.surchargeMinorUnits ?? 0,
+    surcharge_minor_units: input.nonbillable ? 0 : (input.surchargeMinorUnits ?? 0),
+    nonbillable: input.nonbillable ?? false,
     archived_at: "",
     created: now,
     updated: now,
@@ -83,6 +84,7 @@ export function useUpdateBookingTypeMutation() {
                       name: input.name.trim(),
                       name_normalized: input.name.trim().toLowerCase(),
                       surcharge_minor_units: input.surchargeMinorUnits ?? 0,
+                      nonbillable: input.nonbillable ?? false,
                     }
                   : bookingType,
               ),

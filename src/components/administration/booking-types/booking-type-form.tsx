@@ -20,7 +20,7 @@ type BookingTypeFormProps = {
 };
 
 function initialHourlyPrice(bookingType: BookingType | undefined, locale: string): string {
-  if (!bookingType) return "";
+  if (!bookingType || bookingType.nonbillable) return "";
   return formatMinorUnitsForInput(bookingType.surcharge_minor_units, locale);
 }
 
@@ -33,6 +33,7 @@ export function BookingTypeForm({
 }: BookingTypeFormProps) {
   const [bookingType, setBookingType] = useState(initialBookingType?.name ?? "");
   const [hourlyPrice, setHourlyPrice] = useState(initialHourlyPrice(initialBookingType, locale));
+  const [nonbillable, setNonbillable] = useState(initialBookingType?.nonbillable ?? false);
   const [nameError, setNameError] = useState("");
   const [priceError, setPriceError] = useState("");
   const [submitted, setSubmitted] = useState(false);
@@ -63,7 +64,7 @@ export function BookingTypeForm({
       return;
     }
 
-    const surchargeMinorUnits = toMinorUnits(hourlyPrice, locale);
+    const surchargeMinorUnits = nonbillable ? 0 : toMinorUnits(hourlyPrice, locale);
     if (surchargeMinorUnits === undefined) {
       setPriceError(
         `Enter a valid hourly price, such as ${formatMinorUnitsForInput(123450, locale)}.`,
@@ -72,7 +73,7 @@ export function BookingTypeForm({
       return;
     }
     setPriceError("");
-    const input = { name: trimmedName, surchargeMinorUnits };
+    const input = { name: trimmedName, surchargeMinorUnits, nonbillable };
     if (mode === "edit" && initialBookingType) {
       updateMutation.mutate(
         { id: initialBookingType.id, input },
@@ -119,13 +120,29 @@ export function BookingTypeForm({
           label="Hourly price"
           name="hourlyPrice"
           value={hourlyPrice}
-          required
+          required={!nonbillable}
+          disabled={nonbillable}
           error={priceError || undefined}
           onChange={(event) => {
             setHourlyPrice(event.target.value);
             setPriceError("");
           }}
         />
+        <label htmlFor="booking-type-nonbillable">
+          <input
+            id="booking-type-nonbillable"
+            name="nonbillable"
+            type="checkbox"
+            checked={nonbillable}
+            onChange={(event) => {
+              const checked = event.target.checked;
+              setNonbillable(checked);
+              if (checked) setHourlyPrice("");
+              setPriceError("");
+            }}
+          />
+          Non-billable booking type
+        </label>
         <div className="booking-type-form-actions">
           <Button type="button" onClick={onCancel}>
             Cancel
