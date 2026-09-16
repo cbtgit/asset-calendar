@@ -163,7 +163,7 @@ export function BillingExport({ onHeadingReady }: BillingExportProps) {
                     {group.records.map((record) => (
                       <li
                         className="billing-export-record"
-                        key={`${record.start}-${record.end}-${record.booker}`}
+                        key={`${record.start}-${record.end}-${record.booker}-${record.resource}`}
                       >
                         <div>
                           <strong>{record.booker}</strong>
