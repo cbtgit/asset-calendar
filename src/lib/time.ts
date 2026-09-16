@@ -34,6 +34,13 @@ export function addApplicationHours(value: string, hours: number): string {
     .format("YYYY-MM-DDTHH:mm");
 }
 
+export function calendarSlotBookingRange(start: Date) {
+  return {
+    start: start.toISOString(),
+    end: new Date(start.getTime() + 60 * 60 * 1000).toISOString(),
+  };
+}
+
 export function calendarDateStringToApplicationDateTime(value: string): string {
   return dayjs(value).tz(APPLICATION_TIME_ZONE).format("YYYY-MM-DDTHH:mm");
 }

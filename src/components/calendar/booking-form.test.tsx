@@ -85,6 +85,8 @@ it("submits administrator-selected user and booking type", async () => {
     resource: "resource-1",
     booked_for_user: "user-2",
     booking_type: "type-1",
+    optimisticBookerDisplayName: "Regular A",
+    optimisticBookingTypeName: "Training",
     start: "2026-11-30T08:00:00.000Z",
     end: "2026-11-30T09:00:00.000Z",
   });

@@ -3,6 +3,7 @@ import {
   APPLICATION_TIME_ZONE,
   addApplicationHours,
   applicationDateTimeToUtc,
+  calendarSlotBookingRange,
   calendarDateStringToApplicationDateTime,
   formatApplicationDate,
   utcToApplicationDateTime,
@@ -28,4 +29,11 @@ it("adds a booking hour in Copenhagen across the spring DST transition", () => {
   const localEnd = addApplicationHours(localStart, 1);
 
   expect(localEnd).toBe("2026-03-29T03:00");
+});
+
+it("preserves the clicked instant across the Copenhagen autumn DST fallback", () => {
+  expect(calendarSlotBookingRange(new Date("2026-10-25T00:30:00.000Z"))).toEqual({
+    start: "2026-10-25T00:30:00.000Z",
+    end: "2026-10-25T01:30:00.000Z",
+  });
 });

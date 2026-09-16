@@ -261,10 +261,11 @@ function pocketBaseDateValue(date) {
 }
 
 function userDisplayName(record) {
-  return [record.get("first_name"), record.get("last_name")]
+  const name = [record.get("first_name"), record.get("last_name")]
     .map((value) => (typeof value === "string" ? value.trim() : ""))
     .filter(Boolean)
     .join(" ");
+  return name || String(record.get("email") || "").trim();
 }
 
 function bookingUserGroupName(user, tenantId) {
@@ -614,14 +615,27 @@ function bookingProjection(record, administrator, authId) {
 }
 
 function bookingRecordsForRange(tenantId, resourceId, start, end) {
-  const filter = resourceId ? "tenant = {:tenant} && resource = {:resource}" : "tenant = {:tenant}";
+  const filter = resourceId
+    ? "tenant = {:tenant} && resource = {:resource} && start < {:end} && end > {:start}"
+    : "tenant = {:tenant} && start < {:end} && end > {:start}";
   const records = $app.findRecordsByFilter(
     BOOKING_COLLECTION,
     filter,
     "start,id",
     0,
     0,
-    resourceId ? { tenant: tenantId, resource: resourceId } : { tenant: tenantId },
+    resourceId
+      ? {
+          tenant: tenantId,
+          resource: resourceId,
+          start: pocketBaseDateValue(start),
+          end: pocketBaseDateValue(end),
+        }
+      : {
+          tenant: tenantId,
+          start: pocketBaseDateValue(start),
+          end: pocketBaseDateValue(end),
+        },
   );
   return records.filter((record) => {
     const existingStart = Date.parse(String(record.get("start")));

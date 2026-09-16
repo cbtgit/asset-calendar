@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { toAppError } from "@/api/errors";
 import { activeUsersQueryOptions } from "@/api/users";
 import { bookingTypesQueryOptions } from "@/api/booking-types";
@@ -79,6 +79,7 @@ export function BookingForm({
   onCancel,
   onSuccess,
 }: BookingFormProps) {
+  const surfaceRef = useRef<HTMLElement>(null);
   const start = initialDateTime(initialStart);
   const end = initialDateTime(initialEnd);
   const [startDate, setStartDate] = useState(start.date || initialDate || "");
@@ -92,12 +93,21 @@ export function BookingForm({
   const updateMutation = useUpdateBookingMutation();
   const activeUsers = useQuery({ ...activeUsersQueryOptions(), enabled: isAdministrator });
   const bookingTypes = useQuery({ ...bookingTypesQueryOptions(), enabled: isAdministrator });
+  const administratorQueryError = isAdministrator && (activeUsers.isError || bookingTypes.isError);
+
+  useEffect(() => {
+    surfaceRef.current?.focus();
+  }, []);
 
   async function submit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setFormError("");
     if (!startDate || !startTime || !endDate || !endTime) {
       setFormError("Enter a start and end date and time.");
+      return;
+    }
+    if (administratorQueryError) {
+      setFormError("User and booking type data could not be loaded. Try again.");
       return;
     }
 
@@ -128,19 +138,29 @@ export function BookingForm({
             ...(isAdministrator
               ? {
                   booker_display_name:
-                    selectedUser?.display_name ?? initialBooking.booker_display_name,
+                    selectedUser?.display_name ||
+                    selectedUser?.email ||
+                    initialBooking.booker_display_name,
                   booking_type_name: selectedType?.name ?? null,
                 }
               : {}),
           },
         });
       } else {
+        const selectedUser = activeUsers.data?.find((user) => user.id === bookedForUser);
+        const selectedType = bookingTypes.data?.find((type) => type.id === bookingType);
         await createMutation.mutateAsync({
           resource: resourceId,
           start: startValue,
           end: endValue,
           ...(isAdministrator
             ? { booked_for_user: bookedForUser, booking_type: bookingType || null }
+            : {}),
+          ...(isAdministrator
+            ? {
+                optimisticBookerDisplayName: selectedUser?.display_name || selectedUser?.email,
+                optimisticBookingTypeName: selectedType?.name ?? null,
+              }
             : {}),
         });
       }
@@ -154,7 +174,12 @@ export function BookingForm({
   const error = formError || bookingErrorMessage(mutation.error);
 
   return (
-    <section className="booking-form-surface" aria-labelledby="booking-form-title">
+    <section
+      ref={surfaceRef}
+      className="booking-form-surface"
+      aria-labelledby="booking-form-title"
+      tabIndex={-1}
+    >
       <header className="booking-form-heading">
         <div>
           <p className="eyebrow">{initialBooking ? "Edit booking" : "New booking"}</p>
@@ -214,7 +239,7 @@ export function BookingForm({
               <select
                 value={bookedForUser}
                 onChange={(event) => setBookedForUser(event.target.value)}
-                disabled={activeUsers.isPending}
+                disabled={activeUsers.isPending || activeUsers.isError}
                 required
               >
                 <option value="">Select a user</option>
@@ -225,13 +250,14 @@ export function BookingForm({
                         {
                           id: initialBooking.booked_for_user,
                           display_name: initialBooking.booker_display_name,
+                          email: initialBooking.booker_display_name,
                         },
                       ]
                     : []),
                   ...(activeUsers.data ?? []),
                 ].map((user) => (
                   <option key={user.id} value={user.id}>
-                    {user.display_name}
+                    {user.display_name || user.email}
                   </option>
                 ))}
               </select>
@@ -241,7 +267,7 @@ export function BookingForm({
               <select
                 value={bookingType}
                 onChange={(event) => setBookingType(event.target.value)}
-                disabled={bookingTypes.isPending}
+                disabled={bookingTypes.isPending || bookingTypes.isError}
               >
                 <option value="">No booking type</option>
                 {[
@@ -266,6 +292,12 @@ export function BookingForm({
           </div>
         ) : null}
 
+        {administratorQueryError ? (
+          <p className="booking-form-error" role="alert">
+            Unable to load administrator booking options. Try again before saving.
+          </p>
+        ) : null}
+
         {error ? (
           <p className="booking-form-error" role="alert">
             {error}
@@ -276,7 +308,11 @@ export function BookingForm({
           <Button type="button" onClick={onCancel}>
             Cancel
           </Button>
-          <Button type="submit" variant="primary" disabled={mutation.isPending}>
+          <Button
+            type="submit"
+            variant="primary"
+            disabled={mutation.isPending || Boolean(administratorQueryError)}
+          >
             {mutation.isPending ? "Saving..." : initialBooking ? "Save changes" : "Create booking"}
           </Button>
         </div>

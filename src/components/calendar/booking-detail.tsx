@@ -1,3 +1,4 @@
+import { useEffect, useRef } from "react";
 import { Button } from "@/components/base/Button";
 import type { CalendarBooking } from "@/api/bookings";
 import { utcToApplicationDateTime } from "@/lib/time";
@@ -21,8 +22,19 @@ export function BookingDetail({
   onEdit,
   onDelete,
 }: BookingDetailProps) {
+  const surfaceRef = useRef<HTMLElement>(null);
+
+  useEffect(() => {
+    surfaceRef.current?.focus();
+  }, []);
+
   return (
-    <section className="booking-form-surface" aria-labelledby="booking-detail-title">
+    <section
+      ref={surfaceRef}
+      className="booking-form-surface"
+      aria-labelledby="booking-detail-title"
+      tabIndex={-1}
+    >
       <header className="booking-form-heading">
         <div>
           <p className="eyebrow">Booking details</p>

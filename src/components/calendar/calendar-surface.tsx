@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
+import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import FullCalendar from "@fullcalendar/react";
 import dayGridPlugin from "@fullcalendar/daygrid";
 import timeGridPlugin from "@fullcalendar/timegrid";
@@ -22,13 +22,7 @@ import {
   type CalendarSearch,
   type CalendarView,
 } from "@/lib/calendar";
-import {
-  APPLICATION_TIME_ZONE,
-  addApplicationHours,
-  applicationDateTimeToUtc,
-  calendarDateStringToApplicationDateTime,
-  formatApplicationDate,
-} from "@/lib/time";
+import { APPLICATION_TIME_ZONE, calendarSlotBookingRange, formatApplicationDate } from "@/lib/time";
 import "./calendar-surface.css";
 
 type CalendarSurfaceProps = {
@@ -36,7 +30,7 @@ type CalendarSurfaceProps = {
 };
 
 type BookingDraft =
-  | { kind: "create"; start?: string; end?: string; date?: string }
+  | { kind: "create"; resourceId: string; start?: string; end?: string; date?: string }
   | { kind: "detail"; booking: CalendarBooking }
   | { kind: "edit"; booking: CalendarBooking };
 
@@ -102,6 +96,8 @@ export function CalendarSurface({ search }: CalendarSurfaceProps) {
   const [visibleRange, setVisibleRange] = useState(() => fallbackRange(search.date, effectiveView));
   const [bookingDraft, setBookingDraft] = useState<BookingDraft | null>(null);
   const [bookingToDelete, setBookingToDelete] = useState<CalendarBooking | null>(null);
+  const bookingOpenerRef = useRef<HTMLElement | null>(null);
+  const bookingOpenerIdRef = useRef<string | null>(null);
   const deleteMutation = useDeleteBookingMutation();
   const initialView =
     effectiveView === "month"
@@ -123,6 +119,24 @@ export function CalendarSurface({ search }: CalendarSurfaceProps) {
       })),
     [bookings.data],
   );
+
+  useEffect(() => {
+    if (bookingDraft || !bookingOpenerIdRef.current) return;
+
+    const openerId = bookingOpenerIdRef.current;
+    const frame = requestAnimationFrame(() => {
+      const opener = bookingOpenerRef.current?.isConnected
+        ? bookingOpenerRef.current
+        : Array.from(document.querySelectorAll<HTMLElement>(".fc-event")).find(
+            (element) => element.dataset.eventId === openerId,
+          );
+      opener?.focus();
+      bookingOpenerRef.current = null;
+      bookingOpenerIdRef.current = null;
+    });
+
+    return () => cancelAnimationFrame(frame);
+  }, [bookingDraft]);
 
   useEffect(() => {
     if (resources.isPending || resources.isError) return;
@@ -154,10 +168,27 @@ export function CalendarSurface({ search }: CalendarSurfaceProps) {
   }, [isMobile, navigate, search.view]);
 
   function updateSearch(changes: Partial<CalendarSearch>) {
+    if (changes.resource !== undefined && changes.resource !== search.resource) {
+      setBookingDraft(null);
+      setBookingToDelete(null);
+      bookingOpenerRef.current = null;
+      bookingOpenerIdRef.current = null;
+    }
     void navigate({
       search: (current) => ({ ...current, ...changes }),
     });
   }
+
+  const activeBookingDraft =
+    bookingDraft &&
+    selectedResource &&
+    (bookingDraft.kind === "create"
+      ? bookingDraft.resourceId === selectedResource.id
+      : bookingDraft.booking.resource === selectedResource.id)
+      ? bookingDraft
+      : null;
+  const activeBookingToDelete =
+    bookingToDelete && bookingToDelete.resource === selectedResource?.id ? bookingToDelete : null;
 
   if (resources.isPending) {
     return <p role="status">Loading calendar resources...</p>;
@@ -224,25 +255,27 @@ export function CalendarSurface({ search }: CalendarSurfaceProps) {
 
           <div className="calendar-frame">
             {selectedResource ? (
-              bookingDraft ? (
-                bookingDraft.kind === "detail" ? (
+              activeBookingDraft ? (
+                activeBookingDraft.kind === "detail" ? (
                   <BookingDetail
-                    booking={bookingDraft.booking}
+                    booking={activeBookingDraft.booking}
                     isAdministrator={isAdministrator(auth.user)}
                     onClose={() => setBookingDraft(null)}
-                    onEdit={() => setBookingDraft({ kind: "edit", booking: bookingDraft.booking })}
-                    onDelete={() => setBookingToDelete(bookingDraft.booking)}
+                    onEdit={() =>
+                      setBookingDraft({ kind: "edit", booking: activeBookingDraft.booking })
+                    }
+                    onDelete={() => setBookingToDelete(activeBookingDraft.booking)}
                   />
-                ) : bookingDraft.kind === "edit" ? (
+                ) : activeBookingDraft.kind === "edit" ? (
                   <BookingForm
                     resourceId={selectedResource.id}
                     resourceName={selectedResource.name}
                     isAdministrator={isAdministrator(auth.user)}
-                    initialStart={bookingDraft.booking.start}
-                    initialEnd={bookingDraft.booking.end}
-                    initialBooking={bookingDraft.booking}
+                    initialStart={activeBookingDraft.booking.start}
+                    initialEnd={activeBookingDraft.booking.end}
+                    initialBooking={activeBookingDraft.booking}
                     onCancel={() =>
-                      setBookingDraft({ kind: "detail", booking: bookingDraft.booking })
+                      setBookingDraft({ kind: "detail", booking: activeBookingDraft.booking })
                     }
                     onSuccess={() => setBookingDraft(null)}
                   />
@@ -251,9 +284,9 @@ export function CalendarSurface({ search }: CalendarSurfaceProps) {
                     resourceId={selectedResource.id}
                     resourceName={selectedResource.name}
                     isAdministrator={isAdministrator(auth.user)}
-                    initialStart={bookingDraft.start}
-                    initialEnd={bookingDraft.end}
-                    initialDate={bookingDraft.date}
+                    initialStart={activeBookingDraft.start}
+                    initialEnd={activeBookingDraft.end}
+                    initialDate={activeBookingDraft.date}
                     onCancel={() => setBookingDraft(null)}
                     onSuccess={() => setBookingDraft(null)}
                   />
@@ -295,23 +328,28 @@ export function CalendarSurface({ search }: CalendarSurfaceProps) {
                       if (effectiveView === "month" || click.allDay) {
                         setBookingDraft({
                           kind: "create",
+                          resourceId: selectedResource.id,
                           date: formatApplicationDate(click.date),
                         });
                         return;
                       }
-                      const localStart = calendarDateStringToApplicationDateTime(click.dateStr);
-                      const localEnd = addApplicationHours(localStart, 1);
+                      const range = calendarSlotBookingRange(click.date);
                       setBookingDraft({
                         kind: "create",
-                        start: applicationDateTimeToUtc(localStart),
-                        end: applicationDateTimeToUtc(localEnd),
+                        resourceId: selectedResource.id,
+                        start: range.start,
+                        end: range.end,
                       });
                     }}
                     eventClick={(click: EventClickArg) => {
                       const booking = click.event.extendedProps.booking as
                         | CalendarBooking
                         | undefined;
-                      if (booking) setBookingDraft({ kind: "detail", booking });
+                      if (booking) {
+                        bookingOpenerRef.current = click.el;
+                        bookingOpenerIdRef.current = booking.id;
+                        setBookingDraft({ kind: "detail", booking });
+                      }
                     }}
                     datesSet={(range: DatesSetArg) => {
                       const nextRange = {
@@ -340,9 +378,9 @@ export function CalendarSurface({ search }: CalendarSurfaceProps) {
           </div>
         </div>
       )}
-      {bookingToDelete ? (
+      {activeBookingToDelete ? (
         <DeleteBookingDialog
-          booking={bookingToDelete}
+          booking={activeBookingToDelete}
           pending={deleteMutation.isPending}
           error={deletionErrorMessage(deleteMutation.error)}
           onCancel={() => {
@@ -350,7 +388,7 @@ export function CalendarSurface({ search }: CalendarSurfaceProps) {
           }}
           onConfirm={() => {
             void deleteMutation
-              .mutateAsync({ id: bookingToDelete.id })
+              .mutateAsync({ id: activeBookingToDelete.id })
               .then(() => {
                 setBookingToDelete(null);
                 setBookingDraft(null);

@@ -20,20 +20,25 @@ export type BookingUpdateMutationInput = BookingUpdate & {
   optimisticBooking?: CalendarBooking;
 };
 
+export type BookingCreateMutationInput = BookingCreate & {
+  optimisticBookerDisplayName?: string;
+  optimisticBookingTypeName?: string | null;
+};
+
 function displayName(): string {
   const user = getAuthSnapshot().user;
   return [user?.first_name, user?.last_name].filter(Boolean).join(" ") || user?.email || "User";
 }
 
-function optimisticBooking(input: BookingCreate): CalendarBooking {
+function optimisticBooking(input: BookingCreateMutationInput): CalendarBooking {
   return {
     id: `optimistic-${crypto.randomUUID()}`,
     resource: input.resource,
     start: input.start,
     end: input.end,
-    booker_display_name: displayName(),
+    booker_display_name: input.optimisticBookerDisplayName ?? displayName(),
     booking_type: input.booking_type ?? null,
-    booking_type_name: null,
+    booking_type_name: input.optimisticBookingTypeName ?? null,
     booked_for_user: input.booked_for_user ?? getAuthSnapshot().user?.id,
     created_by_user: getAuthSnapshot().user?.id,
   };
@@ -45,7 +50,7 @@ function overlaps(leftStart: string, leftEnd: string, rightStart: string, rightE
 
 function isVisibleQuery(
   queryKey: readonly unknown[],
-): queryKey is readonly ["bookings", "visible", string, string, string] {
+): queryKey is readonly ["bookings", "visible", string, string, string, string] {
   return queryKey[0] === "bookings" && queryKey[1] === "visible";
 }
 
@@ -57,7 +62,11 @@ export function useCreateBookingMutation() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: createBooking,
+    mutationFn: ({
+      optimisticBookerDisplayName: _optimisticBookerDisplayName,
+      optimisticBookingTypeName: _optimisticBookingTypeName,
+      ...input
+    }: BookingCreateMutationInput) => createBooking(input),
     onMutate: async (input): Promise<BookingsContext> => {
       await queryClient.cancelQueries({ queryKey: bookingsKeys.all });
       const previousQueries = queryClient.getQueriesData<CalendarBooking[]>({
@@ -67,7 +76,7 @@ export function useCreateBookingMutation() {
 
       for (const [queryKey, bookings] of previousQueries) {
         if (!bookings || !isVisibleQuery(queryKey)) continue;
-        const [, , resourceId, rangeStart, rangeEnd] = queryKey;
+        const [, , , resourceId, rangeStart, rangeEnd] = queryKey;
         if (
           resourceId === input.resource &&
           overlaps(input.start, input.end, rangeStart, rangeEnd)
@@ -123,7 +132,7 @@ export function useUpdateBookingMutation() {
 
       for (const [queryKey, bookings] of previousQueries) {
         if (!bookings || !isVisibleQuery(queryKey)) continue;
-        const [, , resourceId, rangeStart, rangeEnd] = queryKey;
+        const [, , , resourceId, rangeStart, rangeEnd] = queryKey;
         const current = bookings.find((booking) => booking.id === input.id);
         const updated = optimisticUpdatedBooking(current, input);
         if (!updated) continue;

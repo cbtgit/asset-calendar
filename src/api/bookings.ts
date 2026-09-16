@@ -1,4 +1,5 @@
 import { queryOptions } from "@tanstack/react-query";
+import { getAuthSnapshot } from "./auth";
 import { pocketbase } from "./client";
 import { toAppError } from "./errors";
 import { bookingsKeys } from "./query-keys";
@@ -88,8 +89,9 @@ export async function deleteBooking(id: string): Promise<{ id: string }> {
 }
 
 export function calendarBookingsQueryOptions(range: BookingRange) {
+  const tenantId = getAuthSnapshot().user?.tenant ?? "";
   return queryOptions<CalendarBooking[]>({
-    queryKey: bookingsKeys.visible(range.resourceId, range.start, range.end),
+    queryKey: bookingsKeys.visible(tenantId, range.resourceId, range.start, range.end),
     queryFn: () => getCalendarBookings(range),
     enabled: Boolean(range.resourceId && range.start && range.end),
   });

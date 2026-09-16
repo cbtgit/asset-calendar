@@ -1,6 +1,7 @@
 // @vitest-environment node
 import { cp, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
+import { tmpdir } from "node:os";
 import { fileURLToPath } from "node:url";
 import PocketBase from "pocketbase";
 import { afterAll, beforeAll, expect, it } from "vite-plus/test";
@@ -17,7 +18,7 @@ let harness: PocketBaseIntegrationHarness;
 let migrationsDir: string;
 
 async function createSeededMigrations(): Promise<string> {
-  migrationsDir = await mkdtemp(resolve("/tmp", "asset-calendar-bookings-"));
+  migrationsDir = await mkdtemp(resolve(tmpdir(), "asset-calendar-bookings-"));
   await cp(productionMigrations, migrationsDir, { recursive: true });
   await writeFile(
     resolve(migrationsDir, "1710000011_f08_bookings_fixture.js"),
@@ -97,6 +98,19 @@ async function authenticate(pocketbase: PocketBase, email: string): Promise<void
     method: "POST",
     host: "tenant.localhost",
     body: { identity: email, password },
+  });
+  expect(response.status).toBe(200);
+  const auth = await response.json();
+  pocketbase.authStore.save(auth.token, auth.record);
+}
+
+async function authenticateSuperuser(pocketbase: PocketBase): Promise<void> {
+  const response = await request(pocketbase, "/api/collections/_superusers/auth-with-password", {
+    method: "POST",
+    body: {
+      identity: harness.superuser.email,
+      password: harness.superuser.password,
+    },
   });
   expect(response.status).toBe(200);
   const auth = await response.json();
@@ -239,6 +253,30 @@ it("creates role-safe bookings with snapshots and end-exclusive conflicts", asyn
     booking_type_name: "Training",
   });
   expect(administratorBookingBody).not.toHaveProperty("effective_rate_minor_units");
+
+  const privileged = new PocketBase(harness.baseUrl);
+  await authenticateSuperuser(privileged);
+  const storedBookings = await request(privileged, "/api/collections/bookings/records", {
+    host: "tenant.localhost",
+  });
+  expect(storedBookings.status).toBe(200);
+  const storedBooking = (await storedBookings.json()).items.find(
+    (item: { id: string }) => item.id === regularBookingBody.id,
+  );
+  expect(storedBooking).toMatchObject({
+    tenant: adminRecord.tenant,
+    resource: resource.id,
+    booked_for_user: regularRecord.id,
+    created_by_user: regularRecord.id,
+    resource_base_rate_minor_units: 1500,
+    booking_type_surcharge_minor_units: 0,
+    effective_rate_minor_units: 1500,
+    booker_display_name_snapshot: "Regular A",
+    booker_group_snapshot: "Unit A",
+    booker_email_snapshot: "regular-a@example.test",
+    resource_name_snapshot: "Room A",
+    booking_type_name_snapshot: "",
+  });
 
   const regularVisible = await request(
     regular,
