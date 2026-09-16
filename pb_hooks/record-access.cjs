@@ -355,11 +355,11 @@ function normalizeBooking(event, info, record, context) {
   const endValue = end.toISOString();
   const existingBookings = $app.findRecordsByFilter(
     BOOKING_COLLECTION,
-    "tenant = {:tenant} && resource = {:resource}",
+    "tenant = {:tenant} && resource = {:resource} && start < {:end} && end > {:start}",
     "",
     0,
     0,
-    { tenant: tenantId, resource: resource.id },
+    { tenant: tenantId, resource: resource.id, start: startValue, end: endValue },
   );
   const overlaps = existingBookings.some((existing) => {
     const existingStart = Date.parse(String(existing.get("start")));
