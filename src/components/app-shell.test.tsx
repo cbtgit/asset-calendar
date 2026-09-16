@@ -73,17 +73,21 @@ it("shows the administration module and rail for administrators", () => {
 
   render(<AppShell />);
 
-  expect(screen.getByRole("link", { name: "Administration" })).toBeTruthy();
+  const administrationLink = screen.getByRole("link", { name: "Administration" });
+  expect(administrationLink).toBeTruthy();
+  expect(administrationLink.getAttribute("data-administrator")).toBeNull();
+  expect(administrationLink.getAttribute("href")).toBe("/administration/users");
   expect(screen.getByRole("navigation", { name: "Administration navigation" })).toBeTruthy();
   expect(screen.getByRole("link", { name: "Groups" }).getAttribute("data-active")).toBe("true");
   expect(screen.getAllByRole("link").map((link) => link.textContent)).toEqual([
     "ACAsset Calendar",
     "Calendar",
     "Administration",
-    "Groups",
     "Users",
+    "Groups",
     "Booking Types",
     "Resources",
+    "Billing",
   ]);
 });
 

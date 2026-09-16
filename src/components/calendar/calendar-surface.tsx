@@ -6,7 +6,6 @@ import interactionPlugin from "@fullcalendar/interaction";
 import luxon3Plugin from "@fullcalendar/luxon3";
 import type { DatesSetArg, EventClickArg, EventInput } from "@fullcalendar/core";
 import type { DateClickArg } from "@fullcalendar/interaction";
-import daLocale from "@fullcalendar/core/locales/da";
 import { useNavigate } from "@tanstack/react-router";
 import { isAdministrator } from "@/api/auth";
 import type { CalendarBooking } from "@/api/bookings";
@@ -305,14 +304,13 @@ export function CalendarSurface({ search }: CalendarSurfaceProps) {
                     initialDate={search.date}
                     initialView={initialView}
                     firstDay={1}
-                    locales={[daLocale]}
-                    locale="da"
+                    locale="en"
                     headerToolbar={{
                       left: "prev,next today",
                       center: "title",
                       right: isMobile ? "" : "dayGridMonth,timeGridWeek,timeGridDay",
                     }}
-                    buttonText={{ today: "I dag", month: "Måned", week: "Uge", day: "Dag" }}
+                    buttonText={{ today: "Today", month: "Month", week: "Week", day: "Day" }}
                     slotDuration="00:15:00"
                     slotLabelInterval="01:00:00"
                     slotLabelFormat={{ hour: "2-digit", minute: "2-digit", hour12: false }}
@@ -371,7 +369,7 @@ export function CalendarSurface({ search }: CalendarSurfaceProps) {
               )
             ) : (
               <div className="calendar-empty" role="status">
-                <strong>Resource unavailable</strong>
+                <strong>Calendar view</strong>
                 <p>Select an active resource to view its calendar.</p>
               </div>
             )}

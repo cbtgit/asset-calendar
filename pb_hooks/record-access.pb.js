@@ -34,3 +34,6 @@ routerAdd("PATCH", "/api/calendar/bookings/{id}", (event) =>
 routerAdd("DELETE", "/api/calendar/bookings/{id}", (event) =>
   require(`${__hooks}/record-access.cjs`).calendarBookingDeleteRoute(event),
 );
+routerAdd("GET", "/api/billing/export", (event) =>
+  require(`${__hooks}/record-access.cjs`).billingExportRoute(event),
+);

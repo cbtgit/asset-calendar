@@ -24,7 +24,8 @@ export function MobileNavigationModuleSection({
         aria-expanded={expanded}
         onClick={() => onToggleModule(expanded ? null : module)}
       >
-        {module === "calendar" ? "Calendar" : "Administration"}
+        <span className="shell-mobile-section-chevron" aria-hidden="true" />
+        <span>{module === "calendar" ? "Calendar" : "Administration"}</span>
       </button>
       {expanded ? children : null}
     </div>

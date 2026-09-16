@@ -1,3 +1,5 @@
+import { CloseButton } from "@/components/base/CloseButton";
+
 type MobileNavigationDrawerHeaderProps = {
   onClose: () => void;
 };
@@ -6,14 +8,7 @@ export function MobileNavigationDrawerHeader({ onClose }: MobileNavigationDrawer
   return (
     <div className="shell-mobile-drawer-header">
       <span className="shell-mobile-drawer-title">Navigation</span>
-      <button
-        className="shell-mobile-close"
-        type="button"
-        aria-label="Close navigation"
-        onClick={onClose}
-      >
-        ×
-      </button>
+      <CloseButton className="shell-mobile-close" label="Close navigation" onClick={onClose} />
     </div>
   );
 }

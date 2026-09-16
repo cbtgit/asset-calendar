@@ -337,6 +337,61 @@ it("creates role-safe bookings with snapshots and end-exclusive conflicts", asyn
     created_by_user: adminRecord.id,
   });
 
+  const billingPreview = await request(
+    admin,
+    "/api/billing/export?start=2026-01-01&end=2027-01-01",
+    { host: "tenant.localhost" },
+  );
+  expect(billingPreview.status).toBe(200);
+  const billingPreviewBody = await billingPreview.json();
+  expect(billingPreviewBody).toMatchObject({
+    groups: [
+      expect.objectContaining({
+        name: "Unit A",
+        total: "57.50",
+        records: expect.arrayContaining([
+          expect.objectContaining({
+            booker: "Regular A",
+            group: "Unit A",
+            resource: "Room A",
+            amount: "15.00",
+          }),
+          expect.objectContaining({
+            booker: "Regular A",
+            booking_type: "Training",
+            amount: "27.50",
+          }),
+        ]),
+      }),
+    ],
+    total: "57.50",
+  });
+  expect(JSON.stringify(billingPreviewBody)).not.toContain("Maintenance");
+
+  const billingCsv = await request(
+    admin,
+    "/api/billing/export?start=2026-01-01&end=2027-01-01&format=csv",
+    { host: "tenant.localhost" },
+  );
+  expect(billingCsv.status).toBe(200);
+  expect(billingCsv.headers.get("content-type")).toContain("text/csv");
+  expect(billingCsv.headers.get("content-disposition")).toContain(
+    "billing-2026-01-01-2027-01-01.csv",
+  );
+  const billingCsvBody = await billingCsv.text();
+  expect(billingCsvBody).toContain(
+    "start,end,duration_hours,booker,group,resource,booking_type,amount\r\n",
+  );
+  expect(billingCsvBody).toContain(",Regular A,Unit A,Room A,,15.00\r\n");
+  expect(billingCsvBody).not.toContain("Maintenance");
+
+  const regularBillingPreview = await request(
+    regular,
+    "/api/billing/export?start=2026-01-01&end=2027-01-01",
+    { host: "tenant.localhost" },
+  );
+  expect(regularBillingPreview.status).toBe(403);
+
   const regularVisible = await request(
     regular,
     "/api/calendar/bookings?resource=" +

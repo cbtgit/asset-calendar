@@ -78,18 +78,6 @@
   color: var(--color-brand-dark);
 }
 
-.shell-module-link[data-administrator="true"]::after {
-  content: "ADMIN";
-  margin-left: var(--space-2);
-  padding: 0.15rem 0.35rem;
-  border-radius: 0.25rem;
-  color: var(--color-surface);
-  background: rgb(255 255 255 / 22%);
-  font-size: 0.65rem;
-  font-weight: 750;
-  letter-spacing: 0.02em;
-}
-
 .shell-account {
   grid-column: 3;
   position: relative;
@@ -127,6 +115,20 @@
   background: var(--color-status);
   font-size: 0.7rem;
   font-weight: 750;
+}
+
+.shell-account-chevron {
+  width: 0;
+  height: 0;
+  margin-left: var(--space-1);
+  border-top: 0.35rem solid var(--color-muted);
+  border-right: 0.3rem solid transparent;
+  border-left: 0.3rem solid transparent;
+  transition: transform 160ms ease;
+}
+
+.shell-account-trigger[aria-expanded="true"] .shell-account-chevron {
+  transform: rotate(180deg);
 }
 
 .shell-account-popover {
@@ -193,9 +195,16 @@
 .shell-rail-link {
   width: 100%;
   min-height: 2.75rem;
+  gap: var(--space-3);
   padding: 0 var(--space-3);
   border: 0;
   border-radius: var(--radius-sm);
+}
+
+.shell-rail-icon {
+  width: 1.125rem;
+  height: 1.125rem;
+  flex: 0 0 1.125rem;
 }
 
 .shell-rail-link[data-active="true"] {
@@ -218,6 +227,7 @@
 .shell-content {
   width: min(100%, 72rem);
   flex: 1;
+  min-width: 0;
   margin: 0 auto;
   padding: var(--space-7);
 }
@@ -351,6 +361,14 @@
     line-height: 1;
   }
 
+  .shell-mobile-close.close-button {
+    width: 2.75rem;
+    height: 2.75rem;
+    padding: 0;
+    border: 0;
+    background: transparent;
+  }
+
   .shell-mobile-links {
     display: grid;
     gap: var(--space-2);
@@ -377,6 +395,25 @@
     font-weight: 650;
     text-align: left;
     text-decoration: none;
+  }
+
+  .shell-mobile-section-trigger {
+    gap: var(--space-2);
+    width: 100%;
+  }
+
+  .shell-mobile-section-chevron {
+    width: 0;
+    height: 0;
+    margin-left: var(--space-3);
+    border-top: 0.35rem solid currentColor;
+    border-right: 0.3rem solid transparent;
+    border-left: 0.3rem solid transparent;
+    transition: transform 160ms ease;
+  }
+
+  .shell-mobile-section-trigger[aria-expanded="true"] .shell-mobile-section-chevron {
+    transform: rotate(180deg);
   }
 
   .shell-mobile-section-trigger[aria-expanded="true"],
@@ -413,12 +450,53 @@
     cursor: pointer;
     font: inherit;
     font-weight: 650;
-    text-align: left;
+    text-align: center;
   }
 
   .shell-content {
     width: 100%;
     padding: var(--space-5) var(--space-4);
+  }
+
+  .shell[data-active-module="administration"] {
+    height: 100dvh;
+    overflow: hidden;
+  }
+
+  .shell[data-active-module="administration"] .shell-body {
+    height: calc(100dvh - var(--shell-header-height));
+    min-height: 0;
+  }
+
+  .shell[data-active-module="administration"]
+    .shell-content:has(
+      .booking-types-list,
+      .resources-list,
+      .groups-directory-list,
+      .users-directory-list,
+      .billing-export
+    ) {
+    display: flex;
+    min-height: 0;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  .shell[data-active-module="administration"] .booking-types-list,
+  .shell[data-active-module="administration"] .resources-list,
+  .shell[data-active-module="administration"] .groups-directory-list,
+  .shell[data-active-module="administration"] .users-directory-list,
+  .shell[data-active-module="administration"] .billing-export-groups {
+    min-height: 0;
+    flex: 1 1 auto;
+  }
+
+  .shell[data-active-module="administration"] .groups-directory,
+  .shell[data-active-module="administration"] .users-directory {
+    display: flex;
+    flex: 1 1 auto;
+    min-height: 0;
+    flex-direction: column;
   }
 }
 

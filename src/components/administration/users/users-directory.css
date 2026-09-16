@@ -1,8 +1,10 @@
 .users-directory-list {
+  align-content: start;
   display: grid;
   gap: 0.75rem;
   list-style: none;
   margin: 1.5rem 0 0;
+  min-width: 0;
   padding: 0;
 }
 
@@ -40,8 +42,27 @@
 }
 
 .users-directory-status-value {
-  display: block;
+  align-items: center;
+  display: inline-flex;
+  gap: 0.45rem;
   margin-top: 0.2rem;
+}
+
+.users-directory-status-value::before {
+  border-radius: 50%;
+  content: "";
+  display: inline-block;
+  flex: 0 0 0.5rem;
+  height: 0.5rem;
+  width: 0.5rem;
+}
+
+.users-directory-status-value-active::before {
+  background: #2f9e44;
+}
+
+.users-directory-status-value-inactive::before {
+  background: #d94841;
 }
 
 .users-directory-edit {
@@ -67,10 +88,6 @@
   display: flex;
   flex-direction: column;
   gap: 0.75rem;
-}
-
-.users-directory-state button {
-  padding: 0.5rem 0.75rem;
 }
 
 @media (width < 48rem) {
@@ -130,5 +147,11 @@
     grid-column: 2;
     grid-row: 1 / span 2;
     justify-self: stretch;
+  }
+}
+
+@media (width >= 48rem) {
+  .users-directory-edit {
+    padding-inline: calc(var(--space-3) - 2px);
   }
 }

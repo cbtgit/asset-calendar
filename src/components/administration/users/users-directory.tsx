@@ -24,7 +24,13 @@ function UserRow({ user }: { user: User }) {
       <div className="users-directory-status-actions">
         <div className="users-directory-status">
           <span className="users-directory-label">Status</span>
-          <span className="users-directory-status-value">
+          <span
+            className={`users-directory-status-value ${
+              user.active
+                ? "users-directory-status-value-active"
+                : "users-directory-status-value-inactive"
+            }`}
+          >
             {user.active ? "Active" : "Inactive"}
           </span>
           {user.password_setup_pending ? <small>Invitation pending</small> : null}
@@ -60,7 +66,7 @@ export function UsersDirectory() {
     return <p className="users-directory-empty">No users have been created yet.</p>;
 
   return (
-    <section aria-label="Users directory">
+    <section className="users-directory" aria-label="Users directory">
       <ul className="users-directory-list">
         {users.data.map((user) => (
           <UserRow key={user.id} user={user} />

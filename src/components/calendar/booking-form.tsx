@@ -6,6 +6,7 @@ import { useCreateBookingMutation, useUpdateBookingMutation } from "@/hooks/use-
 import type { CalendarBooking } from "@/api/bookings";
 import { applicationDateTimeToUtc, utcToApplicationDateTime } from "@/lib/time";
 import { Button } from "@/components/base/Button";
+import { CloseButton } from "@/components/base/CloseButton";
 import { useQuery } from "@tanstack/react-query";
 import "./booking-form.css";
 
@@ -20,6 +21,8 @@ type BookingFormProps = {
   onCancel: () => void;
   onSuccess: () => void;
 };
+
+const BOOKING_TIME_STEP_SECONDS = 15 * 60;
 
 function initialDateTime(value: string | undefined) {
   if (!value) return { date: "", time: "" };
@@ -197,9 +200,12 @@ export function BookingForm({
           <p className="eyebrow">{initialBooking ? "Edit booking" : "New booking"}</p>
           <h2 id="booking-form-title">{resourceName}</h2>
         </div>
-        <Button type="button" size="compact" onClick={onCancel}>
-          Close
-        </Button>
+        <CloseButton
+          className="booking-form-close"
+          size="compact"
+          label="Close booking form"
+          onClick={onCancel}
+        />
       </header>
 
       <form className="booking-form" onSubmit={submit} noValidate>
@@ -219,7 +225,7 @@ export function BookingForm({
               type="time"
               value={startTime}
               onChange={(event) => setStartTime(event.target.value)}
-              step={900}
+              step={BOOKING_TIME_STEP_SECONDS}
               required
             />
           </label>
@@ -238,7 +244,7 @@ export function BookingForm({
               type="time"
               value={endTime}
               onChange={(event) => setEndTime(event.target.value)}
-              step={900}
+              step={BOOKING_TIME_STEP_SECONDS}
               required
             />
           </label>

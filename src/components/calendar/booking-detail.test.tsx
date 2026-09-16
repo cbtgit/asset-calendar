@@ -29,5 +29,7 @@ it("moves focus into the detail surface when it opens", () => {
     />,
   );
 
+  expect(screen.getByRole("button", { name: "Close booking details" })).toBeTruthy();
+
   expect(document.activeElement).toBe(screen.getByRole("region", { name: "Regular A" }));
 });

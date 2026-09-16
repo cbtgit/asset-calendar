@@ -1,0 +1,229 @@
+.billing-export {
+  max-width: 64rem;
+}
+
+.billing-export h1 {
+  margin-bottom: var(--space-2);
+}
+
+.billing-export-form {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-4);
+  align-items: end;
+  margin: var(--space-7) 0 var(--space-4);
+  padding: var(--space-5);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface-subtle);
+}
+
+.billing-export-field {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.billing-export-field label {
+  color: var(--color-ink);
+  font-size: 0.875rem;
+  font-weight: 700;
+}
+
+.billing-export-field input {
+  width: 100%;
+  min-height: 2.75rem;
+  padding: 0 var(--space-3);
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-sm);
+  color: var(--color-ink);
+  background: var(--color-surface);
+  font: inherit;
+}
+
+.billing-export-timezone {
+  grid-column: 1 / -1;
+  margin: 0;
+  font-size: 0.8rem;
+}
+
+.billing-export-form .button {
+  justify-self: start;
+}
+
+.billing-export-error {
+  color: var(--color-danger) !important;
+  font-weight: 650;
+}
+
+.billing-export-results {
+  margin-top: var(--space-7);
+}
+
+.billing-export-results-header,
+.billing-export-group-header,
+.billing-export-total {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+}
+
+.billing-export-results-header {
+  padding-bottom: var(--space-4);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.billing-export-results-header h2,
+.billing-export-group-header h3 {
+  margin: 0;
+  color: var(--color-ink);
+}
+
+.billing-export-results-header h2 {
+  font-size: 1.2rem;
+}
+
+.billing-export-results-header p {
+  margin: var(--space-1) 0 0;
+  font-size: 0.85rem;
+}
+
+.billing-export-groups {
+  display: grid;
+  gap: var(--space-5);
+  margin-top: var(--space-5);
+}
+
+.billing-export-group {
+  overflow: hidden;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface);
+}
+
+.billing-export-group-header {
+  padding: var(--space-4) var(--space-5);
+  background: var(--color-surface-subtle);
+}
+
+.billing-export-group-header h3 {
+  font-size: 1rem;
+}
+
+.billing-export-group-header strong,
+.billing-export-total strong {
+  color: var(--color-brand-dark);
+  white-space: nowrap;
+}
+
+.billing-export-records {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.billing-export-record {
+  display: grid;
+  grid-template-columns: minmax(10rem, 1fr) minmax(15rem, 1.5fr) auto;
+  gap: var(--space-4);
+  align-items: center;
+  padding: var(--space-4) var(--space-5);
+  border-top: 1px solid var(--color-border);
+}
+
+.billing-export-record div {
+  display: grid;
+  gap: var(--space-1);
+  min-width: 0;
+}
+
+.billing-export-record span {
+  overflow-wrap: anywhere;
+  color: var(--color-muted);
+  font-size: 0.85rem;
+}
+
+.billing-export-record > strong {
+  white-space: nowrap;
+}
+
+.billing-export-empty {
+  margin: var(--space-5) 0;
+  padding: var(--space-5);
+  border: 1px dashed var(--color-border-strong);
+  border-radius: var(--radius-sm);
+}
+
+.billing-export-total {
+  margin-top: var(--space-5);
+  padding: var(--space-5) 0 0;
+  border-top: 2px solid var(--color-ink);
+  color: var(--color-ink);
+  font-size: 1.05rem;
+  font-weight: 750;
+}
+
+@media (width < 48rem) {
+  .billing-export {
+    display: flex;
+    min-height: 0;
+    flex: 1 1 auto;
+    flex-direction: column;
+    max-width: none;
+  }
+
+  .billing-export-form {
+    grid-template-columns: 1fr;
+    gap: var(--space-3);
+    margin: var(--space-5) 0 var(--space-3);
+    padding: var(--space-4);
+  }
+
+  .billing-export-timezone {
+    grid-column: auto;
+  }
+
+  .billing-export-form .button {
+    width: 100%;
+  }
+
+  .billing-export-results-header {
+    align-items: stretch;
+    flex-direction: column;
+    gap: var(--space-3);
+    padding-bottom: var(--space-3);
+  }
+
+  .billing-export-results-header .button {
+    width: 100%;
+  }
+
+  .billing-export-results {
+    display: flex;
+    min-height: 0;
+    flex: 1 1 auto;
+    flex-direction: column;
+    margin-top: var(--space-3);
+  }
+
+  .billing-export-groups {
+    display: flex;
+    min-height: 0;
+    flex: 1 1 auto;
+    flex-direction: column;
+    gap: var(--space-4);
+    margin-top: var(--space-4);
+  }
+
+  .billing-export-group {
+    min-height: 0;
+    flex: 1 1 0;
+    overflow-y: auto;
+  }
+
+  .billing-export-record {
+    grid-template-columns: 1fr;
+    gap: var(--space-2);
+    padding: var(--space-3) var(--space-4);
+  }
+}

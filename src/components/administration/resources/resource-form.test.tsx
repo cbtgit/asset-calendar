@@ -32,11 +32,11 @@ function renderForm() {
   );
 }
 
-it("initializes Danish base-rate input and submits integer minor units", async () => {
+it("initializes Danish hourly-price input and submits integer minor units", async () => {
   const updateResource = vi.spyOn(resourcesApi, "updateResource").mockResolvedValue({} as never);
   renderForm();
 
-  expect((screen.getByLabelText("Base rate") as HTMLInputElement).value).toBe("12,50");
+  expect((screen.getByLabelText("Hourly price") as HTMLInputElement).value).toBe("12,50");
   fireEvent.submit(screen.getByRole("button", { name: "Save" }).closest("form")!);
 
   await waitFor(() =>
@@ -57,7 +57,7 @@ it("rejects ambiguous dot-decimal input under the Danish policy", () => {
   );
 
   fireEvent.change(screen.getByLabelText("Resource"), { target: { value: "Room A" } });
-  fireEvent.change(screen.getByLabelText("Base rate"), { target: { value: "12.50" } });
+  fireEvent.change(screen.getByLabelText("Hourly price"), { target: { value: "12.50" } });
   fireEvent.submit(screen.getByRole("button", { name: "Save" }).closest("form")!);
 
   expect(screen.getByRole("alert").textContent).toContain("1.234,50");
@@ -88,7 +88,7 @@ it("shows the conflict message for a nested PocketBase uniqueness response", asy
   );
 
   fireEvent.change(screen.getByLabelText("Resource"), { target: { value: "Room A" } });
-  fireEvent.change(screen.getByLabelText("Base rate"), { target: { value: "12,50" } });
+  fireEvent.change(screen.getByLabelText("Hourly price"), { target: { value: "12,50" } });
   fireEvent.submit(screen.getByRole("button", { name: "Save" }).closest("form")!);
 
   await waitFor(() => expect(screen.getByRole("alert").textContent).toContain("already exists"));

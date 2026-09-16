@@ -23,7 +23,7 @@ export function ResourceDirectory() {
             {resource.archived_at ? <p>Archived</p> : null}
           </div>
           <div className="resource-rate">
-            <span className="resource-label">Base rate</span>
+            <span className="resource-label">Hourly price</span>
             <span>{formatMinorUnitsForDisplay(resource.base_rate_minor_units)}</span>
           </div>
           <Link

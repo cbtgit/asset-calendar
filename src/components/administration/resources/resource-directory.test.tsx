@@ -46,7 +46,7 @@ it("shows currency-aware rates and links resources to editing without archive co
     </QueryClientProvider>,
   );
 
-  expect(await screen.findByText("Base rate")).toBeTruthy();
+  expect(await screen.findByText("Hourly price")).toBeTruthy();
   expect(screen.getByText(/12,50/)).toBeTruthy();
   expect(screen.getByText(/kr\./)).toBeTruthy();
   expect((await screen.findByRole("link", { name: "Edit Operations" })).getAttribute("href")).toBe(

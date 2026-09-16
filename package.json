@@ -30,6 +30,7 @@
     "class-variance-authority": "0.7.1",
     "clsx": "2.1.1",
     "dayjs": "^1.11.23",
+    "lucide-react": "^1.46.0",
     "luxon": "^3.7.2",
     "pocketbase": "0.28.1",
     "react": "19.2.8",

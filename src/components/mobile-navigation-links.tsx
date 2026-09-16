@@ -39,17 +39,17 @@ export function MobileNavigationLinks({
         >
           <Link
             className="shell-mobile-child-link"
-            to="/administration/groups"
-            onClick={onSelectRoute}
-          >
-            Groups
-          </Link>
-          <Link
-            className="shell-mobile-child-link"
             to="/administration/users"
             onClick={onSelectRoute}
           >
             Users
+          </Link>
+          <Link
+            className="shell-mobile-child-link"
+            to="/administration/groups"
+            onClick={onSelectRoute}
+          >
+            Groups
           </Link>
           <Link
             className="shell-mobile-child-link"
@@ -64,6 +64,13 @@ export function MobileNavigationLinks({
             onClick={onSelectRoute}
           >
             Resources
+          </Link>
+          <Link
+            className="shell-mobile-child-link"
+            to="/administration/billing"
+            onClick={onSelectRoute}
+          >
+            Billing
           </Link>
         </MobileNavigationModuleSection>
       ) : null}

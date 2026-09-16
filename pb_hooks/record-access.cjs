@@ -670,6 +670,232 @@ function bookingRecordsForRange(tenantId, resourceId, start, end) {
   });
 }
 
+function billingQueryValue(event, name) {
+  return event.request.url.query().get(name) ?? "";
+}
+
+function applicationDateToUtc(value, code) {
+  const normalized = String(value ?? "").trim();
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(normalized);
+  if (!match) throw new BadRequestError(code);
+
+  const [, year, month, day] = match;
+  const yearNumber = Number(year);
+  const monthNumber = Number(month);
+  const dayNumber = Number(day);
+  const hourNumber = 0;
+  const candidate = Date.UTC(yearNumber, monthNumber - 1, dayNumber);
+  const candidateDate = new Date(candidate);
+  if (
+    candidateDate.getUTCFullYear() !== yearNumber ||
+    candidateDate.getUTCMonth() !== monthNumber - 1 ||
+    candidateDate.getUTCDate() !== dayNumber ||
+    candidateDate.getUTCHours() !== hourNumber
+  ) {
+    throw new BadRequestError(code);
+  }
+
+  const lastSunday = (year, month) => {
+    const lastDay = new Date(Date.UTC(year, month + 1, 0));
+    return lastDay.getUTCDate() - lastDay.getUTCDay();
+  };
+  const marchSunday = lastSunday(yearNumber, 2);
+  const octoberSunday = lastSunday(yearNumber, 9);
+  const isAfterSummerTimeStart =
+    monthNumber > 3 ||
+    (monthNumber === 3 &&
+      (dayNumber > marchSunday || (dayNumber === marchSunday && hourNumber >= 2)));
+  const isBeforeSummerTimeEnd =
+    monthNumber < 10 ||
+    (monthNumber === 10 &&
+      (dayNumber < octoberSunday || (dayNumber === octoberSunday && hourNumber < 3)));
+  const offsetMinutes = isAfterSummerTimeStart && isBeforeSummerTimeEnd ? 120 : 60;
+  return new Date(candidate - offsetMinutes * 60 * 1000);
+}
+
+function nextApplicationDate(value, code) {
+  const normalized = String(value ?? "").trim();
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(normalized);
+  if (!match) throw new BadRequestError(code);
+  const candidate = Date.UTC(Number(match[1]), Number(match[2]) - 1, Number(match[3]));
+  const date = new Date(candidate);
+  if (
+    date.getUTCFullYear() !== Number(match[1]) ||
+    date.getUTCMonth() !== Number(match[2]) - 1 ||
+    date.getUTCDate() !== Number(match[3])
+  ) {
+    throw new BadRequestError(code);
+  }
+  return new Date(candidate + 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+}
+
+function billingInterval(event) {
+  const startValue = billingQueryValue(event, "start");
+  const endValue = billingQueryValue(event, "end");
+  const start = applicationDateToUtc(startValue, "billing_start_invalid");
+  const end = applicationDateToUtc(
+    nextApplicationDate(endValue, "billing_end_invalid"),
+    "billing_end_invalid",
+  );
+  if (end <= start) throw new BadRequestError("billing_interval_invalid");
+  return { start, end, startValue, endValue };
+}
+
+function formatDecimal(numerator, denominator, fractionDigits = 6) {
+  const scale = 10n ** BigInt(fractionDigits);
+  const scaled = (numerator * scale + denominator / 2n) / denominator;
+  const whole = scaled / scale;
+  const fraction = String(scaled % scale)
+    .padStart(fractionDigits, "0")
+    .replace(/0+$/, "");
+  return fraction ? `${whole}.${fraction}` : String(whole);
+}
+
+function roundHalfUp(numerator, denominator) {
+  const whole = numerator / denominator;
+  const remainder = numerator % denominator;
+  return whole + (remainder * 2n >= denominator ? 1n : 0n);
+}
+
+function amountFromMinorUnits(minorUnits) {
+  const value = String(minorUnits);
+  const sign = value.startsWith("-") ? "-" : "";
+  const digits = sign ? value.slice(1) : value;
+  return `${sign}${digits.slice(0, -2) || "0"}.${digits.slice(-2).padStart(2, "0")}`;
+}
+
+function billingRow(record) {
+  const start = new Date(String(record.get("start")));
+  const end = new Date(String(record.get("end")));
+  const durationMilliseconds = end.getTime() - start.getTime();
+  if (!Number.isFinite(durationMilliseconds) || durationMilliseconds <= 0) {
+    throw new BadRequestError("billing_booking_duration_invalid");
+  }
+
+  const durationNumerator = BigInt(durationMilliseconds);
+  const durationDenominator = 60n * 60n * 1000n;
+  const effectiveRate = record.get("effective_rate_minor_units");
+  if (!Number.isSafeInteger(effectiveRate) || effectiveRate < 0) {
+    throw new BadRequestError("billing_effective_rate_invalid");
+  }
+  const amountMinorUnits = roundHalfUp(
+    BigInt(effectiveRate) * durationNumerator,
+    durationDenominator,
+  );
+  return {
+    start: start.toISOString(),
+    end: end.toISOString(),
+    duration_hours: formatDecimal(durationNumerator, durationDenominator),
+    booker: String(record.get("booker_display_name_snapshot") || ""),
+    group: String(record.get("booker_group_snapshot") || ""),
+    resource: String(record.get("resource_name_snapshot") || ""),
+    booking_type: String(record.get("booking_type_name_snapshot") || ""),
+    amount: amountFromMinorUnits(amountMinorUnits),
+    amount_minor_units: amountMinorUnits,
+  };
+}
+
+function billingProjection(event) {
+  const context = applicationContext({
+    ...event,
+    collection: { name: BOOKING_COLLECTION, fields: [{ name: TENANT_FIELD }] },
+  });
+  if (!context || context.auth.get("role") !== "administrator") deny();
+
+  const interval = billingInterval(event);
+  const records = $app.findRecordsByFilter(
+    BOOKING_COLLECTION,
+    "tenant = {:tenant} && start < {:end}",
+    "start,id",
+    0,
+    0,
+    {
+      tenant: context.context.tenant.id,
+      start: pocketBaseDateValue(interval.start),
+      end: pocketBaseDateValue(interval.end),
+    },
+  );
+  const rows = records
+    .filter((record) => Date.parse(String(record.get("start"))) >= interval.start.getTime())
+    .filter((record) => {
+      const bookingTypeId = record.get("booking_type");
+      if (!bookingTypeId) return true;
+      try {
+        const bookingType = $app.findRecordById(BOOKING_TYPE_COLLECTION, bookingTypeId);
+        return (
+          bookingType.get(TENANT_FIELD) === context.context.tenant.id &&
+          bookingType.get("nonbillable") !== true
+        );
+      } catch {
+        return true;
+      }
+    })
+    .map(billingRow);
+
+  const groups = new Map();
+  let grandTotal = 0n;
+  for (const row of rows) {
+    const existing = groups.get(row.group) ?? { name: row.group, rows: [], total: 0n };
+    existing.rows.push(row);
+    existing.total += row.amount_minor_units;
+    groups.set(row.group, existing);
+    grandTotal += row.amount_minor_units;
+  }
+
+  return {
+    start: interval.startValue,
+    end: interval.endValue,
+    groups: [...groups.values()].map((group) => ({
+      name: group.name,
+      records: group.rows.map(({ amount_minor_units: _amount, ...row }) => row),
+      total: amountFromMinorUnits(group.total),
+    })),
+    total: amountFromMinorUnits(grandTotal),
+    rows,
+  };
+}
+
+function csvField(value) {
+  const text = String(value ?? "");
+  return /[",\r\n]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
+}
+
+function billingCsv(projection) {
+  const columns = [
+    "start",
+    "end",
+    "duration_hours",
+    "booker",
+    "group",
+    "resource",
+    "booking_type",
+    "amount",
+  ];
+  const lines = [columns.join(",")];
+  for (const row of projection.rows) {
+    lines.push(columns.map((column) => csvField(row[column])).join(","));
+  }
+  return lines.join("\r\n") + "\r\n";
+}
+
+function billingExportRoute(event) {
+  const projection = billingProjection(event);
+  if (billingQueryValue(event, "format") === "csv") {
+    const startDate = projection.start.slice(0, 10);
+    const endDate = projection.end.slice(0, 10);
+    event.response
+      .header()
+      .set("Content-Disposition", `attachment; filename="billing-${startDate}-${endDate}.csv"`);
+    return event.blob(200, "text/csv; charset=utf-8", billingCsv(projection));
+  }
+  return event.json(200, {
+    start: projection.start,
+    end: projection.end,
+    groups: projection.groups,
+    total: projection.total,
+  });
+}
+
 function calendarBookingsRoute(event) {
   const context = applicationContext({
     ...event,
@@ -949,6 +1175,7 @@ function administratorContext(event) {
 }
 
 module.exports = {
+  billingExportRoute,
   calendarBookingDeleteRoute,
   calendarBookingDetailRoute,
   calendarBookingCreateRoute,

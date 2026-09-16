@@ -64,6 +64,9 @@ it("keeps administrator-only selectors out of the regular form", () => {
   } as never);
   renderForm(false);
 
+  expect(screen.getByRole("button", { name: "Close booking form" })).toBeTruthy();
+  expect(screen.getByLabelText("Start time").getAttribute("step")).toBe("900");
+  expect(screen.getByLabelText("End time").getAttribute("step")).toBe("900");
   expect(screen.queryByLabelText("User")).toBeNull();
   expect(screen.queryByLabelText("Booking type")).toBeNull();
 });
