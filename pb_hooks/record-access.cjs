@@ -261,6 +261,31 @@ function groupsProjectionRoute(event) {
   return event.json(200, groupId ? items[0] : { items });
 }
 
+function calendarResourcesRoute(event) {
+  const context = applicationContext({
+    ...event,
+    collection: {
+      name: RESOURCE_COLLECTION,
+      fields: [{ name: TENANT_FIELD }],
+    },
+  });
+  if (!context) deny();
+
+  const resources = $app.findRecordsByFilter(
+    RESOURCE_COLLECTION,
+    'tenant = {:tenant} && archived_at = ""',
+    "name_normalized,id",
+    0,
+    0,
+    { tenant: context.context.tenant.id },
+  );
+  const items = resources.map((record) => ({
+    id: record.id,
+    name: record.get("name"),
+  }));
+  return event.json(200, { items });
+}
+
 function protectUserFields(context, record) {
   if (
     collectionName({ record }) !== USER_COLLECTION ||
@@ -359,6 +384,7 @@ function administratorContext(event) {
 
 module.exports = {
   checkRecords,
+  calendarResourcesRoute,
   createRecord,
   deleteRecord,
   groupsProjectionRoute,

@@ -22,7 +22,12 @@ export function MobileNavigationLinks({
         expandedModule={expandedModule}
         onToggleModule={onToggleModule}
       >
-        <Link className="shell-mobile-child-link" to="/calendar" onClick={onSelectRoute}>
+        <Link
+          className="shell-mobile-child-link"
+          to="/calendar"
+          search={{ date: "", view: "week", resource: "" }}
+          onClick={onSelectRoute}
+        >
           Calendar
         </Link>
       </MobileNavigationModuleSection>

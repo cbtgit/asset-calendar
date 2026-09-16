@@ -78,6 +78,26 @@ async function createSeededMigrations(): Promise<string> {
   }
 }, () => {});`,
   );
+  await writeFile(
+    resolve(migrationsDir, "1710000010_calendar_resources_fixture.js"),
+    `migrate((app) => {
+  const resources = app.findCollectionByNameOrId("resources");
+  const tenantA = app.findRecordsByFilter("tenants", "subdomain = 'tenant'", "", 1, 0)[0];
+  const tenantB = app.findRecordsByFilter("tenants", "subdomain = 'other'", "", 1, 0)[0];
+  for (const data of [
+    { tenant: tenantA.id, name: "Archived Room A", archived_at: "2026-01-01 00:00:00.000Z" },
+    { tenant: tenantB.id, name: "Active Room B", archived_at: "" },
+  ]) {
+    const resource = new Record(resources);
+    resource.set("tenant", data.tenant);
+    resource.set("name", data.name);
+    resource.set("name_normalized", data.name.toLowerCase());
+    resource.set("base_rate_minor_units", 2500);
+    resource.set("archived_at", data.archived_at);
+    app.save(resource);
+  }
+}, () => {});`,
+  );
   return migrationsDir;
 }
 
@@ -190,7 +210,7 @@ it("enforces resource reads, writes, validation, and server-managed fields", asy
     host: "tenant.localhost",
   });
   expect(emptyRead.status).toBe(200);
-  expect((await emptyRead.json()).items).toHaveLength(0);
+  expect((await emptyRead.json()).items).toHaveLength(1);
 
   const wrongTenant = await createResource(
     admin,
@@ -242,7 +262,7 @@ it("enforces resource reads, writes, validation, and server-managed fields", asy
     host: "tenant.localhost",
   });
   expect(regularRead.status).toBe(200);
-  expect((await regularRead.json()).items).toHaveLength(1);
+  expect((await regularRead.json()).items).toHaveLength(2);
 
   const regularWrite = await createResource(regular, undefined, "Unauthorized");
   expect(regularWrite.status).toBe(400);
@@ -277,6 +297,54 @@ it("enforces resource reads, writes, validation, and server-managed fields", asy
     body: { archived_at: "2026-01-01 00:00:00.000Z" },
   });
   expect(archiveUpdate.status).toBe(403);
+});
+
+it("returns only active calendar resources for the resolved tenant", async () => {
+  const adminA = new PocketBase(harness.baseUrl);
+  await authenticate(adminA, "admin-a@example.test", "tenant.localhost");
+  const createdA = await createResource(adminA, undefined, "Active Room A", 1750);
+  expect(createdA.status).toBe(200);
+  const activeA = await createdA.json();
+
+  const adminB = new PocketBase(harness.baseUrl);
+  await authenticate(adminB, "admin-b@example.test", "other.localhost");
+
+  const tenantAResponse = await request(adminA, "/api/calendar/resources", {
+    host: "tenant.localhost",
+  });
+  expect(tenantAResponse.status).toBe(200);
+  const tenantAItems = (await tenantAResponse.json()).items;
+  expect(tenantAItems).toContainEqual({ id: activeA.id, name: "Active Room A" });
+  expect(tenantAItems).not.toContainEqual(expect.objectContaining({ name: "Archived Room A" }));
+  expect(tenantAItems).not.toContainEqual(expect.objectContaining({ name: "Active Room B" }));
+  for (const item of tenantAItems) {
+    expect(Object.keys(item).sort()).toEqual(["id", "name"]);
+    expect(item).not.toHaveProperty("base_rate_minor_units");
+    expect(item).not.toHaveProperty("archived_at");
+    expect(item).not.toHaveProperty("tenant");
+  }
+
+  const tenantBResponse = await request(adminB, "/api/calendar/resources", {
+    host: "other.localhost",
+  });
+  expect(tenantBResponse.status).toBe(200);
+  const tenantBItems = (await tenantBResponse.json()).items;
+  expect(tenantBItems).toContainEqual(expect.objectContaining({ name: "Active Room B" }));
+  expect(tenantBItems).not.toContainEqual(expect.objectContaining({ name: "Active Room A" }));
+
+  const unauthenticated = await request(
+    new PocketBase(harness.baseUrl),
+    "/api/calendar/resources",
+    {
+      host: "tenant.localhost",
+    },
+  );
+  expect(unauthenticated.status).toBe(403);
+
+  const wrongTenantHost = await request(adminB, "/api/calendar/resources", {
+    host: "tenant.localhost",
+  });
+  expect(wrongTenantHost.status).toBe(403);
 });
 
 // oxlint-disable-next-line eslint(max-lines-per-function)

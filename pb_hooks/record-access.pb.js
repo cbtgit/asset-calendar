@@ -16,3 +16,6 @@ routerAdd("GET", "/api/groups", (event) =>
 routerAdd("GET", "/api/groups/{id}", (event) =>
   require(`${__hooks}/record-access.cjs`).groupsProjectionRoute(event),
 );
+routerAdd("GET", "/api/calendar/resources", (event) =>
+  require(`${__hooks}/record-access.cjs`).calendarResourcesRoute(event),
+);
