@@ -733,10 +733,7 @@ function billingInterval(event) {
   const startValue = billingQueryValue(event, "start");
   const endValue = billingQueryValue(event, "end");
   const start = applicationDateToUtc(startValue, "billing_start_invalid");
-  const end = applicationDateToUtc(
-    nextApplicationDate(endValue, "billing_end_invalid"),
-    "billing_end_invalid",
-  );
+  const end = applicationDateToUtc(endValue, "billing_end_invalid");
   if (end <= start) throw new BadRequestError("billing_interval_invalid");
   return { start, end, startValue, endValue };
 }
