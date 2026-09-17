@@ -1,5 +1,6 @@
 import { useState } from "react";
 import type { Group } from "@/api/groups";
+import { Loading } from "@/components/base/Loading";
 import { useDeleteGroupMutation, useGroupsQuery } from "@/hooks/use-groups";
 import { DeleteGroupDialog } from "../../delete-group-dialog";
 import { GroupsDirectoryHeader } from "./groups-directory-header";
@@ -14,7 +15,7 @@ export function GroupsDirectory() {
   const [pendingDelete, setPendingDelete] = useState<Group | null>(null);
 
   if (groups.isPending) {
-    return <p role="status">Loading groups…</p>;
+    return <Loading className="loading-page" />;
   }
 
   if (groups.isError) {

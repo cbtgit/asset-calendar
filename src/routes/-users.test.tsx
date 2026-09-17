@@ -1,8 +1,9 @@
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { createMemoryHistory, createRouter, RouterProvider } from "@tanstack/react-router";
 import { afterEach, expect, it, vi } from "vite-plus/test";
 import { pocketbase } from "@/api/client";
+import { queryClient } from "@/lib/query-client";
 import { routeTree } from "@/routeTree.gen";
 
 const user = {
@@ -21,6 +22,7 @@ const user = {
 
 afterEach(() => {
   cleanup();
+  queryClient.clear();
   pocketbase.authStore.clear();
   vi.restoreAllMocks();
 });
@@ -39,9 +41,7 @@ async function renderUsers(path: string) {
   });
   await router.load();
   render(
-    <QueryClientProvider
-      client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}
-    >
+    <QueryClientProvider client={queryClient}>
       <RouterProvider router={router} />
     </QueryClientProvider>,
   );
@@ -72,6 +72,20 @@ it("renders the editor with labeled controls and immutable email on edit", async
   expect(screen.getByRole("combobox", { name: "Role" })).toBeTruthy();
   expect(screen.getByRole("checkbox", { name: "Active user" })).toBeTruthy();
   expect(screen.getByRole("button", { name: "Resend invitation" })).toBeTruthy();
+});
+
+it("opens the editor from cached directory data without fetching the user again", async () => {
+  const send = vi.spyOn(pocketbase, "send").mockImplementation(async (path) => {
+    if (path === "/api/groups") return { items: [{ id: "group-1", name: "Operations" }] };
+    if (path === "/api/users") return { items: [user] };
+    throw new Error(`Unexpected request: ${path}`);
+  });
+  await renderUsers("/administration/users");
+
+  fireEvent.click(await screen.findByRole("link", { name: "Edit Ada Lovelace" }));
+
+  expect(await screen.findByRole("heading", { name: "Edit user" })).toBeTruthy();
+  expect(send).not.toHaveBeenCalledWith("/api/users/user-1", expect.anything());
 });
 
 it("shows a specific validation message when the email is already in use", async () => {

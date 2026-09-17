@@ -13,6 +13,7 @@ import { toAppError } from "@/api/errors";
 import { BookingDetail } from "@/components/calendar/booking-detail";
 import { BookingForm } from "@/components/calendar/booking-form";
 import { DeleteBookingDialog } from "@/components/calendar/delete-booking-dialog";
+import { Loading } from "@/components/base/Loading";
 import { useCalendarResourcesQuery } from "@/hooks/use-calendar-resources";
 import { useAuth } from "@/hooks/use-auth";
 import { useBookingsQuery, useDeleteBookingMutation } from "@/hooks/use-bookings";
@@ -190,7 +191,7 @@ export function CalendarSurface({ search }: CalendarSurfaceProps) {
     bookingToDelete && bookingToDelete.resource === selectedResource?.id ? bookingToDelete : null;
 
   if (resources.isPending) {
-    return <p role="status">Loading calendar resources...</p>;
+    return <Loading />;
   }
 
   if (resources.isError) {

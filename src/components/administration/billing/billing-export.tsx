@@ -2,6 +2,7 @@ import { useRef, useState, type FormEvent } from "react";
 import { downloadBillingCsv, searchBilling, type BillingPreview } from "@/api/billing";
 import { ApplicationError } from "@/api/errors";
 import { Button } from "@/components/base/Button";
+import { Loading } from "@/components/base/Loading";
 import { formatMinorUnitsForDisplay } from "@/lib/money";
 import { formatApplicationDateTime } from "@/lib/time";
 import "./billing-export.css";
@@ -130,7 +131,7 @@ export function BillingExport({ onHeadingReady }: BillingExportProps) {
           {error}
         </p>
       ) : null}
-      {isSearching ? <p role="status">Loading billing records...</p> : null}
+      {isSearching ? <Loading className="loading-compact" /> : null}
 
       {result ? (
         <div className="billing-export-results" aria-live="polite">

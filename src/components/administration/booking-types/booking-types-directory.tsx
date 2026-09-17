@@ -1,11 +1,12 @@
 import { Link } from "@tanstack/react-router";
 import { useBookingTypesQuery } from "@/hooks/use-booking-types";
+import { Loading } from "@/components/base/Loading";
 import { formatMinorUnitsForDisplay } from "@/lib/money";
 
 export function BookingTypesDirectory() {
   const bookingTypes = useBookingTypesQuery();
 
-  if (bookingTypes.isPending) return <p>Loading booking types...</p>;
+  if (bookingTypes.isPending) return <Loading className="loading-page" />;
   if (bookingTypes.error) {
     return <p role="alert">Unable to load booking types: {bookingTypes.error.message}</p>;
   }

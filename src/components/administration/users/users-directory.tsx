@@ -1,4 +1,5 @@
 import { Link } from "@tanstack/react-router";
+import { Loading } from "@/components/base/Loading";
 import { useUsersQuery } from "@/hooks/use-users";
 import type { User } from "@/api/users";
 import "./users-directory.css";
@@ -51,7 +52,7 @@ function UserRow({ user }: { user: User }) {
 export function UsersDirectory() {
   const users = useUsersQuery();
 
-  if (users.isPending) return <p role="status">Loading users…</p>;
+  if (users.isPending) return <Loading className="loading-page" />;
   if (users.isError) {
     return (
       <div className="users-directory-state">
