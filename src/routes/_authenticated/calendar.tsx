@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import dayjs from "dayjs";
+import { getTenantDisplaySettingsSnapshot } from "@/api/tenant-display-settings";
 import { CalendarSurface } from "@/components/calendar/calendar-surface";
 import { formatApplicationDate } from "@/lib/time";
 import type { CalendarView } from "@/lib/calendar";
@@ -7,14 +8,15 @@ import type { CalendarView } from "@/lib/calendar";
 export type { CalendarView } from "@/lib/calendar";
 
 export function normalizeCalendarDate(value: unknown): string {
+  const timeZone = getTenantDisplaySettingsSnapshot().timezone;
   if (typeof value !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(value)) {
-    return formatApplicationDate(new Date());
+    return formatApplicationDate(new Date(), timeZone);
   }
 
   const parsed = dayjs(value);
   return parsed.isValid() && parsed.format("YYYY-MM-DD") === value
     ? value
-    : formatApplicationDate(new Date());
+    : formatApplicationDate(new Date(), timeZone);
 }
 
 export function normalizeCalendarView(value: unknown): CalendarView {

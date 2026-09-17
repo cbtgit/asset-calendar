@@ -3,11 +3,14 @@ const tenantResolver = require(`${__hooks}/tenant-host-resolver.cjs`);
 
 const configuration = authConfig.validateAuthConfig(authConfig.readPocketBaseEnvironment());
 const TENANT_FIELD = "tenant";
+const TENANT_COLLECTION = "tenants";
 const USER_COLLECTION = "users";
 const ORGANIZATIONAL_UNIT_COLLECTION = "organizational_units";
 const BOOKING_TYPE_COLLECTION = "booking_types";
 const RESOURCE_COLLECTION = "resources";
 const BOOKING_COLLECTION = "bookings";
+const TENANT_SETTINGS_COLLECTION = "tenant_settings";
+const DEFAULT_BOOKING_EDIT_LEAD_HOURS = 24;
 const PROTECTED_USER_FIELDS = [
   "email",
   "email_normalized",
@@ -107,6 +110,39 @@ function applyServerTenant(info, record, tenantId) {
   if (recordTenant(record) !== undefined) {
     info.body[TENANT_FIELD] = tenantId;
     record.set(TENANT_FIELD, tenantId);
+  }
+}
+
+function bookingEditLeadWindowMs(tenantId) {
+  try {
+    const settings = $app.findFirstRecordByData(TENANT_SETTINGS_COLLECTION, TENANT_FIELD, tenantId);
+    const hours = settings.get("booking_edit_lead_hours");
+    const windowMs = hours * 60 * 60 * 1000;
+    if (typeof hours === "number" && Number.isFinite(windowMs) && hours >= 0) {
+      return windowMs;
+    }
+  } catch {
+    // Use the migration default while settings are being initialized.
+  }
+  return DEFAULT_BOOKING_EDIT_LEAD_HOURS * 60 * 60 * 1000;
+}
+
+function createTenantSettings(event) {
+  if (collectionName({ record: event.record }) !== TENANT_COLLECTION) return;
+
+  try {
+    $app.findFirstRecordByData(TENANT_SETTINGS_COLLECTION, TENANT_FIELD, event.record.id);
+    return;
+  } catch {
+    const collection = $app.findCollectionByNameOrId(TENANT_SETTINGS_COLLECTION);
+    const settings = new Record(collection);
+    settings.set(TENANT_FIELD, event.record.id);
+    settings.set("locale", "da-DK");
+    settings.set("currency_code", "DKK");
+    settings.set("timezone", "Europe/Copenhagen");
+    settings.set("booking_edit_lead_hours", DEFAULT_BOOKING_EDIT_LEAD_HOURS);
+    settings.set("heading_title", "Asset Calendar");
+    $app.saveNoValidate(settings);
   }
 }
 
@@ -451,7 +487,14 @@ function normalizeBooking(event, info, record, context) {
   record.set("booking_type_name_snapshot", bookingTypeName);
 }
 
-function normalizeBookingUpdate(event, info, record, context, storedRecord = record) {
+function normalizeBookingUpdate(
+  event,
+  info,
+  record,
+  context,
+  storedRecord = record,
+  leadWindowMs = bookingEditLeadWindowMs(context.context.tenant.id),
+) {
   const body = info.body ?? {};
   const tenantId = context.context.tenant.id;
   const administrator = context.auth.get("role") === "administrator";
@@ -484,10 +527,10 @@ function normalizeBookingUpdate(event, info, record, context, storedRecord = rec
 
   if (!administrator) {
     if (record.get("booked_for_user") !== context.auth.id) deny();
-    if (currentStart.getTime() - Date.now() < 24 * 60 * 60 * 1000) {
+    if (currentStart.getTime() - Date.now() < leadWindowMs) {
       throw new BadRequestError("booking_edit_window_closed");
     }
-    if (start.getTime() - Date.now() < 24 * 60 * 60 * 1000) {
+    if (start.getTime() - Date.now() < leadWindowMs) {
       throw new BadRequestError("booking_edit_start_too_soon");
     }
   }
@@ -598,11 +641,15 @@ function normalizeBookingUpdate(event, info, record, context, storedRecord = rec
   record.set("booking_type_name_snapshot", bookingTypeName);
 }
 
-function authorizeBookingDelete(record, context) {
+function authorizeBookingDelete(
+  record,
+  context,
+  leadWindowMs = bookingEditLeadWindowMs(context.context.tenant.id),
+) {
   if (context.auth.get("role") === "administrator") return;
   if (record.get("booked_for_user") !== context.auth.id) deny();
   const start = parseBookingDate(record.get("start"), "booking_start_invalid");
-  if (start.getTime() - Date.now() < 24 * 60 * 60 * 1000) {
+  if (start.getTime() - Date.now() < leadWindowMs) {
     throw new BadRequestError("booking_delete_window_closed");
   }
 }
@@ -618,10 +665,10 @@ function bookingDateRange(event) {
   return { start, end };
 }
 
-function bookingProjection(record, administrator, authId) {
+function bookingProjection(record, administrator, authId, leadWindowMs) {
   const currentStart = Date.parse(String(record.get("start")));
   const regularEligible =
-    record.get("booked_for_user") === authId && currentStart - Date.now() >= 24 * 60 * 60 * 1000;
+    record.get("booked_for_user") === authId && currentStart - Date.now() >= leadWindowMs;
   const projection = {
     id: record.id,
     resource: record.get("resource"),
@@ -910,9 +957,15 @@ function calendarBookingsRoute(event) {
       "booking_resource_invalid",
     );
   }
+  const leadWindowMs = bookingEditLeadWindowMs(context.context.tenant.id);
   const items = bookingRecordsForRange(context.context.tenant.id, resourceId, start, end).map(
     (record) =>
-      bookingProjection(record, context.auth.get("role") === "administrator", context.auth.id),
+      bookingProjection(
+        record,
+        context.auth.get("role") === "administrator",
+        context.auth.id,
+        leadWindowMs,
+      ),
   );
   return event.json(200, { items });
 }
@@ -925,9 +978,15 @@ function calendarBookingCreateRoute(event) {
   const record = new Record(collection);
   normalizeBooking(event, context.info, record, context);
   $app.saveNoValidate(record);
+  const leadWindowMs = bookingEditLeadWindowMs(context.context.tenant.id);
   return event.json(
     200,
-    bookingProjection(record, context.auth.get("role") === "administrator", context.auth.id),
+    bookingProjection(
+      record,
+      context.auth.get("role") === "administrator",
+      context.auth.id,
+      leadWindowMs,
+    ),
   );
 }
 
@@ -949,9 +1008,15 @@ function calendarBookingDetailRoute(event) {
   });
   if (!context) deny();
   const record = calendarBookingRecord(event, context);
+  const leadWindowMs = bookingEditLeadWindowMs(context.context.tenant.id);
   return event.json(
     200,
-    bookingProjection(record, context.auth.get("role") === "administrator", context.auth.id),
+    bookingProjection(
+      record,
+      context.auth.get("role") === "administrator",
+      context.auth.id,
+      leadWindowMs,
+    ),
   );
 }
 
@@ -960,11 +1025,17 @@ function calendarBookingUpdateRoute(event) {
   const context = applicationContext({ ...event, collection });
   if (!context) deny();
   const record = calendarBookingRecord(event, context);
-  normalizeBookingUpdate(event, context.info, record, context);
+  const leadWindowMs = bookingEditLeadWindowMs(context.context.tenant.id);
+  normalizeBookingUpdate(event, context.info, record, context, record, leadWindowMs);
   $app.saveNoValidate(record);
   return event.json(
     200,
-    bookingProjection(record, context.auth.get("role") === "administrator", context.auth.id),
+    bookingProjection(
+      record,
+      context.auth.get("role") === "administrator",
+      context.auth.id,
+      leadWindowMs,
+    ),
   );
 }
 
@@ -973,7 +1044,7 @@ function calendarBookingDeleteRoute(event) {
   const context = applicationContext({ ...event, collection });
   if (!context) deny();
   const record = calendarBookingRecord(event, context);
-  authorizeBookingDelete(record, context);
+  authorizeBookingDelete(record, context, bookingEditLeadWindowMs(context.context.tenant.id));
   $app.delete(record);
   return event.json(200, { id: record.id });
 }
@@ -1041,6 +1112,35 @@ function groupsProjectionRoute(event) {
     member_count: memberCount(record),
   }));
   return event.json(200, groupId ? items[0] : { items });
+}
+
+function tenantSettingsProjectionRoute(event) {
+  const context = applicationContext({
+    ...event,
+    collection: {
+      name: TENANT_SETTINGS_COLLECTION,
+      fields: [{ name: TENANT_FIELD }],
+    },
+  });
+  if (!context) deny();
+
+  let settings;
+  try {
+    settings = $app.findFirstRecordByData(
+      TENANT_SETTINGS_COLLECTION,
+      TENANT_FIELD,
+      context.context.tenant.id,
+    );
+  } catch {
+    throw new NotFoundError("tenant_settings_not_found");
+  }
+
+  return event.json(200, {
+    locale: settings.get("locale"),
+    timezone: settings.get("timezone"),
+    currency_code: settings.get("currency_code"),
+    heading_title: settings.get("heading_title"),
+  });
 }
 
 function calendarResourcesRoute(event) {
@@ -1118,6 +1218,8 @@ function createRecord(event) {
     normalizeResource(event, context.info, event.record, context.context.tenant.id);
   } else if (collectionName({ record: event.record }) === BOOKING_COLLECTION) {
     normalizeBooking(event, context.info, event.record, context);
+  } else if (collectionName({ record: event.record }) === TENANT_SETTINGS_COLLECTION) {
+    applyServerTenant(context.info, event.record, context.context.tenant.id);
   } else {
     applyServerTenant(context.info, event.record, context.context.tenant.id);
   }
@@ -1139,7 +1241,16 @@ function updateRecord(event) {
     normalizeResource(event, context.info, event.record, context.context.tenant.id);
   } else if (collectionName({ record: event.record }) === BOOKING_COLLECTION) {
     const storedBooking = $app.findRecordById(BOOKING_COLLECTION, event.record.id);
-    normalizeBookingUpdate(event, context.info, event.record, context, storedBooking);
+    normalizeBookingUpdate(
+      event,
+      context.info,
+      event.record,
+      context,
+      storedBooking,
+      bookingEditLeadWindowMs(context.context.tenant.id),
+    );
+  } else if (collectionName({ record: event.record }) === TENANT_SETTINGS_COLLECTION) {
+    applyServerTenant(context.info, event.record, context.context.tenant.id);
   } else {
     applyServerTenant(context.info, event.record, context.context.tenant.id);
   }
@@ -1183,6 +1294,8 @@ module.exports = {
   createRecord,
   deleteRecord,
   groupsProjectionRoute,
+  tenantSettingsProjectionRoute,
+  createTenantSettings,
   administratorContext,
   rejectInactive,
   updateRecord,

@@ -8,31 +8,35 @@ dayjs.extend(timezone);
 
 export const APPLICATION_TIME_ZONE = "Europe/Copenhagen";
 
-const applicationDateFormatter = new Intl.DateTimeFormat("en-CA", {
-  day: "2-digit",
-  month: "2-digit",
-  timeZone: APPLICATION_TIME_ZONE,
-  year: "numeric",
-});
+type TimeFormatOptions = {
+  timeZone?: string;
+  locale?: string;
+};
 
-export function formatApplicationDate(date: Date): string {
+export function formatApplicationDate(date: Date, timeZone = APPLICATION_TIME_ZONE): string {
+  const applicationDateFormatter = new Intl.DateTimeFormat("en-CA", {
+    day: "2-digit",
+    month: "2-digit",
+    timeZone,
+    year: "numeric",
+  });
   const parts = Object.fromEntries(
     applicationDateFormatter.formatToParts(date).map(({ type, value }) => [type, value]),
   );
   return `${parts.year}-${parts.month}-${parts.day}`;
 }
 
-export function applicationDateTimeToUtc(value: string): string {
-  return dayjs.tz(value, APPLICATION_TIME_ZONE).toISOString();
+export function applicationDateTimeToUtc(value: string, timeZone = APPLICATION_TIME_ZONE): string {
+  return dayjs.tz(value, timeZone).toISOString();
 }
 
-export function addApplicationHours(value: string, hours: number): string {
-  const startUtc = applicationDateTimeToUtc(value);
-  return dayjs
-    .utc(startUtc)
-    .add(hours, "hour")
-    .tz(APPLICATION_TIME_ZONE)
-    .format("YYYY-MM-DDTHH:mm");
+export function addApplicationHours(
+  value: string,
+  hours: number,
+  timeZone = APPLICATION_TIME_ZONE,
+): string {
+  const startUtc = applicationDateTimeToUtc(value, timeZone);
+  return dayjs.utc(startUtc).add(hours, "hour").tz(timeZone).format("YYYY-MM-DDTHH:mm");
 }
 
 export function calendarSlotBookingRange(start: Date) {
@@ -42,18 +46,24 @@ export function calendarSlotBookingRange(start: Date) {
   };
 }
 
-export function calendarDateStringToApplicationDateTime(value: string): string {
-  return dayjs(value).tz(APPLICATION_TIME_ZONE).format("YYYY-MM-DDTHH:mm");
+export function calendarDateStringToApplicationDateTime(
+  value: string,
+  timeZone = APPLICATION_TIME_ZONE,
+): string {
+  return dayjs(value).tz(timeZone).format("YYYY-MM-DDTHH:mm");
 }
 
-export function utcToApplicationDateTime(value: string): string {
-  return dayjs.utc(value).tz(APPLICATION_TIME_ZONE).format("YYYY-MM-DDTHH:mm");
+export function utcToApplicationDateTime(value: string, timeZone = APPLICATION_TIME_ZONE): string {
+  return dayjs.utc(value).tz(timeZone).format("YYYY-MM-DDTHH:mm");
 }
 
-export function formatApplicationDateTime(value: string): string {
-  return new Intl.DateTimeFormat(DEFAULT_MONEY_LOCALE, {
+export function formatApplicationDateTime(
+  value: string,
+  { locale = DEFAULT_MONEY_LOCALE, timeZone = APPLICATION_TIME_ZONE }: TimeFormatOptions = {},
+): string {
+  return new Intl.DateTimeFormat(locale, {
     dateStyle: "short",
     timeStyle: "short",
-    timeZone: APPLICATION_TIME_ZONE,
+    timeZone,
   }).format(new Date(value));
 }

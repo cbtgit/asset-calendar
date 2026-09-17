@@ -1,0 +1,56 @@
+.tenant-settings {
+  max-width: 48rem;
+}
+
+.tenant-settings-intro {
+  max-width: 42rem;
+  color: var(--color-muted);
+}
+
+.tenant-settings-form {
+  display: grid;
+  gap: var(--space-5);
+  max-width: 34rem;
+  margin-top: var(--space-7);
+}
+
+.tenant-settings-form label {
+  display: grid;
+  gap: var(--space-2);
+  color: var(--color-ink);
+  font-weight: 650;
+}
+
+.tenant-settings-form input,
+.tenant-settings-form select {
+  min-height: 2.75rem;
+  padding: 0 var(--space-3);
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-sm);
+  color: var(--color-ink);
+  background: var(--color-surface);
+  font: inherit;
+}
+
+.tenant-settings-form input:focus,
+.tenant-settings-form select:focus {
+  outline: 0.18rem solid var(--color-focus);
+  outline-offset: 0.1rem;
+}
+
+.tenant-settings-error {
+  margin: 0;
+  color: var(--color-danger);
+}
+
+.tenant-settings-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+}
+
+.tenant-settings-actions span {
+  color: var(--color-status);
+  font-size: 0.9rem;
+  font-weight: 650;
+}

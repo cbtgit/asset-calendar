@@ -8,6 +8,16 @@ export const integrationRecordKeys = {
   current: () => [...integrationRecordKeys.all, "current"] as const,
 };
 
+export const tenantSettingsKeys = {
+  all: ["tenant-settings"] as const,
+  current: () => [...tenantSettingsKeys.all, "current"] as const,
+};
+
+export const tenantDisplaySettingsKeys = {
+  all: ["tenant-display-settings"] as const,
+  current: () => [...tenantDisplaySettingsKeys.all, "current"] as const,
+};
+
 export const groupsKeys = {
   all: ["groups"] as const,
   list: () => [...groupsKeys.all, "list"] as const,

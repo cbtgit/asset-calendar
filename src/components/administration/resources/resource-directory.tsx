@@ -1,10 +1,12 @@
 import { Link } from "@tanstack/react-router";
 import { Loading } from "@/components/base/Loading";
 import { useResourcesQuery } from "@/hooks/use-resources";
+import { useTenantDisplaySettings } from "@/hooks/use-tenant-display-settings";
 import { formatMinorUnitsForDisplay } from "@/lib/money";
 
 export function ResourceDirectory() {
   const resources = useResourcesQuery();
+  const settings = useTenantDisplaySettings();
 
   if (resources.isPending) return <Loading className="loading-page" />;
   if (resources.error) {
@@ -25,7 +27,12 @@ export function ResourceDirectory() {
           </div>
           <div className="resource-rate">
             <span className="resource-label">Hourly price</span>
-            <span>{formatMinorUnitsForDisplay(resource.base_rate_minor_units)}</span>
+            <span>
+              {formatMinorUnitsForDisplay(resource.base_rate_minor_units, {
+                locale: settings.locale,
+                currency: settings.currency_code,
+              })}
+            </span>
           </div>
           <Link
             className="resource-edit"

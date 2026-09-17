@@ -1,10 +1,12 @@
 import { Link } from "@tanstack/react-router";
 import { useBookingTypesQuery } from "@/hooks/use-booking-types";
+import { useTenantDisplaySettings } from "@/hooks/use-tenant-display-settings";
 import { Loading } from "@/components/base/Loading";
 import { formatMinorUnitsForDisplay } from "@/lib/money";
 
 export function BookingTypesDirectory() {
   const bookingTypes = useBookingTypesQuery();
+  const settings = useTenantDisplaySettings();
 
   if (bookingTypes.isPending) return <Loading className="loading-page" />;
   if (bookingTypes.error) {
@@ -31,7 +33,12 @@ export function BookingTypesDirectory() {
           </div>
           <div className="booking-type-price">
             <span className="booking-type-label">Hourly price</span>
-            <span>{formatMinorUnitsForDisplay(bookingType.surcharge_minor_units)}</span>
+            <span>
+              {formatMinorUnitsForDisplay(bookingType.surcharge_minor_units, {
+                locale: settings.locale,
+                currency: settings.currency_code,
+              })}
+            </span>
           </div>
           <Link
             className="booking-type-edit"

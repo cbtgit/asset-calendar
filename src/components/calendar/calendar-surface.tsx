@@ -16,13 +16,14 @@ import { DeleteBookingDialog } from "@/components/calendar/delete-booking-dialog
 import { Loading } from "@/components/base/Loading";
 import { useCalendarResourcesQuery } from "@/hooks/use-calendar-resources";
 import { useAuth } from "@/hooks/use-auth";
+import { useTenantDisplaySettings } from "@/hooks/use-tenant-display-settings";
 import { useBookingsQuery, useDeleteBookingMutation } from "@/hooks/use-bookings";
 import {
   getCalendarSearchFromDatesSet,
   type CalendarSearch,
   type CalendarView,
 } from "@/lib/calendar";
-import { APPLICATION_TIME_ZONE, calendarSlotBookingRange, formatApplicationDate } from "@/lib/time";
+import { calendarSlotBookingRange, formatApplicationDate } from "@/lib/time";
 import "./calendar-surface.css";
 
 type CalendarSurfaceProps = {
@@ -83,6 +84,7 @@ function deletionErrorMessage(error: unknown): string {
 export function CalendarSurface({ search }: CalendarSurfaceProps) {
   const navigate = useNavigate({ from: "/calendar" });
   const auth = useAuth();
+  const displaySettings = useTenantDisplaySettings();
   const isMobile = useSyncExternalStore(
     subscribeToMobileQuery,
     getMobileSnapshot,
@@ -260,6 +262,7 @@ export function CalendarSurface({ search }: CalendarSurfaceProps) {
                   <BookingDetail
                     booking={activeBookingDraft.booking}
                     isAdministrator={isAdministrator(auth.user)}
+                    timeZone={displaySettings.timezone}
                     onClose={() => setBookingDraft(null)}
                     onEdit={() =>
                       setBookingDraft({ kind: "edit", booking: activeBookingDraft.booking })
@@ -271,6 +274,7 @@ export function CalendarSurface({ search }: CalendarSurfaceProps) {
                     resourceId={selectedResource.id}
                     resourceName={selectedResource.name}
                     isAdministrator={isAdministrator(auth.user)}
+                    timeZone={displaySettings.timezone}
                     initialStart={activeBookingDraft.booking.start}
                     initialEnd={activeBookingDraft.booking.end}
                     initialBooking={activeBookingDraft.booking}
@@ -284,6 +288,7 @@ export function CalendarSurface({ search }: CalendarSurfaceProps) {
                     resourceId={selectedResource.id}
                     resourceName={selectedResource.name}
                     isAdministrator={isAdministrator(auth.user)}
+                    timeZone={displaySettings.timezone}
                     initialStart={activeBookingDraft.start}
                     initialEnd={activeBookingDraft.end}
                     initialDate={activeBookingDraft.date}
@@ -301,11 +306,11 @@ export function CalendarSurface({ search }: CalendarSurfaceProps) {
                   <FullCalendar
                     key={`${search.date}:${effectiveView}:${selectedResource.id}`}
                     plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin, luxon3Plugin]}
-                    timeZone={APPLICATION_TIME_ZONE}
+                    timeZone={displaySettings.timezone}
                     initialDate={search.date}
                     initialView={initialView}
                     firstDay={1}
-                    locale="en"
+                    locale={displaySettings.locale}
                     headerToolbar={{
                       left: "prev,next today",
                       center: "title",
@@ -328,7 +333,7 @@ export function CalendarSurface({ search }: CalendarSurfaceProps) {
                         setBookingDraft({
                           kind: "create",
                           resourceId: selectedResource.id,
-                          date: formatApplicationDate(click.date),
+                          date: formatApplicationDate(click.date, displaySettings.timezone),
                         });
                         return;
                       }
@@ -360,7 +365,10 @@ export function CalendarSurface({ search }: CalendarSurfaceProps) {
                           ? current
                           : nextRange,
                       );
-                      const nextSearch = getCalendarSearchFromDatesSet(range);
+                      const nextSearch = getCalendarSearchFromDatesSet(
+                        range,
+                        displaySettings.timezone,
+                      );
                       if (nextSearch.view !== search.view || nextSearch.date !== search.date) {
                         updateSearch(nextSearch);
                       }

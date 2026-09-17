@@ -10,10 +10,11 @@ type BookingDetailProps = {
   onClose: () => void;
   onEdit: () => void;
   onDelete: () => void;
+  timeZone?: string;
 };
 
-function formatDateTime(value: string): string {
-  return utcToApplicationDateTime(value).replace("T", " ");
+function formatDateTime(value: string, timeZone: string): string {
+  return utcToApplicationDateTime(value, timeZone).replace("T", " ");
 }
 
 export function BookingDetail({
@@ -22,6 +23,7 @@ export function BookingDetail({
   onClose,
   onEdit,
   onDelete,
+  timeZone = "Europe/Copenhagen",
 }: BookingDetailProps) {
   const surfaceRef = useRef<HTMLElement>(null);
 
@@ -51,11 +53,11 @@ export function BookingDetail({
       <dl className="booking-detail-list">
         <div>
           <dt>Start</dt>
-          <dd>{formatDateTime(booking.start)}</dd>
+          <dd>{formatDateTime(booking.start, timeZone)}</dd>
         </div>
         <div>
           <dt>End</dt>
-          <dd>{formatDateTime(booking.end)}</dd>
+          <dd>{formatDateTime(booking.end, timeZone)}</dd>
         </div>
         {isAdministrator && booking.booking_type_name ? (
           <div>

@@ -2,6 +2,7 @@ import { Link } from "@tanstack/react-router";
 import type { ActiveModule } from "./app-shell";
 import { MobileNavigation } from "./mobile-navigation";
 import { ShellAccountMenu } from "./shell-account-menu";
+import { useTenantDisplaySettings } from "@/hooks/use-tenant-display-settings";
 
 type ShellHeaderProps = {
   activeModule: ActiveModule;
@@ -10,18 +11,20 @@ type ShellHeaderProps = {
 };
 
 export function ShellHeader({ activeModule, isAdministrator, navigationKey }: ShellHeaderProps) {
+  const headingTitle = useTenantDisplaySettings().heading_title;
+
   return (
     <header className="shell-header">
       <Link
         className="shell-brand"
         to="/calendar"
         search={{ date: "", view: "week", resource: "" }}
-        aria-label="Asset Calendar home"
+        aria-label={`${headingTitle} home`}
       >
         <span className="shell-brand-mark" aria-hidden="true">
           AC
         </span>
-        <span>Asset Calendar</span>
+        <span>{headingTitle}</span>
       </Link>
       <nav aria-label="Primary navigation" className="shell-modules">
         <Link

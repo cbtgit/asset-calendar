@@ -2,6 +2,9 @@ onRecordsListRequest((event) => require(`${__hooks}/record-access.cjs`).checkRec
 onRecordViewRequest((event) => require(`${__hooks}/record-access.cjs`).checkRecords(event));
 onRecordDeleteRequest((event) => require(`${__hooks}/record-access.cjs`).deleteRecord(event));
 onRecordCreateRequest((event) => require(`${__hooks}/record-access.cjs`).createRecord(event));
+onRecordAfterCreateSuccess((event) =>
+  require(`${__hooks}/record-access.cjs`).createTenantSettings(event),
+);
 onRecordUpdateRequest((event) => require(`${__hooks}/record-access.cjs`).updateRecord(event));
 onRecordAuthRequest((event) => require(`${__hooks}/record-access.cjs`).rejectInactive(event));
 onRecordAuthWithPasswordRequest((event) =>
@@ -15,6 +18,9 @@ routerAdd("GET", "/api/groups", (event) =>
 );
 routerAdd("GET", "/api/groups/{id}", (event) =>
   require(`${__hooks}/record-access.cjs`).groupsProjectionRoute(event),
+);
+routerAdd("GET", "/api/tenant-settings", (event) =>
+  require(`${__hooks}/record-access.cjs`).tenantSettingsProjectionRoute(event),
 );
 routerAdd("GET", "/api/calendar/resources", (event) =>
   require(`${__hooks}/record-access.cjs`).calendarResourcesRoute(event),

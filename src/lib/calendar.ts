@@ -11,6 +11,7 @@ export type CalendarSearch = {
 
 export function getCalendarSearchFromDatesSet(
   range: Pick<DatesSetArg, "view">,
+  timeZone?: string,
 ): Pick<CalendarSearch, "date" | "view"> {
   const view: CalendarView =
     range.view.type === "dayGridMonth"
@@ -21,6 +22,6 @@ export function getCalendarSearchFromDatesSet(
 
   return {
     view,
-    date: formatApplicationDate(range.view.currentStart),
+    date: formatApplicationDate(range.view.currentStart, timeZone),
   };
 }

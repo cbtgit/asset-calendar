@@ -5,6 +5,7 @@ import { Button } from "@/components/base/Button";
 import { Loading } from "@/components/base/Loading";
 import { formatMinorUnitsForDisplay } from "@/lib/money";
 import { formatApplicationDateTime } from "@/lib/time";
+import { useTenantDisplaySettings } from "@/hooks/use-tenant-display-settings";
 import "./billing-export.css";
 
 type BillingExportProps = {
@@ -19,6 +20,7 @@ function errorMessage(error: unknown): string {
 }
 
 export function BillingExport({ onHeadingReady }: BillingExportProps) {
+  const settings = useTenantDisplaySettings();
   const [start, setStart] = useState("");
   const [end, setEnd] = useState("");
   const [result, setResult] = useState<BillingPreview | null>(null);
@@ -157,7 +159,12 @@ export function BillingExport({ onHeadingReady }: BillingExportProps) {
                 <section className="billing-export-group" key={group.name}>
                   <div className="billing-export-group-header">
                     <h3>{group.name || "Unassigned Group/Org unit"}</h3>
-                    <strong>{formatMinorUnitsForDisplay(Number(group.total) * 100)}</strong>
+                    <strong>
+                      {formatMinorUnitsForDisplay(Number(group.total) * 100, {
+                        locale: settings.locale,
+                        currency: settings.currency_code,
+                      })}
+                    </strong>
                   </div>
                   <ul className="billing-export-records">
                     {group.records.map((record) => (
@@ -171,12 +178,24 @@ export function BillingExport({ onHeadingReady }: BillingExportProps) {
                         </div>
                         <div>
                           <span>
-                            {formatApplicationDateTime(record.start)} to{" "}
-                            {formatApplicationDateTime(record.end)}
+                            {formatApplicationDateTime(record.start, {
+                              locale: settings.locale,
+                              timeZone: settings.timezone,
+                            })}{" "}
+                            to{" "}
+                            {formatApplicationDateTime(record.end, {
+                              locale: settings.locale,
+                              timeZone: settings.timezone,
+                            })}
                           </span>
                           <span>{record.booking_type || "Standard booking"}</span>
                         </div>
-                        <strong>{formatMinorUnitsForDisplay(Number(record.amount) * 100)}</strong>
+                        <strong>
+                          {formatMinorUnitsForDisplay(Number(record.amount) * 100, {
+                            locale: settings.locale,
+                            currency: settings.currency_code,
+                          })}
+                        </strong>
                       </li>
                     ))}
                   </ul>
@@ -186,7 +205,12 @@ export function BillingExport({ onHeadingReady }: BillingExportProps) {
           )}
           <div className="billing-export-total">
             <span>Total for all records</span>
-            <strong>{formatMinorUnitsForDisplay(Number(result.total) * 100)}</strong>
+            <strong>
+              {formatMinorUnitsForDisplay(Number(result.total) * 100, {
+                locale: settings.locale,
+                currency: settings.currency_code,
+              })}
+            </strong>
           </div>
         </div>
       ) : null}

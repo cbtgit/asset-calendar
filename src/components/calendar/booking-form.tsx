@@ -18,15 +18,16 @@ type BookingFormProps = {
   initialEnd?: string;
   initialDate?: string;
   initialBooking?: CalendarBooking;
+  timeZone?: string;
   onCancel: () => void;
   onSuccess: () => void;
 };
 
 const BOOKING_TIME_STEP_SECONDS = 15 * 60;
 
-function initialDateTime(value: string | undefined) {
+function initialDateTime(value: string | undefined, timeZone: string) {
   if (!value) return { date: "", time: "" };
-  const local = utcToApplicationDateTime(value);
+  const local = utcToApplicationDateTime(value, timeZone);
   return { date: local.slice(0, 10), time: local.slice(11, 16) };
 }
 
@@ -35,11 +36,12 @@ function submittedDateTime(
   time: string,
   originalValue: string | undefined,
   originalDateTime: { date: string; time: string },
+  timeZone: string,
 ): string {
   if (originalValue && date === originalDateTime.date && time === originalDateTime.time) {
     return originalValue;
   }
-  return applicationDateTimeToUtc(`${date}T${time}`);
+  return applicationDateTimeToUtc(`${date}T${time}`, timeZone);
 }
 
 function bookingErrorMessage(error: unknown): string {
@@ -63,7 +65,7 @@ function bookingErrorMessage(error: unknown): string {
     return "This booking can no longer be edited because its current start is too soon.";
   }
   if (message.includes("booking_edit_start_too_soon")) {
-    return "Regular bookings must be moved to a start at least 24 hours from now.";
+    return "Regular bookings must be moved to a start outside the configured lead time.";
   }
   if (message.includes("booking_booked_for_user_inactive")) {
     return "Select an active user for this booking.";
@@ -91,12 +93,13 @@ export function BookingForm({
   initialEnd,
   initialDate,
   initialBooking,
+  timeZone = "Europe/Copenhagen",
   onCancel,
   onSuccess,
 }: BookingFormProps) {
   const surfaceRef = useRef<HTMLElement>(null);
-  const start = initialDateTime(initialStart);
-  const end = initialDateTime(initialEnd);
+  const start = initialDateTime(initialStart, timeZone);
+  const end = initialDateTime(initialEnd, timeZone);
   const [startDate, setStartDate] = useState(start.date || initialDate || "");
   const [startTime, setStartTime] = useState(start.time);
   const [endDate, setEndDate] = useState(end.date || start.date || initialDate || "");
@@ -126,8 +129,8 @@ export function BookingForm({
       return;
     }
 
-    const startValue = submittedDateTime(startDate, startTime, initialStart, start);
-    const endValue = submittedDateTime(endDate, endTime, initialEnd, end);
+    const startValue = submittedDateTime(startDate, startTime, initialStart, start, timeZone);
+    const endValue = submittedDateTime(endDate, endTime, initialEnd, end, timeZone);
     if (new Date(endValue) <= new Date(startValue)) {
       setFormError("The end must be after the start.");
       return;
