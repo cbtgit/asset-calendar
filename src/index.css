@@ -5,6 +5,7 @@
   --color-muted: #697586;
   --color-surface: #ffffff;
   --color-surface-subtle: #f5f7fb;
+  --color-content-background: #eef2f7;
   --color-border: #e1e6ee;
   --color-brand: #2f66d2;
   --color-brand-dark: #2454b4;
@@ -42,6 +43,20 @@
   --space-5: 1.5rem;
   --space-6: 2rem;
   --space-7: 3rem;
+  --font-size-caption: 0.75rem;
+  --font-size-control: 0.875rem;
+  --font-size-body: 1rem;
+  --font-size-subheading: 1.05rem;
+  --font-size-heading: 1.2rem;
+  --font-size-icon: 1.35rem;
+  --font-size-page-title: clamp(1.5rem, 2vw, 1.75rem);
+  --font-size-display: clamp(2rem, 6vw, 3.5rem);
+  --font-size-drawer-title: 1.1rem;
+  --font-size-icon-large: 1.75rem;
+  --font-weight-medium: 600;
+  --font-weight-semibold: 650;
+  --font-weight-bold: 700;
+  --font-weight-strong: 750;
   font-family:
     Inter,
     ui-sans-serif,

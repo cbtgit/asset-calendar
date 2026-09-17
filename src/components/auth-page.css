@@ -7,7 +7,7 @@
 .auth-page h1 {
   max-width: none;
   margin-bottom: 0.75rem;
-  font-size: clamp(2rem, 6vw, 3.5rem);
+  font-size: var(--font-size-display);
 }
 
 .auth-page p {
@@ -24,7 +24,7 @@
 .auth-form label {
   display: grid;
   gap: 0.4rem;
-  font-weight: 700;
+  font-weight: var(--font-weight-bold);
 }
 
 .auth-form input {
@@ -56,12 +56,12 @@
 .auth-error {
   margin: 1rem 0 0;
   color: #9b2226 !important;
-  font-weight: 700;
+  font-weight: var(--font-weight-bold);
 }
 
 .auth-link {
   display: inline-block;
   margin-top: 1.5rem;
   color: #2f5d50;
-  font-weight: 700;
+  font-weight: var(--font-weight-bold);
 }

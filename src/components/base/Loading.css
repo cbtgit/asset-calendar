@@ -23,7 +23,7 @@
 
 .loading-label {
   color: inherit;
-  font-size: 0.9375rem;
+  font-size: var(--font-size-control);
 }
 
 .loading-page {

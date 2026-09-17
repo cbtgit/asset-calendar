@@ -5,7 +5,7 @@
 
 .number-field-label {
   color: var(--color-ink);
-  font-weight: 650;
+  font-weight: var(--font-weight-semibold);
 }
 
 .number-field input {
@@ -25,5 +25,5 @@
 .number-field-error {
   margin: 0;
   color: #b42318;
-  font-size: 0.9rem;
+  font-size: var(--font-size-control);
 }

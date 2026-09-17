@@ -31,7 +31,7 @@
 .users-directory-label {
   color: var(--text-muted, #5d6672);
   display: block;
-  font-size: 0.75rem;
+  font-size: var(--font-size-caption);
   letter-spacing: 0.04em;
   text-transform: uppercase;
 }
@@ -75,7 +75,7 @@
   display: inline-flex;
   flex: 0 0 auto;
   font: inherit;
-  font-weight: 650;
+  font-weight: var(--font-weight-semibold);
   justify-content: center;
   min-height: 2.25rem;
   padding: 0 var(--space-3);
