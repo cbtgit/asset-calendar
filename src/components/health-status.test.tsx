@@ -29,7 +29,7 @@ it("shows the checking and connected states", async () => {
 
   renderHealthStatus();
 
-  expect(screen.getByText("Checking PocketBase connection…")).toBeTruthy();
+  expect(screen.getByText("Loading...")).toBeTruthy();
   await waitFor(() => expect(screen.getByText("Connected")).toBeTruthy());
 });
 

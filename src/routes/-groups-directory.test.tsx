@@ -93,7 +93,7 @@ it("renders a loading status while the directory request is pending", async () =
   vi.spyOn(pocketbase, "send").mockReturnValue(new Promise(() => {}) as never);
   await renderGroups();
 
-  expect(screen.getByRole("status").textContent).toBe("Loading groups…");
+  expect(screen.getByRole("status").textContent).toBe("Loading...");
 });
 
 it("shows a mutation error when deletion is rejected", async () => {

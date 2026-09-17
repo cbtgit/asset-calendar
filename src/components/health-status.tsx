@@ -1,11 +1,12 @@
 import { useHealthQuery } from "@/hooks/use-health-query";
 import { Button } from "./base/Button";
+import { Loading } from "./base/Loading";
 
 export function HealthStatus() {
   const health = useHealthQuery();
 
   if (health.isPending) {
-    return <p role="status">Checking PocketBase connection…</p>;
+    return <Loading className="loading-compact" />;
   }
 
   if (health.isError) {

@@ -1,11 +1,12 @@
 import { Link } from "@tanstack/react-router";
+import { Loading } from "@/components/base/Loading";
 import { useResourcesQuery } from "@/hooks/use-resources";
 import { formatMinorUnitsForDisplay } from "@/lib/money";
 
 export function ResourceDirectory() {
   const resources = useResourcesQuery();
 
-  if (resources.isPending) return <p role="status">Loading resources...</p>;
+  if (resources.isPending) return <Loading className="loading-page" />;
   if (resources.error) {
     return <p role="alert">Unable to load resources: {resources.error.message}</p>;
   }

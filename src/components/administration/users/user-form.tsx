@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { ApplicationError } from "@/api/errors";
 import type { User, UserCreate, UserRole, UserUpdate } from "@/api/users";
+import { Loading } from "@/components/base/Loading";
 import { useGroupsQuery } from "@/hooks/use-groups";
 import {
   useCreateUserMutation,
@@ -92,7 +93,7 @@ export function UserForm(props: UserFormProps) {
     }
   }
 
-  if (groups.isPending) return <p role="status">Loading groups…</p>;
+  if (groups.isPending) return <Loading />;
   if (groups.isError) return <p role="alert">Unable to load groups: {groups.error.message}</p>;
 
   const error =

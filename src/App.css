@@ -225,6 +225,7 @@
 }
 
 .shell-content {
+  position: relative;
   width: min(100%, 72rem);
   flex: 1;
   min-width: 0;
@@ -247,6 +248,10 @@
   font-size: clamp(1.5rem, 2vw, 1.75rem);
   letter-spacing: -0.04em;
   line-height: 1.1;
+}
+
+.shell-content h1[tabindex="-1"]:focus {
+  outline: none;
 }
 
 .shell-content p:not(.eyebrow) {
