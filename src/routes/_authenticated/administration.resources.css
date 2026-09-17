@@ -47,7 +47,7 @@
   display: block;
   margin-bottom: var(--space-1);
   color: var(--color-text-muted);
-  font-size: 0.8rem;
+  font-size: var(--font-size-control);
 }
 
 .resource-rate {
@@ -70,7 +70,7 @@
   background: var(--color-surface);
   cursor: pointer;
   font: inherit;
-  font-weight: 650;
+  font-weight: var(--font-weight-semibold);
   text-decoration: none;
 }
 

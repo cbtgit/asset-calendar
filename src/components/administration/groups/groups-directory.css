@@ -15,8 +15,8 @@
 
 .groups-directory-count {
   color: var(--color-muted);
-  font-size: 0.9rem;
-  font-weight: 650;
+  font-size: var(--font-size-control);
+  font-weight: var(--font-weight-semibold);
 }
 
 .groups-directory-add,
@@ -34,7 +34,7 @@
   background: var(--color-surface);
   cursor: pointer;
   font: inherit;
-  font-weight: 650;
+  font-weight: var(--font-weight-semibold);
   text-decoration: none;
 }
 
@@ -69,7 +69,7 @@
   display: block;
   margin-bottom: var(--space-1);
   color: var(--color-muted);
-  font-size: 0.8rem;
+  font-size: var(--font-size-control);
 }
 
 .groups-directory-name {
@@ -114,7 +114,7 @@
 .groups-directory-hint {
   flex-basis: 100%;
   color: var(--color-muted);
-  font-size: 0.8rem;
+  font-size: var(--font-size-control);
   text-align: right;
 }
 

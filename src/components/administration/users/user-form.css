@@ -17,7 +17,7 @@
 
 .user-form label {
   display: grid;
-  font-weight: 600;
+  font-weight: var(--font-weight-medium);
   gap: 0.4rem;
 }
 

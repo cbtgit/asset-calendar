@@ -25,8 +25,8 @@
 
 .billing-export-field label {
   color: var(--color-ink);
-  font-size: 0.875rem;
-  font-weight: 700;
+  font-size: var(--font-size-control);
+  font-weight: var(--font-weight-bold);
 }
 
 .billing-export-field input {
@@ -43,7 +43,7 @@
 .billing-export-timezone {
   grid-column: 1 / -1;
   margin: 0;
-  font-size: 0.8rem;
+  font-size: var(--font-size-control);
 }
 
 .billing-export-form .button {
@@ -52,7 +52,7 @@
 
 .billing-export-error {
   color: var(--color-danger) !important;
-  font-weight: 650;
+  font-weight: var(--font-weight-semibold);
 }
 
 .billing-export-results {
@@ -80,12 +80,12 @@
 }
 
 .billing-export-results-header h2 {
-  font-size: 1.2rem;
+  font-size: var(--font-size-heading);
 }
 
 .billing-export-results-header p {
   margin: var(--space-1) 0 0;
-  font-size: 0.85rem;
+  font-size: var(--font-size-control);
 }
 
 .billing-export-groups {
@@ -107,7 +107,7 @@
 }
 
 .billing-export-group-header h3 {
-  font-size: 1rem;
+  font-size: var(--font-size-body);
 }
 
 .billing-export-group-header strong,
@@ -140,7 +140,7 @@
 .billing-export-record span {
   overflow-wrap: anywhere;
   color: var(--color-muted);
-  font-size: 0.85rem;
+  font-size: var(--font-size-control);
 }
 
 .billing-export-record > strong {
@@ -159,8 +159,8 @@
   padding: var(--space-5) 0 0;
   border-top: 2px solid var(--color-ink);
   color: var(--color-ink);
-  font-size: 1.05rem;
-  font-weight: 750;
+  font-size: var(--font-size-subheading);
+  font-weight: var(--font-weight-strong);
 }
 
 @media (width < 48rem) {
