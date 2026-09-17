@@ -14,7 +14,6 @@
     "pocketbase": "node --env-file-if-exists=.env scripts/pocketbase.ts start",
     "pocketbase:reset": "node --env-file-if-exists=.env scripts/pocketbase.ts reset",
     "dev:all": "node --env-file-if-exists=.env scripts/dev.ts",
-    "dev:full": "node --env-file-if-exists=.env scripts/dev.ts",
     "prepare": "vp config",
     "verify": "vp check && vp test && vp build"
   },

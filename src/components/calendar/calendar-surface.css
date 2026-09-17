@@ -108,6 +108,14 @@
   overflow: hidden;
 }
 
+.calendar-frame:has(.booking-form-surface) {
+  overflow: visible;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
 .calendar-frame > div {
   min-height: 42rem;
 }

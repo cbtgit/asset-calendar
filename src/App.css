@@ -1,5 +1,8 @@
 .shell {
   min-height: 100vh;
+  max-width: 120rem;
+  margin-inline: auto;
+  background: var(--color-surface);
 }
 
 .shell-header {
@@ -231,6 +234,7 @@
   min-width: 0;
   margin: 0 auto;
   padding: var(--space-7);
+  background: var(--color-content-background);
 }
 
 .shell-content .eyebrow {
