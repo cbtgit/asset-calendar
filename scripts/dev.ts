@@ -3,16 +3,13 @@ import { fileURLToPath } from "node:url";
 import { dirname, resolve } from "node:path";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
-const detached = process.platform !== "win32";
 const pocketbase = spawn(process.execPath, [resolve(root, "scripts/pocketbase.ts"), "start"], {
   cwd: root,
   stdio: "inherit",
-  detached,
 });
 const frontend = spawn("vp", ["dev"], {
   cwd: root,
   stdio: "inherit",
-  detached,
 });
 const children: ChildProcess[] = [pocketbase, frontend];
 const CHILD_SHUTDOWN_TIMEOUT_MS = 2_000;
@@ -21,14 +18,6 @@ let shutdownPromise: Promise<void> | undefined;
 
 function signalChild(child: ChildProcess, signal: NodeJS.Signals): void {
   if (child.exitCode !== null || child.signalCode !== null) return;
-  if (process.platform !== "win32" && child.pid) {
-    try {
-      process.kill(-child.pid, signal);
-      return;
-    } catch {
-      // The process may have exited between the status check and the signal.
-    }
-  }
   child.kill(signal);
 }
 
