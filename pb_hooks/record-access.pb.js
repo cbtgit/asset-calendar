@@ -2,6 +2,9 @@ onRecordsListRequest((event) => require(`${__hooks}/record-access.cjs`).checkRec
 onRecordViewRequest((event) => require(`${__hooks}/record-access.cjs`).checkRecords(event));
 onRecordDeleteRequest((event) => require(`${__hooks}/record-access.cjs`).deleteRecord(event));
 onRecordCreateRequest((event) => require(`${__hooks}/record-access.cjs`).createRecord(event));
+onRecordAfterCreateSuccess((event) =>
+  require(`${__hooks}/record-access.cjs`).afterCreateRecord(event),
+);
 onRecordUpdateRequest((event) => require(`${__hooks}/record-access.cjs`).updateRecord(event));
 onRecordAuthRequest((event) => require(`${__hooks}/record-access.cjs`).rejectInactive(event));
 onRecordAuthWithPasswordRequest((event) =>

@@ -195,7 +195,7 @@ export function UserForm(props: UserFormProps) {
             Cancel
           </Button>
           <Button type="submit" variant="primary" disabled={pending}>
-            {pending ? "Saving…" : editing ? "Save changes" : "Create user"}
+            {pending ? "Saving…" : editing ? "Save" : "Create user"}
           </Button>
           {props.mode === "edit" && props.user.password_setup_pending && props.user.active ? (
             <Button

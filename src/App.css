@@ -28,18 +28,6 @@
   white-space: nowrap;
 }
 
-.shell-brand-mark {
-  display: grid;
-  width: 2rem;
-  height: 2rem;
-  place-items: center;
-  border-radius: var(--radius-sm);
-  color: var(--color-surface);
-  background: var(--color-brand);
-  font-size: var(--font-size-caption);
-  letter-spacing: 0.04em;
-}
-
 .shell-modules {
   display: flex;
   grid-column: 2;

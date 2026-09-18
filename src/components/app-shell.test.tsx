@@ -1,7 +1,9 @@
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import type { ReactNode } from "react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { afterEach, expect, it, vi } from "vite-plus/test";
 import { pocketbase } from "@/api/client";
+import { tenantSettingsKeys } from "@/api/query-keys";
 import { useMatches, useNavigate, useRouterState } from "@tanstack/react-router";
 import { AppShell } from "./app-shell";
 
@@ -44,11 +46,33 @@ function mockRouterLocation(
   }) => options?.select?.({ location })) as never);
 }
 
+function renderAppShell() {
+  const queryClient = new QueryClient({
+    defaultOptions: { queries: { retry: false, staleTime: Infinity } },
+  });
+  queryClient.setQueryData(tenantSettingsKeys.current(), {
+    id: "settings-1",
+    tenant: "tenant-1",
+    site_title: "Asset Calendar",
+    booking_lock_hours: 24,
+    created: "",
+    updated: "",
+  });
+  shellQueryClient = queryClient;
+  return render(
+    <QueryClientProvider client={queryClient}>
+      <AppShell />
+    </QueryClientProvider>,
+  );
+}
+
+let shellQueryClient: QueryClient;
+
 it("provides the shared authenticated page landmarks and outlet state", () => {
   vi.mocked(useNavigate).mockReturnValue(vi.fn() as never);
   mockRouterLocation({ pathname: "/calendar", href: "/calendar" });
 
-  render(<AppShell />);
+  renderAppShell();
 
   expect(screen.getByRole("banner").textContent).toContain("Asset Calendar");
   expect(screen.getByRole("link", { name: "Calendar" }).getAttribute("data-active")).toBe("true");
@@ -71,7 +95,7 @@ it("shows the administration module and rail for administrators", () => {
     role: "administrator",
   });
 
-  render(<AppShell />);
+  renderAppShell();
 
   const administrationLink = screen.getByRole("link", { name: "Administration" });
   expect(administrationLink).toBeTruthy();
@@ -80,7 +104,7 @@ it("shows the administration module and rail for administrators", () => {
   expect(screen.getByRole("navigation", { name: "Administration navigation" })).toBeTruthy();
   expect(screen.getByRole("link", { name: "Groups" }).getAttribute("data-active")).toBe("true");
   expect(screen.getAllByRole("link").map((link) => link.textContent)).toEqual([
-    "ACAsset Calendar",
+    "Asset Calendar",
     "Calendar",
     "Administration",
     "Users",
@@ -88,6 +112,7 @@ it("shows the administration module and rail for administrators", () => {
     "Booking Types",
     "Resources",
     "Billing",
+    "Settings",
   ]);
 });
 
@@ -102,7 +127,7 @@ it("hides the administration destination from regular users", () => {
     role: "regular",
   });
 
-  render(<AppShell />);
+  renderAppShell();
 
   expect(screen.queryByRole("link", { name: "Administration" })).toBeNull();
   expect(screen.queryByRole("navigation", { name: "Administration navigation" })).toBeNull();
@@ -121,7 +146,7 @@ it("logs out and replaces history with sign-in", () => {
   mockRouterLocation({ pathname: "/calendar", href: "/calendar" });
   pocketbase.authStore.save("token", user);
 
-  render(<AppShell />);
+  renderAppShell();
   fireEvent.click(screen.getByRole("button", { name: "person@example.test" }));
   screen.getByRole("menuitem", { name: "Log out" }).click();
 
@@ -136,12 +161,16 @@ it("closes the account menu when search or hash changes on the current route", (
   vi.mocked(useNavigate).mockReturnValue(vi.fn() as never);
   mockRouterLocation(location);
 
-  const view = render(<AppShell />);
+  const view = renderAppShell();
   fireEvent.click(screen.getByRole("button", { name: "Current user" }));
   expect(screen.getByRole("menu")).toBeTruthy();
 
   location.href = "/calendar?view=week#today";
-  view.rerender(<AppShell />);
+  view.rerender(
+    <QueryClientProvider client={shellQueryClient}>
+      <AppShell />
+    </QueryClientProvider>,
+  );
 
   expect(screen.queryByRole("menu")).toBeNull();
 });

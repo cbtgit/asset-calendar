@@ -195,8 +195,9 @@ same trusted calculation as booking creation.
   required for the MVP.
 
 For a regular user's edit, both the current booking start and the proposed new
-start must be at least 24 hours in the future. Administrators are not subject
-to the 24-hour edit restriction. Administrators may change the booked-for user
+start must be at least the tenant's configured booking lock window in the
+future. The setting is a whole number of hours and defaults to 24 hours.
+Administrators are not subject to the booking lock restriction. Administrators may change the booked-for user
 and booking type, but the resource remains fixed. Any administrator-selected
 replacement user must be active and belong to the tenant. When an
 administrator changes the booked-for user or booking type, the server
@@ -392,7 +393,7 @@ is not supported in the MVP.
 Deletion requires an explicit confirmation for every user type, including
 regular users and administrators. Administrator deletion is unrestricted by
 the booking's current start time. Regular deletion still requires ownership
-and a current start at least 24 hours in the future.
+and a current start at least the tenant's configured booking lock window in the future.
 
 ### 6.6 Calendar implementation
 

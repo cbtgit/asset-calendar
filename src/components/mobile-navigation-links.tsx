@@ -72,6 +72,13 @@ export function MobileNavigationLinks({
           >
             Billing
           </Link>
+          <Link
+            className="shell-mobile-child-link"
+            to="/administration/settings"
+            onClick={onSelectRoute}
+          >
+            Settings
+          </Link>
         </MobileNavigationModuleSection>
       ) : null}
     </nav>

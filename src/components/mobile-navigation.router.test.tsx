@@ -80,7 +80,11 @@ async function renderRouter(initialEntries: string[]) {
     history: createMemoryHistory({ initialEntries }),
   });
   await router.load();
-  render(<RouterProvider router={router} />);
+  render(
+    <QueryClientProvider client={new QueryClient()}>
+      <RouterProvider router={router} />
+    </QueryClientProvider>,
+  );
   return router;
 }
 
