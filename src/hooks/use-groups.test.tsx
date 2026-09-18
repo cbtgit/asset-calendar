@@ -31,6 +31,7 @@ function setup(groups: Group[] = [group]) {
     <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
   );
   queryClient.setQueryData(groupsKeys.list(), groups);
+  queryClient.setQueryData(groupsKeys.detail(group.id), group);
   return { queryClient, wrapper };
 }
 
@@ -56,9 +57,11 @@ it("optimistically renames and rolls back a failed mutation", async () => {
     await Promise.resolve();
   });
   expect(queryClient.getQueryData<Group[]>(groupsKeys.list())?.[0]?.name).toBe("Renamed");
+  expect(queryClient.getQueryData<Group>(groupsKeys.detail("group-1"))?.name).toBe("Renamed");
   rejectMutation(error);
   await expect(mutation).rejects.toMatchObject({ kind: "conflict" });
   expect(queryClient.getQueryData<Group[]>(groupsKeys.list())).toEqual([group]);
+  expect(queryClient.getQueryData<Group>(groupsKeys.detail("group-1"))).toEqual(group);
 });
 
 it("optimistically adds a trimmed group", async () => {
@@ -124,5 +127,7 @@ it("optimistically deletes and reconciles after settlement", async () => {
     await result.current.mutateAsync("group-1");
   });
   expect(queryClient.getQueryData<Group[]>(groupsKeys.list())).toEqual([]);
+  expect(queryClient.getQueryData<Group>(groupsKeys.detail("group-1"))).toBeUndefined();
   expect(invalidate).toHaveBeenCalledWith({ queryKey: groupsKeys.list() });
+  expect(invalidate).toHaveBeenCalledWith({ queryKey: groupsKeys.detail("group-1") });
 });

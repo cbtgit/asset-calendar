@@ -55,11 +55,13 @@ function toActiveUser(user: User): ActiveUser {
   };
 }
 
-async function cancelUserQueries(queryClient: ReturnType<typeof useQueryClient>) {
-  await Promise.all([
+async function cancelUserQueries(queryClient: ReturnType<typeof useQueryClient>, id?: string) {
+  const cancellations = [
     queryClient.cancelQueries({ queryKey: usersKeys.list() }),
     queryClient.cancelQueries({ queryKey: usersKeys.active() }),
-  ]);
+  ];
+  if (id) cancellations.push(queryClient.cancelQueries({ queryKey: usersKeys.detail(id) }));
+  await Promise.all(cancellations);
 }
 
 function snapshotUsers(queryClient: ReturnType<typeof useQueryClient>, id?: string): UsersContext {
@@ -126,7 +128,7 @@ export function useUpdateUserMutation() {
   return useMutation({
     mutationFn: ({ id, input }: { id: string; input: UserUpdate }) => updateUser(id, input),
     onMutate: async ({ id, input }): Promise<UsersContext> => {
-      await cancelUserQueries(queryClient);
+      await cancelUserQueries(queryClient, id);
       const context = snapshotUsers(queryClient, id);
       const update = (user: User): User => ({
         ...user,
@@ -169,12 +171,14 @@ export function useResendUserInvitationMutation() {
   return useMutation({
     mutationFn: resendUserInvitation,
     onMutate: async (id): Promise<UsersContext> => {
-      await cancelUserQueries(queryClient);
+      await cancelUserQueries(queryClient, id);
       const context = snapshotUsers(queryClient, id);
+      const updatedAt = new Date().toISOString();
       queryClient.setQueryData(usersKeys.list(), (users: User[] | undefined) =>
-        users?.map((user) =>
-          user.id === id ? { ...user, updated: new Date().toISOString() } : user,
-        ),
+        users?.map((user) => (user.id === id ? { ...user, updated: updatedAt } : user)),
+      );
+      queryClient.setQueryData(usersKeys.detail(id), (user: User | undefined) =>
+        user ? { ...user, updated: updatedAt } : user,
       );
       return context;
     },

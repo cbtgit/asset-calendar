@@ -1,8 +1,11 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useRef } from "react";
+import { groupsQueryOptions } from "@/api/groups";
 import { GroupsDirectory } from "@/components/administration/groups/groups-directory";
+import { queryClient } from "@/lib/query-client";
 
 export const Route = createFileRoute("/_authenticated/administration/groups/")({
+  loader: () => queryClient.ensureQueryData(groupsQueryOptions()),
   component: GroupsIndexPage,
 });
 

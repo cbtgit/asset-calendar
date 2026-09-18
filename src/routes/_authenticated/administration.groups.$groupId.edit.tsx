@@ -1,11 +1,12 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { getGroup } from "@/api/groups";
+import { groupQueryOptions } from "@/api/groups";
 import { Loading } from "@/components/base/Loading";
 import { GroupForm } from "@/components/administration/groups/group-form";
 import { GroupEditError } from "@/components/administration/groups/group-edit-error";
+import { queryClient } from "@/lib/query-client";
 
 export const Route = createFileRoute("/_authenticated/administration/groups/$groupId/edit")({
-  loader: ({ params }) => getGroup(params.groupId),
+  loader: ({ params }) => queryClient.ensureQueryData(groupQueryOptions(params.groupId)),
   pendingComponent: () => <Loading className="loading-page" />,
   errorComponent: GroupEditError,
   component: GroupEditPage,

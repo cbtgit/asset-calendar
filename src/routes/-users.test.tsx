@@ -74,10 +74,11 @@ it("renders the editor with labeled controls and immutable email on edit", async
   expect(screen.getByRole("button", { name: "Resend invitation" })).toBeTruthy();
 });
 
-it("opens the editor from cached directory data without fetching the user again", async () => {
+it("loads the editor from the user detail query", async () => {
   const send = vi.spyOn(pocketbase, "send").mockImplementation(async (path) => {
     if (path === "/api/groups") return { items: [{ id: "group-1", name: "Operations" }] };
     if (path === "/api/users") return { items: [user] };
+    if (path === "/api/users/user-1") return user;
     throw new Error(`Unexpected request: ${path}`);
   });
   await renderUsers("/administration/users");
@@ -85,7 +86,7 @@ it("opens the editor from cached directory data without fetching the user again"
   fireEvent.click(await screen.findByRole("link", { name: "Edit Ada Lovelace" }));
 
   expect(await screen.findByRole("heading", { name: "Edit user" })).toBeTruthy();
-  expect(send).not.toHaveBeenCalledWith("/api/users/user-1", expect.anything());
+  expect(send).toHaveBeenCalledWith("/api/users/user-1", { method: "GET" });
 });
 
 it("shows a specific validation message when the email is already in use", async () => {

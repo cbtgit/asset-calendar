@@ -1,12 +1,14 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { getBookingType } from "@/api/booking-types";
+import { bookingTypeQueryOptions } from "@/api/booking-types";
 import { Loading } from "@/components/base/Loading";
 import { BookingTypeForm } from "@/components/administration/booking-types/booking-type-form";
+import { queryClient } from "@/lib/query-client";
 
 export const Route = createFileRoute(
   "/_authenticated/administration/booking-types/$bookingTypeId/edit",
 )({
-  loader: ({ params }) => getBookingType(params.bookingTypeId),
+  loader: ({ params }) =>
+    queryClient.ensureQueryData(bookingTypeQueryOptions(params.bookingTypeId)),
   pendingComponent: () => <Loading className="loading-page" />,
   component: BookingTypeEditPage,
   shouldReload: true,

@@ -1,9 +1,12 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { bookingTypesQueryOptions } from "@/api/booking-types";
 import { Button } from "@/components/base/Button";
 import { BookingTypesDirectory } from "@/components/administration/booking-types/booking-types-directory";
+import { queryClient } from "@/lib/query-client";
 import "./administration.booking-types.css";
 
 export const Route = createFileRoute("/_authenticated/administration/booking-types/")({
+  loader: () => queryClient.ensureQueryData(bookingTypesQueryOptions()),
   component: BookingTypesPage,
 });
 

@@ -77,6 +77,13 @@ export function bookingTypesQueryOptions() {
   });
 }
 
+export function bookingTypeQueryOptions(id: string) {
+  return queryOptions<BookingType>({
+    queryKey: bookingTypesKeys.detail(id),
+    queryFn: () => getBookingType(id),
+  });
+}
+
 function toBookingTypePayload(input: BookingTypeCreate, tenant: string): BookingTypePayload {
   const name = input.name.trim();
 

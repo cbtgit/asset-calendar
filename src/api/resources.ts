@@ -57,6 +57,13 @@ export function resourcesQueryOptions() {
   });
 }
 
+export function resourceQueryOptions(id: string) {
+  return queryOptions<Resource>({
+    queryKey: resourcesKeys.detail(id),
+    queryFn: () => getResource(id),
+  });
+}
+
 function toResourcePayload(input: ResourceCreate): ResourcePayload {
   return {
     name: input.name.trim(),

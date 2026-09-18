@@ -25,6 +25,7 @@ function setup() {
     <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
   );
   queryClient.setQueryData(resourcesKeys.list(), [resource]);
+  queryClient.setQueryData(resourcesKeys.detail(resource.id), resource);
   return { queryClient, wrapper };
 }
 
@@ -90,9 +91,14 @@ it("rolls back a failed resource update and invalidates the list", async () => {
     await Promise.resolve();
   });
   expect(queryClient.getQueryData<Resource[]>(resourcesKeys.list())?.[0].name).toBe("Duplicate");
+  expect(queryClient.getQueryData<Resource>(resourcesKeys.detail(resource.id))?.name).toBe(
+    "Duplicate",
+  );
 
   rejectUpdate(error);
   await expect(mutation).rejects.toMatchObject({ kind: "conflict" });
   expect(queryClient.getQueryData<Resource[]>(resourcesKeys.list())).toEqual([resource]);
+  expect(queryClient.getQueryData<Resource>(resourcesKeys.detail(resource.id))).toEqual(resource);
   expect(invalidate).toHaveBeenCalledWith({ queryKey: resourcesKeys.list() });
+  expect(invalidate).toHaveBeenCalledWith({ queryKey: resourcesKeys.detail(resource.id) });
 });

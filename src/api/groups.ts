@@ -83,3 +83,10 @@ export function groupsQueryOptions() {
     queryFn: getGroups,
   });
 }
+
+export function groupQueryOptions(id: string) {
+  return queryOptions<Group>({
+    queryKey: groupsKeys.detail(id),
+    queryFn: () => getGroup(id),
+  });
+}

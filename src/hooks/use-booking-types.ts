@@ -12,6 +12,7 @@ import { getAuthSnapshot } from "@/api/auth";
 
 type BookingTypesContext = {
   previousBookingTypes: BookingType[] | undefined;
+  previousBookingType: BookingType | undefined;
 };
 
 function optimisticBookingType(input: BookingTypeCreate): BookingType {
@@ -55,7 +56,7 @@ export function useCreateBookingTypeMutation() {
           sortBookingTypes([...previousBookingTypes, optimisticBookingType(input)]),
         );
       }
-      return { previousBookingTypes };
+      return { previousBookingTypes, previousBookingType: undefined };
     },
     onError: (_error, _input, context) => {
       if (context?.previousBookingTypes !== undefined) {
@@ -73,33 +74,50 @@ export function useUpdateBookingTypeMutation() {
     mutationFn: ({ id, input }: { id: string; input: BookingTypeUpdate }) =>
       updateBookingType(id, input),
     onMutate: async ({ id, input }): Promise<BookingTypesContext> => {
-      await queryClient.cancelQueries({ queryKey: bookingTypesKeys.list() });
+      await Promise.all([
+        queryClient.cancelQueries({ queryKey: bookingTypesKeys.list() }),
+        queryClient.cancelQueries({ queryKey: bookingTypesKeys.detail(id) }),
+      ]);
       const previousBookingTypes = queryClient.getQueryData<BookingType[]>(bookingTypesKeys.list());
+      const previousBookingType = queryClient.getQueryData<BookingType>(
+        bookingTypesKeys.detail(id),
+      );
+      const update = (bookingType: BookingType): BookingType => ({
+        ...bookingType,
+        name: input.name.trim(),
+        name_normalized: input.name.trim().toLowerCase(),
+        surcharge_minor_units: input.surchargeMinorUnits ?? 0,
+        nonbillable: input.nonbillable ?? false,
+        color: input.color ?? null,
+      });
       queryClient.setQueryData<BookingType[]>(bookingTypesKeys.list(), (bookingTypes) =>
         bookingTypes
           ? sortBookingTypes(
               bookingTypes.map((bookingType) =>
-                bookingType.id === id
-                  ? {
-                      ...bookingType,
-                      name: input.name.trim(),
-                      name_normalized: input.name.trim().toLowerCase(),
-                      surcharge_minor_units: input.surchargeMinorUnits ?? 0,
-                      nonbillable: input.nonbillable ?? false,
-                      color: input.color ?? null,
-                    }
-                  : bookingType,
+                bookingType.id === id ? update(bookingType) : bookingType,
               ),
             )
           : bookingTypes,
       );
-      return { previousBookingTypes };
+      queryClient.setQueryData<BookingType>(bookingTypesKeys.detail(id), (bookingType) =>
+        bookingType ? update(bookingType) : bookingType,
+      );
+      return { previousBookingTypes, previousBookingType };
     },
-    onError: (_error, _input, context) => {
+    onError: (_error, variables, context) => {
       if (context?.previousBookingTypes !== undefined) {
         queryClient.setQueryData(bookingTypesKeys.list(), context.previousBookingTypes);
       }
+      if (context?.previousBookingType !== undefined) {
+        queryClient.setQueryData(
+          bookingTypesKeys.detail(variables.id),
+          context.previousBookingType,
+        );
+      }
     },
-    onSettled: () => queryClient.invalidateQueries({ queryKey: bookingTypesKeys.list() }),
+    onSettled: (_data, _error, variables) => {
+      void queryClient.invalidateQueries({ queryKey: bookingTypesKeys.list() });
+      void queryClient.invalidateQueries({ queryKey: bookingTypesKeys.detail(variables.id) });
+    },
   });
 }

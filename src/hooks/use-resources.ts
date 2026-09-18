@@ -12,6 +12,7 @@ import { getAuthSnapshot } from "@/api/auth";
 
 type ResourcesContext = {
   previousResources: Resource[] | undefined;
+  previousResource: Resource | undefined;
 };
 
 function optimisticResource(input: ResourceCreate): Resource {
@@ -53,7 +54,7 @@ export function useCreateResourceMutation() {
           sortResources([...previousResources, optimisticResource(input)]),
         );
       }
-      return { previousResources };
+      return { previousResources, previousResource: undefined };
     },
     onError: (_error, _input, context) => {
       if (context?.previousResources !== undefined) {
@@ -70,31 +71,41 @@ export function useUpdateResourceMutation() {
   return useMutation({
     mutationFn: ({ id, input }: { id: string; input: ResourceUpdate }) => updateResource(id, input),
     onMutate: async ({ id, input }): Promise<ResourcesContext> => {
-      await queryClient.cancelQueries({ queryKey: resourcesKeys.list() });
+      await Promise.all([
+        queryClient.cancelQueries({ queryKey: resourcesKeys.list() }),
+        queryClient.cancelQueries({ queryKey: resourcesKeys.detail(id) }),
+      ]);
       const previousResources = queryClient.getQueryData<Resource[]>(resourcesKeys.list());
+      const previousResource = queryClient.getQueryData<Resource>(resourcesKeys.detail(id));
+      const update = (resource: Resource): Resource => ({
+        ...resource,
+        name: input.name.trim(),
+        name_normalized: input.name.trim().toLowerCase(),
+        base_rate_minor_units: input.baseRateMinorUnits ?? 0,
+      });
       queryClient.setQueryData<Resource[]>(resourcesKeys.list(), (resources) =>
         resources
           ? sortResources(
-              resources.map((resource) =>
-                resource.id === id
-                  ? {
-                      ...resource,
-                      name: input.name.trim(),
-                      name_normalized: input.name.trim().toLowerCase(),
-                      base_rate_minor_units: input.baseRateMinorUnits ?? 0,
-                    }
-                  : resource,
-              ),
+              resources.map((resource) => (resource.id === id ? update(resource) : resource)),
             )
           : resources,
       );
-      return { previousResources };
+      queryClient.setQueryData<Resource>(resourcesKeys.detail(id), (resource) =>
+        resource ? update(resource) : resource,
+      );
+      return { previousResources, previousResource };
     },
-    onError: (_error, _input, context) => {
+    onError: (_error, variables, context) => {
       if (context?.previousResources !== undefined) {
         queryClient.setQueryData(resourcesKeys.list(), context.previousResources);
       }
+      if (context?.previousResource !== undefined) {
+        queryClient.setQueryData(resourcesKeys.detail(variables.id), context.previousResource);
+      }
     },
-    onSettled: () => queryClient.invalidateQueries({ queryKey: resourcesKeys.list() }),
+    onSettled: (_data, _error, variables) => {
+      void queryClient.invalidateQueries({ queryKey: resourcesKeys.list() });
+      void queryClient.invalidateQueries({ queryKey: resourcesKeys.detail(variables.id) });
+    },
   });
 }

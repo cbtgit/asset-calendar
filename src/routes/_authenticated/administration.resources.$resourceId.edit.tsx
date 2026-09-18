@@ -1,10 +1,11 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { getResource } from "@/api/resources";
+import { resourceQueryOptions } from "@/api/resources";
 import { Loading } from "@/components/base/Loading";
 import { ResourceForm } from "@/components/administration/resources/resource-form";
+import { queryClient } from "@/lib/query-client";
 
 export const Route = createFileRoute("/_authenticated/administration/resources/$resourceId/edit")({
-  loader: ({ params }) => getResource(params.resourceId),
+  loader: ({ params }) => queryClient.ensureQueryData(resourceQueryOptions(params.resourceId)),
   pendingComponent: () => <Loading className="loading-page" />,
   component: ResourceEditPage,
   shouldReload: true,
