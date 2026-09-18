@@ -12,6 +12,14 @@ const BOOKING_COLLECTION = "bookings";
 const TENANT_SETTINGS_COLLECTION = "tenant_settings";
 const DEFAULT_SITE_TITLE = "Asset Calendar";
 const DEFAULT_BOOKING_LOCK_HOURS = 24;
+const BOOKING_TYPE_COLORS = new Set([
+  "#2F66D2",
+  "#168C6C",
+  "#CF7B36",
+  "#B42318",
+  "#52606D",
+  "#7A5C00",
+]);
 const PROTECTED_USER_FIELDS = [
   "email",
   "email_normalized",
@@ -207,15 +215,24 @@ function normalizeBookingType(event, info, record, tenantId) {
   ) {
     throw new BadRequestError("booking_type_surcharge_invalid");
   }
+  const configuredColor = Object.prototype.hasOwnProperty.call(info.body, "color")
+    ? info.body.color
+    : record.get("color");
+  const color = configuredColor || null;
+  if (color !== null && (typeof color !== "string" || !BOOKING_TYPE_COLORS.has(color))) {
+    throw new BadRequestError("booking_type_color_invalid");
+  }
   info.body.name = trimmedName;
   info.body.name_normalized = trimmedName.toLowerCase();
   info.body.nonbillable = nonbillable;
   info.body.surcharge_minor_units = nonbillable ? 0 : configuredSurcharge;
+  info.body.color = color;
   info.body[TENANT_FIELD] = tenantId;
   record.set("name", trimmedName);
   record.set("name_normalized", info.body.name_normalized);
   record.set("nonbillable", nonbillable);
   record.set("surcharge_minor_units", info.body.surcharge_minor_units);
+  record.set("color", color);
   record.set(TENANT_FIELD, tenantId);
 }
 
@@ -267,6 +284,7 @@ const PROTECTED_BOOKING_FIELDS = [
   "booker_email_snapshot",
   "resource_name_snapshot",
   "booking_type_name_snapshot",
+  "booking_type_color_snapshot",
 ];
 
 function hasField(body, field) {
@@ -457,6 +475,7 @@ function normalizeBooking(event, info, record, context) {
 
   const groupName = bookingUserGroupName(bookedForUser, tenantId);
   const bookingTypeName = bookingType?.get("name") ?? "";
+  const bookingTypeColor = bookingType?.get("color") || "";
   info.body[TENANT_FIELD] = tenantId;
   info.body.resource = resource.id;
   info.body.booked_for_user = bookedForUser.id;
@@ -472,6 +491,7 @@ function normalizeBooking(event, info, record, context) {
   info.body.booker_email_snapshot = bookedForUser.get("email");
   info.body.resource_name_snapshot = resource.get("name");
   info.body.booking_type_name_snapshot = bookingTypeName;
+  info.body.booking_type_color_snapshot = bookingTypeColor;
 
   record.set(TENANT_FIELD, tenantId);
   record.set("resource", resource.id);
@@ -488,6 +508,7 @@ function normalizeBooking(event, info, record, context) {
   record.set("booker_email_snapshot", bookedForUser.get("email"));
   record.set("resource_name_snapshot", resource.get("name"));
   record.set("booking_type_name_snapshot", bookingTypeName);
+  record.set("booking_type_color_snapshot", bookingTypeColor);
 }
 
 function normalizeBookingUpdate(
@@ -623,6 +644,7 @@ function normalizeBookingUpdate(
 
   const groupName = bookingUserGroupName(bookedForUser, tenantId);
   const bookingTypeName = bookingType?.get("name") ?? "";
+  const bookingTypeColor = bookingType?.get("color") || "";
   info.body.booked_for_user = bookedForUser.id;
   info.body.booking_type = bookingType?.id ?? "";
   info.body.resource_base_rate_minor_units = storedResourceRate;
@@ -633,6 +655,7 @@ function normalizeBookingUpdate(
   info.body.booker_email_snapshot = bookedForUser.get("email");
   info.body.resource_name_snapshot = resource.get("name");
   info.body.booking_type_name_snapshot = bookingTypeName;
+  info.body.booking_type_color_snapshot = bookingTypeColor;
 
   record.set("booked_for_user", bookedForUser.id);
   record.set("booking_type", bookingType?.id ?? "");
@@ -644,6 +667,7 @@ function normalizeBookingUpdate(
   record.set("booker_email_snapshot", bookedForUser.get("email"));
   record.set("resource_name_snapshot", resource.get("name"));
   record.set("booking_type_name_snapshot", bookingTypeName);
+  record.set("booking_type_color_snapshot", bookingTypeColor);
 }
 
 function normalizeTenantSettings(event, info, record, context) {
@@ -706,9 +730,10 @@ function bookingProjection(record, administrator, authId, bookingLockMs) {
     can_edit: administrator || regularEligible,
     can_delete: administrator || regularEligible,
   };
+  projection.booking_type_name = record.get("booking_type_name_snapshot") || null;
+  projection.booking_type_color = record.get("booking_type_color_snapshot") || null;
   if (administrator) {
     projection.booking_type = record.get("booking_type") || null;
-    projection.booking_type_name = record.get("booking_type_name_snapshot") || null;
     projection.booked_for_user = record.get("booked_for_user");
     projection.created_by_user = record.get("created_by_user");
   }

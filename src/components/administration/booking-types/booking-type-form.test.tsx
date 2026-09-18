@@ -32,6 +32,7 @@ function renderEditForm() {
           name_normalized: "operations",
           surcharge_minor_units: 1250,
           nonbillable: false,
+          color: "#168C6C",
           archived_at: "",
           created: "2026-01-01T00:00:00Z",
           updated: "2026-01-01T00:00:00Z",
@@ -49,6 +50,8 @@ describe("BookingTypeForm", () => {
 
     expect(screen.getByLabelText("Booking type")).toBeTruthy();
     expect(screen.getByLabelText("Hourly price")).toBeTruthy();
+    expect(screen.getAllByRole("radio")).toHaveLength(6);
+    expect(screen.getByRole("radio", { name: "Teal" })).toHaveProperty("checked", false);
     expect(screen.getByRole("button", { name: "Save" })).toBeTruthy();
   });
 
@@ -168,6 +171,7 @@ describe("BookingTypeForm", () => {
     expect(screen.getByRole("heading", { name: "Edit Booking Type" })).toBeTruthy();
     expect((screen.getByLabelText("Booking type") as HTMLInputElement).value).toBe("Operations");
     expect((screen.getByLabelText("Hourly price") as HTMLInputElement).value).toBe("12,50");
+    expect(screen.getByRole("radio", { name: "Teal" })).toHaveProperty("checked", true);
 
     fireEvent.change(screen.getByLabelText("Booking type"), {
       target: { value: "Updated operations" },
@@ -179,6 +183,7 @@ describe("BookingTypeForm", () => {
         name: "Updated operations",
         surchargeMinorUnits: 1250,
         nonbillable: false,
+        color: "#168C6C",
       }),
     );
   });
@@ -206,6 +211,7 @@ describe("BookingTypeForm", () => {
       name: "Maintenance",
       surchargeMinorUnits: 0,
       nonbillable: true,
+      color: "#2F66D2",
     });
   });
 });

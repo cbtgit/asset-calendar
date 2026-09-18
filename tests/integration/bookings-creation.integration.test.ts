@@ -190,6 +190,7 @@ it("creates role-safe bookings with snapshots and end-exclusive conflicts", asyn
       tenant: adminRecord.tenant,
       name: "Training",
       surcharge_minor_units: 1250,
+      color: "#168C6C",
     },
   });
   expect(bookingTypeResponse.status).toBe(200);
@@ -203,6 +204,7 @@ it("creates role-safe bookings with snapshots and end-exclusive conflicts", asyn
       name: "Maintenance",
       surcharge_minor_units: 9000,
       nonbillable: true,
+      color: "#CF7B36",
     },
   });
   expect(nonbillableTypeResponse.status).toBe(200);
@@ -224,6 +226,8 @@ it("creates role-safe bookings with snapshots and end-exclusive conflicts", asyn
     id: expect.any(String),
     resource: resource.id,
     booker_display_name: "Regular A",
+    booking_type_name: null,
+    booking_type_color: null,
   });
   expect(regularBookingBody).not.toHaveProperty("tenant");
   expect(regularBookingBody).not.toHaveProperty("resource_base_rate_minor_units");
@@ -325,6 +329,7 @@ it("creates role-safe bookings with snapshots and end-exclusive conflicts", asyn
     booker_email_snapshot: "regular-a@example.test",
     resource_name_snapshot: "Room A",
     booking_type_name_snapshot: "",
+    booking_type_color_snapshot: "",
   });
   const storedNonbillableBooking = storedBookingItems.find(
     (item: { id: string }) => item.id === nonbillableBookingBody.id,
@@ -405,8 +410,9 @@ it("creates role-safe bookings with snapshots and end-exclusive conflicts", asyn
   expect(regularVisibleBody.items[0]).toMatchObject({
     resource: resource.id,
     booker_display_name: "Regular A",
+    booking_type_name: null,
+    booking_type_color: null,
   });
-  expect(regularVisibleBody.items[0]).not.toHaveProperty("booking_type_name");
   expect(regularVisibleBody.items[0]).not.toHaveProperty("effective_rate_minor_units");
 
   const administratorVisible = await request(
@@ -418,7 +424,10 @@ it("creates role-safe bookings with snapshots and end-exclusive conflicts", asyn
   );
   expect(administratorVisible.status).toBe(200);
   expect((await administratorVisible.json()).items).toContainEqual(
-    expect.objectContaining({ booking_type_name: "Training" }),
+    expect.objectContaining({
+      booking_type_name: "Training",
+      booking_type_color: "#168C6C",
+    }),
   );
 
   const regularUpdate = await request(regular, `/api/calendar/bookings/${regularBookingBody.id}`, {

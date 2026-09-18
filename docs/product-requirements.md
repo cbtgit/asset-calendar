@@ -149,7 +149,8 @@ the booker.
 
 Booking types are tenant-owned records used for administrator-selected
 bookings. Each booking type has an administrator-configurable name, surcharge,
-and `nonbillable` capability flag. The flag defaults to `false`, so booking
+calendar color, and `nonbillable` capability flag. The color is selected from
+the six supported calendar colors. The flag defaults to `false`, so booking
 types are billable unless explicitly configured otherwise. Regular bookings do
 not reference a booking type.
 
@@ -168,11 +169,13 @@ action yet.
 
 Regular users do not see a booking type field or the booking-type catalog. Their
 bookings store a null booking type, a zero booking-type surcharge, and no
-booking-type name snapshot. Administrators may select an active booking type
+booking-type name or color snapshot. Administrators may select an active booking type
 permitted for the workflow and must still select an active user for the booking.
 Regular users cannot change booking type after creation. Administrators may
 change it while editing, with snapshots and rate fields recalculated using the
-same trusted calculation as booking creation.
+same trusted calculation as booking creation. The booking type name and color
+are snapshotted so existing calendar bookings retain their original meaning
+when a booking type is later edited.
 
 ### 5.2 Time and availability
 
@@ -386,6 +389,10 @@ Administrators may additionally see booking type and may edit or delete any
 booking. Administrators may change the booked-for user and booking type while
 editing, but may not change the resource. Prices remain hidden in booking
 details.
+
+Calendar events show the booking type name for every user. Typed bookings use
+their snapshotted booking type color; bookings without a type, and legacy typed
+bookings without a color snapshot, retain the calendar's default color.
 
 The resource remains fixed while editing. Moving a booking to another resource
 is not supported in the MVP.

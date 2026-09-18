@@ -11,6 +11,7 @@ import { isAdministrator } from "@/api/auth";
 import type { CalendarBooking } from "@/api/bookings";
 import { toAppError } from "@/api/errors";
 import { BookingDetail } from "@/components/calendar/booking-detail";
+import { toCalendarEvents } from "@/components/calendar/calendar-events";
 import { BookingForm } from "@/components/calendar/booking-form";
 import { DeleteBookingDialog } from "@/components/calendar/delete-booking-dialog";
 import { Loading } from "@/components/base/Loading";
@@ -112,14 +113,7 @@ export function CalendarSurface({ search }: CalendarSurfaceProps) {
     end: visibleRange.end,
   });
   const events = useMemo<EventInput[]>(
-    () =>
-      (bookings.data ?? []).map((booking) => ({
-        id: booking.id,
-        title: booking.booker_display_name,
-        start: booking.start,
-        end: booking.end,
-        extendedProps: { booking },
-      })),
+    () => toCalendarEvents(bookings.data ?? []),
     [bookings.data],
   );
 

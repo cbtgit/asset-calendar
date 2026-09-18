@@ -160,6 +160,7 @@ export function BookingForm({
                     selectedUser?.email ||
                     initialBooking.booker_display_name,
                   booking_type_name: selectedType?.name ?? null,
+                  booking_type_color: selectedType?.color ?? null,
                 }
               : {}),
           },
@@ -178,6 +179,7 @@ export function BookingForm({
             ? {
                 optimisticBookerDisplayName: selectedUser?.display_name || selectedUser?.email,
                 optimisticBookingTypeName: selectedType?.name ?? null,
+                optimisticBookingTypeColor: selectedType?.color ?? null,
               }
             : {}),
         });
