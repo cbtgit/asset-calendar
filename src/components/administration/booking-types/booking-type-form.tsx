@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
-import type { BookingType } from "@/api/booking-types";
+import { BOOKING_TYPE_COLORS, type BookingType } from "@/api/booking-types";
 import { ApplicationError, hasValidationCode } from "@/api/errors";
 import { Button } from "@/components/base/Button";
 import { NumberField } from "@/components/base/NumberField";
@@ -34,6 +34,7 @@ export function BookingTypeForm({
   const [bookingType, setBookingType] = useState(initialBookingType?.name ?? "");
   const [hourlyPrice, setHourlyPrice] = useState(initialHourlyPrice(initialBookingType, locale));
   const [nonbillable, setNonbillable] = useState(initialBookingType?.nonbillable ?? false);
+  const [color, setColor] = useState(initialBookingType?.color ?? BOOKING_TYPE_COLORS[0].value);
   const [nameError, setNameError] = useState("");
   const [priceError, setPriceError] = useState("");
   const [submitted, setSubmitted] = useState(false);
@@ -73,7 +74,7 @@ export function BookingTypeForm({
       return;
     }
     setPriceError("");
-    const input = { name: trimmedName, surchargeMinorUnits, nonbillable };
+    const input = { name: trimmedName, surchargeMinorUnits, nonbillable, color };
     if (mode === "edit" && initialBookingType) {
       updateMutation.mutate(
         { id: initialBookingType.id, input },
@@ -143,6 +144,27 @@ export function BookingTypeForm({
           />
           Non-billable booking type
         </label>
+        <fieldset className="booking-type-form-colors">
+          <legend>Calendar color</legend>
+          <div className="booking-type-color-options">
+            {BOOKING_TYPE_COLORS.map((option) => (
+              <label className="booking-type-color-option" key={option.value}>
+                <input
+                  type="radio"
+                  name="bookingTypeColor"
+                  value={option.value}
+                  checked={color === option.value}
+                  onChange={() => setColor(option.value)}
+                />
+                <span
+                  className={`booking-type-color-swatch booking-type-color-swatch-${option.label.toLowerCase()}`}
+                  aria-hidden="true"
+                />
+                <span>{option.label}</span>
+              </label>
+            ))}
+          </div>
+        </fieldset>
         <div className="booking-type-form-actions">
           <Button type="button" onClick={onCancel}>
             Cancel

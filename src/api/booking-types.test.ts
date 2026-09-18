@@ -32,6 +32,7 @@ it("loads booking types sorted by name", async () => {
       name: "Training",
       name_normalized: "training",
       surcharge_minor_units: 1250,
+      color: null,
       archived_at: "",
       created: "2026-01-01T00:00:00Z",
       updated: "2026-01-01T00:00:00Z",
@@ -51,6 +52,7 @@ it("loads one booking type for editing", async () => {
     name: "Training",
     name_normalized: "training",
     surcharge_minor_units: 1250,
+    color: null,
     archived_at: "",
     created: "2026-01-01T00:00:00Z",
     updated: "2026-01-01T00:00:00Z",
@@ -69,6 +71,7 @@ it("creates a booking type with a tenant-scoped payload", async () => {
     name: "Training",
     name_normalized: "training",
     surcharge_minor_units: 1250,
+    color: "#168C6C",
     archived_at: "",
     created: "2026-01-01T00:00:00Z",
     updated: "2026-01-01T00:00:00Z",
@@ -77,13 +80,14 @@ it("creates a booking type with a tenant-scoped payload", async () => {
   vi.spyOn(pocketbase, "collection").mockReturnValue({ create } as never);
 
   await expect(
-    createBookingType({ name: "  Training  ", surchargeMinorUnits: 1250 }),
+    createBookingType({ name: "  Training  ", surchargeMinorUnits: 1250, color: "#168C6C" }),
   ).resolves.toEqual(created);
   expect(create).toHaveBeenCalledWith({
     tenant: "tenant-id",
     name: "Training",
     surcharge_minor_units: 1250,
     nonbillable: false,
+    color: "#168C6C",
   });
 });
 
@@ -98,6 +102,7 @@ it("creates a non-billable booking type with an explicit capability", async () =
     name: "Maintenance",
     surcharge_minor_units: 0,
     nonbillable: true,
+    color: null,
   });
 });
 
@@ -116,6 +121,7 @@ it("updates a booking type without changing its tenant", async () => {
     name: "Updated training",
     name_normalized: "updated training",
     surcharge_minor_units: 1500,
+    color: "#CF7B36",
     archived_at: "",
     created: "2026-01-01T00:00:00Z",
     updated: "2026-01-02T00:00:00Z",
@@ -127,11 +133,13 @@ it("updates a booking type without changing its tenant", async () => {
     updateBookingType("booking-type-1", {
       name: "  Updated training  ",
       surchargeMinorUnits: 1500,
+      color: "#CF7B36",
     }),
   ).resolves.toEqual(updated);
   expect(update).toHaveBeenCalledWith("booking-type-1", {
     name: "Updated training",
     surcharge_minor_units: 1500,
     nonbillable: false,
+    color: "#CF7B36",
   });
 });

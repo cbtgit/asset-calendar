@@ -14,6 +14,7 @@ export type CalendarBooking = {
   can_delete?: boolean;
   booking_type?: string | null;
   booking_type_name?: string | null;
+  booking_type_color?: string | null;
   booked_for_user?: string;
   created_by_user?: string;
 };

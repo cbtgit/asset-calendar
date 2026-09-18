@@ -23,6 +23,7 @@ export type BookingUpdateMutationInput = BookingUpdate & {
 export type BookingCreateMutationInput = BookingCreate & {
   optimisticBookerDisplayName?: string;
   optimisticBookingTypeName?: string | null;
+  optimisticBookingTypeColor?: string | null;
 };
 
 function displayName(): string {
@@ -39,6 +40,7 @@ function optimisticBooking(input: BookingCreateMutationInput): CalendarBooking {
     booker_display_name: input.optimisticBookerDisplayName ?? displayName(),
     booking_type: input.booking_type ?? null,
     booking_type_name: input.optimisticBookingTypeName ?? null,
+    booking_type_color: input.optimisticBookingTypeColor ?? null,
     booked_for_user: input.booked_for_user ?? getAuthSnapshot().user?.id,
     created_by_user: getAuthSnapshot().user?.id,
   };
@@ -65,6 +67,7 @@ export function useCreateBookingMutation() {
     mutationFn: ({
       optimisticBookerDisplayName: _optimisticBookerDisplayName,
       optimisticBookingTypeName: _optimisticBookingTypeName,
+      optimisticBookingTypeColor: _optimisticBookingTypeColor,
       ...input
     }: BookingCreateMutationInput) => createBooking(input),
     onMutate: async (input): Promise<BookingsContext> => {
@@ -113,7 +116,11 @@ function optimisticUpdatedBooking(
       ? { booked_for_user: input.booked_for_user ?? undefined }
       : {}),
     ...(Object.prototype.hasOwnProperty.call(input, "booking_type")
-      ? { booking_type: input.booking_type ?? null, booking_type_name: null }
+      ? {
+          booking_type: input.booking_type ?? null,
+          booking_type_name: input.optimisticBooking?.booking_type_name ?? null,
+          booking_type_color: input.optimisticBooking?.booking_type_color ?? null,
+        }
       : {}),
   };
 }
