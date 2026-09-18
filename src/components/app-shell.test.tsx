@@ -50,7 +50,7 @@ function renderAppShell() {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false, staleTime: Infinity } },
   });
-  queryClient.setQueryData(tenantSettingsKeys.current(), {
+  queryClient.setQueryData(tenantSettingsKeys.current(""), {
     id: "settings-1",
     tenant: "tenant-1",
     site_title: "Asset Calendar",

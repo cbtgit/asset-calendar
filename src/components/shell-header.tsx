@@ -12,9 +12,7 @@ type ShellHeaderProps = {
 
 export function ShellHeader({ activeModule, isAdministrator, navigationKey }: ShellHeaderProps) {
   const tenantSettings = useTenantSettingsQuery();
-  const siteTitle = tenantSettings.isPending
-    ? ""
-    : tenantSettings.data?.site_title || "Asset Calendar";
+  const siteTitle = tenantSettings.data?.site_title || "Asset Calendar";
 
   return (
     <header className="shell-header">

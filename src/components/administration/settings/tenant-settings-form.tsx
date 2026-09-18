@@ -71,6 +71,7 @@ export function TenantSettingsForm({ settings }: TenantSettingsFormProps) {
           name="siteTitle"
           value={siteTitle}
           maxLength={200}
+          disabled={mutation.isPending}
           aria-invalid={Boolean(siteTitleError)}
           aria-describedby={siteTitleError ? "tenant-settings-site-title-error" : undefined}
           onChange={(event) => {
@@ -96,6 +97,7 @@ export function TenantSettingsForm({ settings }: TenantSettingsFormProps) {
           step="1"
           inputMode="numeric"
           value={bookingLockHours}
+          disabled={mutation.isPending}
           aria-invalid={Boolean(bookingLockHoursError)}
           aria-describedby={
             bookingLockHoursError ? "tenant-settings-booking-lock-hours-error" : undefined

@@ -58,3 +58,22 @@ it("submits the site title and whole-hour lock setting", async () => {
   );
   expect(screen.getByText("Tenant settings saved.")).toBeTruthy();
 });
+
+it("disables both fields while saving", async () => {
+  let resolveUpdate!: (value: typeof settings) => void;
+  vi.spyOn(tenantSettingsApi, "updateTenantSettings").mockReturnValue(
+    new Promise((resolve) => {
+      resolveUpdate = resolve;
+    }),
+  );
+  renderForm();
+
+  fireEvent.submit(screen.getByRole("button", { name: "Save" }).closest("form")!);
+
+  await waitFor(() => expect(tenantSettingsApi.updateTenantSettings).toHaveBeenCalled());
+  expect((screen.getByLabelText("Site title") as HTMLInputElement).disabled).toBe(true);
+  expect((screen.getByLabelText("Booking lock hours") as HTMLInputElement).disabled).toBe(true);
+
+  resolveUpdate(settings);
+  await waitFor(() => expect(screen.getByText("Tenant settings saved.")).toBeTruthy());
+});

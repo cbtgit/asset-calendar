@@ -32,9 +32,9 @@ export async function getTenantSettings(): Promise<TenantSettings> {
   }
 }
 
-export function tenantSettingsQueryOptions() {
+export function tenantSettingsQueryOptions(tenantId: string) {
   return queryOptions<TenantSettings>({
-    queryKey: tenantSettingsKeys.current(),
+    queryKey: tenantSettingsKeys.current(tenantId),
     queryFn: getTenantSettings,
   });
 }
