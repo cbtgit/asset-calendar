@@ -4,6 +4,7 @@ import { getAuthSnapshot } from "./auth";
 import { pocketbase } from "./client";
 import { toAppError } from "./errors";
 import { resourcesKeys } from "./query-keys";
+import { ADMIN_LIST_STALE_TIME } from "./query-config";
 
 export type Resource = {
   id: string;
@@ -54,6 +55,7 @@ export function resourcesQueryOptions() {
   return queryOptions<Resource[]>({
     queryKey: resourcesKeys.list(),
     queryFn: getResources,
+    staleTime: ADMIN_LIST_STALE_TIME,
   });
 }
 

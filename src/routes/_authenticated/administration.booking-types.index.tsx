@@ -6,7 +6,9 @@ import { queryClient } from "@/lib/query-client";
 import "./administration.booking-types.css";
 
 export const Route = createFileRoute("/_authenticated/administration/booking-types/")({
-  loader: () => queryClient.ensureQueryData(bookingTypesQueryOptions()),
+  loader: () => {
+    void queryClient.prefetchQuery(bookingTypesQueryOptions()).catch(() => undefined);
+  },
   component: BookingTypesPage,
 });
 

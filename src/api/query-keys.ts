@@ -33,7 +33,7 @@ export const tenantSettingsKeys = {
 
 export const calendarKeys = {
   all: ["calendar"] as const,
-  resources: () => [...calendarKeys.all, "resources"] as const,
+  resources: (tenantId: string) => [...calendarKeys.all, "resources", tenantId] as const,
 };
 
 export const bookingsKeys = {

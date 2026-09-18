@@ -5,7 +5,9 @@ import { GroupsDirectory } from "@/components/administration/groups/groups-direc
 import { queryClient } from "@/lib/query-client";
 
 export const Route = createFileRoute("/_authenticated/administration/groups/")({
-  loader: () => queryClient.ensureQueryData(groupsQueryOptions()),
+  loader: () => {
+    void queryClient.prefetchQuery(groupsQueryOptions()).catch(() => undefined);
+  },
   component: GroupsIndexPage,
 });
 

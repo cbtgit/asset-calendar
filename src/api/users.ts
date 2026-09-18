@@ -1,4 +1,5 @@
 import { queryOptions } from "@tanstack/react-query";
+import { ADMIN_LIST_STALE_TIME } from "./query-config";
 import { pocketbase } from "./client";
 import { toAppError } from "./errors";
 import { usersKeys } from "./query-keys";
@@ -80,7 +81,11 @@ export async function resendUserInvitation(id: string): Promise<User> {
 }
 
 export function usersQueryOptions() {
-  return queryOptions<User[]>({ queryKey: usersKeys.list(), queryFn: getUsers });
+  return queryOptions<User[]>({
+    queryKey: usersKeys.list(),
+    queryFn: getUsers,
+    staleTime: ADMIN_LIST_STALE_TIME,
+  });
 }
 
 export function userQueryOptions(id: string) {

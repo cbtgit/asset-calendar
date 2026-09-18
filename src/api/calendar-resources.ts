@@ -1,4 +1,5 @@
 import { queryOptions } from "@tanstack/react-query";
+import { getAuthSnapshot } from "./auth";
 import { pocketbase } from "./client";
 import { toAppError } from "./errors";
 import { calendarKeys } from "./query-keys";
@@ -23,10 +24,17 @@ export async function getCalendarResources(): Promise<CalendarResource[]> {
   }
 }
 
+export function calendarResourcesQueryKey() {
+  return calendarKeys.resources(getAuthSnapshot().user?.tenant ?? "anonymous");
+}
+
 export function calendarResourcesQueryOptions() {
+  const tenantId = getAuthSnapshot().user?.tenant;
+
   return queryOptions<CalendarResource[]>({
-    queryKey: calendarKeys.resources(),
+    queryKey: calendarResourcesQueryKey(),
     queryFn: getCalendarResources,
+    enabled: Boolean(tenantId),
     staleTime: 2 * 60 * 1000,
   });
 }

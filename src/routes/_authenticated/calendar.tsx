@@ -29,7 +29,9 @@ export const Route = createFileRoute("/_authenticated/calendar")({
     view: normalizeCalendarView(search.view),
     resource: typeof search.resource === "string" ? search.resource : "",
   }),
-  loader: () => queryClient.ensureQueryData(calendarResourcesQueryOptions()),
+  loader: () => {
+    void queryClient.prefetchQuery(calendarResourcesQueryOptions()).catch(() => undefined);
+  },
   component: CalendarPage,
 });
 

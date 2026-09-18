@@ -6,7 +6,9 @@ import { queryClient } from "@/lib/query-client";
 import "./administration.resources.css";
 
 export const Route = createFileRoute("/_authenticated/administration/resources/")({
-  loader: () => queryClient.ensureQueryData(resourcesQueryOptions()),
+  loader: () => {
+    void queryClient.prefetchQuery(resourcesQueryOptions()).catch(() => undefined);
+  },
   component: ResourcesPage,
 });
 

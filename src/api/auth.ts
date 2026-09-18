@@ -1,4 +1,5 @@
 import type { RecordAuthResponse, RecordModel } from "pocketbase";
+import { queryClient } from "@/lib/query-client";
 import { pocketbase, setUnauthorizedHandler } from "./client";
 import { toAppError, type ApplicationError } from "./errors";
 
@@ -136,6 +137,7 @@ export async function setupPassword(token: string, password: string): Promise<Au
 export function signOut(): void {
   readyPromise = undefined;
   pocketbase.authStore.clear();
+  queryClient.clear();
 }
 
 export function setUnauthorizedRedirect(handler: (() => void) | undefined): void {
