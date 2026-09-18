@@ -102,5 +102,6 @@ export function calendarBookingsQueryOptions(range: BookingRange) {
     ),
     queryFn: () => getCalendarBookings(range),
     enabled: Boolean(range.resourceId && range.start && range.end),
+    staleTime: 15 * 1000,
   });
 }

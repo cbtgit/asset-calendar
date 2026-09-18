@@ -27,5 +27,6 @@ export function calendarResourcesQueryOptions() {
   return queryOptions<CalendarResource[]>({
     queryKey: calendarKeys.resources(),
     queryFn: getCalendarResources,
+    staleTime: 2 * 60 * 1000,
   });
 }

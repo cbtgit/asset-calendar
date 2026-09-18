@@ -1,11 +1,11 @@
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { afterEach, beforeEach, expect, it, vi } from "vite-plus/test";
 import { useNavigate } from "@tanstack/react-router";
 import { useCalendarResourcesQuery } from "@/hooks/use-calendar-resources";
 import { useAuth } from "@/hooks/use-auth";
 import { useBookingsQuery, useDeleteBookingMutation } from "@/hooks/use-bookings";
-import { CalendarSurface } from "./calendar-surface";
+import { CalendarSurface, getAdjacentBookingRanges } from "./calendar-surface";
 import { toCalendarEvents } from "./calendar-events";
 
 vi.mock("@tanstack/react-router", () => ({ useNavigate: vi.fn() }));
@@ -48,8 +48,9 @@ beforeEach(() => {
 });
 
 it("exposes the selected desktop resource through aria-pressed", () => {
+  const queryClient = new QueryClient();
   render(
-    <QueryClientProvider client={new QueryClient()}>
+    <QueryClientProvider client={queryClient}>
       <CalendarSurface search={{ date: "2026-09-16", view: "week", resource: "resource-1" }} />
     </QueryClientProvider>,
   );
@@ -60,6 +61,36 @@ it("exposes the selected desktop resource through aria-pressed", () => {
   expect(screen.getByRole("button", { name: /Studio B/ }).getAttribute("aria-pressed")).toBe(
     "false",
   );
+});
+
+it("prefetches the visible range for a resource on pointer entry", () => {
+  const queryClient = new QueryClient();
+  const prefetchQuery = vi.spyOn(queryClient, "prefetchQuery").mockResolvedValue(undefined);
+  render(
+    <QueryClientProvider client={queryClient}>
+      <CalendarSurface search={{ date: "2026-09-16", view: "week", resource: "resource-1" }} />
+    </QueryClientProvider>,
+  );
+
+  fireEvent.pointerEnter(screen.getByRole("button", { name: /Studio B/ }));
+
+  expect(prefetchQuery).toHaveBeenCalledWith(
+    expect.objectContaining({
+      queryKey: expect.arrayContaining(["bookings", "visible", "resource-2"]),
+    }),
+  );
+});
+
+it("calculates the immediately adjacent booking ranges", () => {
+  expect(
+    getAdjacentBookingRanges({
+      start: "2026-09-14T00:00:00.000Z",
+      end: "2026-09-21T00:00:00.000Z",
+    }),
+  ).toEqual([
+    { start: "2026-09-07T00:00:00.000Z", end: "2026-09-14T00:00:00.000Z" },
+    { start: "2026-09-21T00:00:00.000Z", end: "2026-09-28T00:00:00.000Z" },
+  ]);
 });
 
 it("uses booking type snapshots for event labels and colors", () => {
