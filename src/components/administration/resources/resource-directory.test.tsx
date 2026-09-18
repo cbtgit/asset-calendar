@@ -1,14 +1,16 @@
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, render, screen } from "@testing-library/react";
 import { createMemoryHistory, createRouter, RouterProvider } from "@tanstack/react-router";
 import { afterEach, expect, it, vi } from "vite-plus/test";
 import type { Resource } from "@/api/resources";
 import { pocketbase } from "@/api/client";
 import { resourcesKeys } from "@/api/query-keys";
+import { queryClient } from "@/lib/query-client";
 import { routeTree } from "@/routeTree.gen";
 
 afterEach(() => {
   cleanup();
+  queryClient.clear();
   pocketbase.authStore.clear();
   vi.restoreAllMocks();
 });
@@ -32,7 +34,6 @@ it("shows currency-aware rates and links resources to editing without archive co
     created: "2026-01-01T00:00:00Z",
     updated: "2026-01-01T00:00:00Z",
   };
-  const queryClient = new QueryClient();
   queryClient.setQueryData(resourcesKeys.list(), [resource]);
   const router = createRouter({
     routeTree,

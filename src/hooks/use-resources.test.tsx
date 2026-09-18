@@ -4,6 +4,7 @@ import type { ReactNode } from "react";
 import { afterEach, beforeEach, expect, it, vi } from "vite-plus/test";
 import { signOut } from "@/api/auth";
 import { pocketbase } from "@/api/client";
+import { calendarResourcesQueryKey } from "@/api/calendar-resources";
 import type { Resource } from "@/api/resources";
 import { resourcesKeys } from "@/api/query-keys";
 import { useCreateResourceMutation, useUpdateResourceMutation } from "./use-resources";
@@ -25,6 +26,8 @@ function setup() {
     <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
   );
   queryClient.setQueryData(resourcesKeys.list(), [resource]);
+  queryClient.setQueryData(resourcesKeys.detail(resource.id), resource);
+  queryClient.setQueryData(calendarResourcesQueryKey(), [{ id: resource.id, name: resource.name }]);
   return { queryClient, wrapper };
 }
 
@@ -63,6 +66,10 @@ it("optimistically adds and sorts a resource", async () => {
   expect(
     queryClient.getQueryData<Resource[]>(resourcesKeys.list())?.map(({ name }) => name),
   ).toEqual(["New resource", "Operations"]);
+  expect(queryClient.getQueryData(calendarResourcesQueryKey())).toEqual([
+    { id: expect.stringMatching(/^optimistic-/), name: "New resource" },
+    { id: "resource-1", name: "Operations" },
+  ]);
 
   resolveCreate({ ...resource, id: "resource-2", name: "New resource" });
   await mutation;
@@ -90,9 +97,21 @@ it("rolls back a failed resource update and invalidates the list", async () => {
     await Promise.resolve();
   });
   expect(queryClient.getQueryData<Resource[]>(resourcesKeys.list())?.[0].name).toBe("Duplicate");
+  expect(queryClient.getQueryData<Resource>(resourcesKeys.detail(resource.id))?.name).toBe(
+    "Duplicate",
+  );
+  expect(queryClient.getQueryData(calendarResourcesQueryKey())).toEqual([
+    { id: "resource-1", name: "Duplicate" },
+  ]);
 
   rejectUpdate(error);
   await expect(mutation).rejects.toMatchObject({ kind: "conflict" });
   expect(queryClient.getQueryData<Resource[]>(resourcesKeys.list())).toEqual([resource]);
+  expect(queryClient.getQueryData<Resource>(resourcesKeys.detail(resource.id))).toEqual(resource);
+  expect(queryClient.getQueryData(calendarResourcesQueryKey())).toEqual([
+    { id: "resource-1", name: "Operations" },
+  ]);
   expect(invalidate).toHaveBeenCalledWith({ queryKey: resourcesKeys.list() });
+  expect(invalidate).toHaveBeenCalledWith({ queryKey: resourcesKeys.detail(resource.id) });
+  expect(invalidate).toHaveBeenCalledWith({ queryKey: calendarResourcesQueryKey() });
 });

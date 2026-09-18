@@ -3,6 +3,7 @@ import type { RecordModel } from "pocketbase";
 import { pocketbase } from "./client.ts";
 import { toAppError } from "./errors.ts";
 import { groupsKeys } from "./query-keys.ts";
+import { ADMIN_LIST_STALE_TIME } from "./query-config.ts";
 
 export type Group = {
   id: string;
@@ -81,5 +82,13 @@ export function groupsQueryOptions() {
   return queryOptions<Group[]>({
     queryKey: groupsKeys.list(),
     queryFn: getGroups,
+    staleTime: ADMIN_LIST_STALE_TIME,
+  });
+}
+
+export function groupQueryOptions(id: string) {
+  return queryOptions<Group>({
+    queryKey: groupsKeys.detail(id),
+    queryFn: () => getGroup(id),
   });
 }

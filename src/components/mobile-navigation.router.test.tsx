@@ -104,6 +104,10 @@ it("restores hamburger focus when route selection remounts the mobile navigation
 
 it("logs out without traversing drawer history or revisiting guarded content", async () => {
   vi.spyOn(auth, "ensureAuthContextReady").mockResolvedValue();
+  vi.spyOn(pocketbase, "send").mockImplementation(async (path) => {
+    if (path === "/api/calendar/resources") return { items: [] };
+    throw new Error(`Unexpected request: ${path}`);
+  });
   window.history.replaceState(null, "", "/sign-in");
   const router = createRouter({
     routeTree: actualRouteTree,

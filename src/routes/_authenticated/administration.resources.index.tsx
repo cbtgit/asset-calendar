@@ -1,9 +1,14 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { resourcesQueryOptions } from "@/api/resources";
 import { ResourceDirectory } from "@/components/administration/resources/resource-directory";
 import { Button } from "@/components/base/Button";
+import { queryClient } from "@/lib/query-client";
 import "./administration.resources.css";
 
 export const Route = createFileRoute("/_authenticated/administration/resources/")({
+  loader: () => {
+    void queryClient.prefetchQuery(resourcesQueryOptions()).catch(() => undefined);
+  },
   component: ResourcesPage,
 });
 

@@ -12,6 +12,7 @@ import { groupsKeys } from "@/api/query-keys";
 
 type GroupsContext = {
   previousGroups: Group[] | undefined;
+  previousGroup: Group | undefined;
 };
 
 function optimisticGroup(input: GroupCreate): Group {
@@ -49,7 +50,7 @@ export function useCreateGroupMutation() {
           sortGroups([...previousGroups, optimisticGroup(input)]),
         );
       }
-      return { previousGroups };
+      return { previousGroups, previousGroup: undefined };
     },
     onError: (_error, _input, context) => {
       if (context?.previousGroups !== undefined) {
@@ -66,8 +67,12 @@ export function useRenameGroupMutation() {
   return useMutation({
     mutationFn: ({ id, input }: { id: string; input: GroupRename }) => renameGroup(id, input),
     onMutate: async ({ id, input }): Promise<GroupsContext> => {
-      await queryClient.cancelQueries({ queryKey: groupsKeys.list() });
+      await Promise.all([
+        queryClient.cancelQueries({ queryKey: groupsKeys.list() }),
+        queryClient.cancelQueries({ queryKey: groupsKeys.detail(id) }),
+      ]);
       const previousGroups = queryClient.getQueryData<Group[]>(groupsKeys.list());
+      const previousGroup = queryClient.getQueryData<Group>(groupsKeys.detail(id));
       queryClient.setQueryData<Group[]>(groupsKeys.list(), (groups) =>
         groups
           ? sortGroups(
@@ -77,14 +82,23 @@ export function useRenameGroupMutation() {
             )
           : groups,
       );
-      return { previousGroups };
+      queryClient.setQueryData<Group>(groupsKeys.detail(id), (group) =>
+        group ? { ...group, name: input.name.trim() } : group,
+      );
+      return { previousGroups, previousGroup };
     },
     onError: (_error, _input, context) => {
       if (context?.previousGroups !== undefined) {
         queryClient.setQueryData(groupsKeys.list(), context.previousGroups);
       }
+      if (context?.previousGroup !== undefined) {
+        queryClient.setQueryData(groupsKeys.detail(_input.id), context.previousGroup);
+      }
     },
-    onSettled: () => queryClient.invalidateQueries({ queryKey: groupsKeys.list() }),
+    onSettled: (_data, _error, variables) => {
+      void queryClient.invalidateQueries({ queryKey: groupsKeys.list() });
+      void queryClient.invalidateQueries({ queryKey: groupsKeys.detail(variables.id) });
+    },
   });
 }
 
@@ -94,18 +108,31 @@ export function useDeleteGroupMutation() {
   return useMutation({
     mutationFn: deleteGroup,
     onMutate: async (id): Promise<GroupsContext> => {
-      await queryClient.cancelQueries({ queryKey: groupsKeys.list() });
+      await Promise.all([
+        queryClient.cancelQueries({ queryKey: groupsKeys.list() }),
+        queryClient.cancelQueries({ queryKey: groupsKeys.detail(id) }),
+      ]);
       const previousGroups = queryClient.getQueryData<Group[]>(groupsKeys.list());
+      const previousGroup = queryClient.getQueryData<Group>(groupsKeys.detail(id));
       queryClient.setQueryData<Group[]>(groupsKeys.list(), (groups) =>
         groups?.filter((group) => group.id !== id),
       );
-      return { previousGroups };
+      if (previousGroup !== undefined) {
+        queryClient.removeQueries({ queryKey: groupsKeys.detail(id), exact: true });
+      }
+      return { previousGroups, previousGroup };
     },
-    onError: (_error, _input, context) => {
+    onError: (_error, id, context) => {
       if (context?.previousGroups !== undefined) {
         queryClient.setQueryData(groupsKeys.list(), context.previousGroups);
       }
+      if (context?.previousGroup !== undefined) {
+        queryClient.setQueryData(groupsKeys.detail(id), context.previousGroup);
+      }
     },
-    onSettled: () => queryClient.invalidateQueries({ queryKey: groupsKeys.list() }),
+    onSettled: (_data, _error, id) => {
+      void queryClient.invalidateQueries({ queryKey: groupsKeys.list() });
+      void queryClient.invalidateQueries({ queryKey: groupsKeys.detail(id) });
+    },
   });
 }

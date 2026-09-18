@@ -4,6 +4,7 @@ import { toAppError } from "./errors.ts";
 import { queryOptions } from "@tanstack/react-query";
 import { bookingTypesKeys } from "./query-keys.ts";
 import { getAuthSnapshot } from "./auth.ts";
+import { ADMIN_LIST_STALE_TIME } from "./query-config.ts";
 
 export const BOOKING_TYPE_COLORS = [
   { value: "#2F66D2", label: "Blue" },
@@ -74,6 +75,14 @@ export function bookingTypesQueryOptions() {
   return queryOptions<BookingType[]>({
     queryKey: bookingTypesKeys.list(),
     queryFn: getBookingTypes,
+    staleTime: ADMIN_LIST_STALE_TIME,
+  });
+}
+
+export function bookingTypeQueryOptions(id: string) {
+  return queryOptions<BookingType>({
+    queryKey: bookingTypesKeys.detail(id),
+    queryFn: () => getBookingType(id),
   });
 }
 

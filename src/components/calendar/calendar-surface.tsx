@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import FullCalendar from "@fullcalendar/react";
 import dayGridPlugin from "@fullcalendar/daygrid";
 import timeGridPlugin from "@fullcalendar/timegrid";
@@ -8,7 +9,11 @@ import type { DatesSetArg, EventClickArg, EventInput } from "@fullcalendar/core"
 import type { DateClickArg } from "@fullcalendar/interaction";
 import { useNavigate } from "@tanstack/react-router";
 import { isAdministrator } from "@/api/auth";
-import type { CalendarBooking } from "@/api/bookings";
+import {
+  calendarBookingsQueryOptions,
+  type CalendarBooking,
+  type BookingRange,
+} from "@/api/bookings";
 import { toAppError } from "@/api/errors";
 import { BookingDetail } from "@/components/calendar/booking-detail";
 import { toCalendarEvents } from "@/components/calendar/calendar-events";
@@ -66,6 +71,25 @@ function fallbackRange(date: string, view: CalendarView) {
   return { start: start.toISOString(), end: end.toISOString() };
 }
 
+export function getAdjacentBookingRanges(range: Pick<BookingRange, "start" | "end">) {
+  const start = new Date(range.start).getTime();
+  const end = new Date(range.end).getTime();
+  const duration = end - start;
+
+  if (!Number.isFinite(start) || !Number.isFinite(end) || duration <= 0) return [];
+
+  return [
+    {
+      start: new Date(start - duration).toISOString(),
+      end: new Date(start).toISOString(),
+    },
+    {
+      start: new Date(end).toISOString(),
+      end: new Date(end + duration).toISOString(),
+    },
+  ];
+}
+
 function deletionErrorMessage(error: unknown, bookingLockHours: number): string {
   if (!error) return "";
   const applicationError = toAppError(error);
@@ -85,6 +109,7 @@ function deletionErrorMessage(error: unknown, bookingLockHours: number): string 
 
 export function CalendarSurface({ search }: CalendarSurfaceProps) {
   const navigate = useNavigate({ from: "/calendar" });
+  const queryClient = useQueryClient();
   const auth = useAuth();
   const isMobile = useSyncExternalStore(
     subscribeToMobileQuery,
@@ -116,6 +141,20 @@ export function CalendarSurface({ search }: CalendarSurfaceProps) {
     () => toCalendarEvents(bookings.data ?? []),
     [bookings.data],
   );
+
+  function prefetchBookings(resourceId: string, range: Pick<BookingRange, "start" | "end">) {
+    if (!resourceId) return;
+    void queryClient.prefetchQuery(calendarBookingsQueryOptions({ resourceId, ...range }));
+  }
+
+  function prefetchAdjacentBookings(
+    resourceId: string,
+    range: Pick<BookingRange, "start" | "end">,
+  ) {
+    for (const adjacentRange of getAdjacentBookingRanges(range)) {
+      prefetchBookings(resourceId, adjacentRange);
+    }
+  }
 
   useEffect(() => {
     if (bookingDraft || !bookingOpenerIdRef.current) return;
@@ -241,6 +280,8 @@ export function CalendarSurface({ search }: CalendarSurfaceProps) {
                   aria-pressed={resource.id === selectedResource?.id}
                   key={resource.id}
                   type="button"
+                  onFocus={() => prefetchBookings(resource.id, visibleRange)}
+                  onPointerEnter={() => prefetchBookings(resource.id, visibleRange)}
                   onClick={() => updateSearch({ resource: resource.id })}
                 >
                   <span>{resource.name}</span>
@@ -357,6 +398,7 @@ export function CalendarSurface({ search }: CalendarSurfaceProps) {
                           ? current
                           : nextRange,
                       );
+                      prefetchAdjacentBookings(selectedResource.id, nextRange);
                       const nextSearch = getCalendarSearchFromDatesSet(range);
                       if (nextSearch.view !== search.view || nextSearch.date !== search.date) {
                         updateSearch(nextSearch);

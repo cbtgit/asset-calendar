@@ -2,6 +2,7 @@ import { afterEach, beforeEach, expect, it, vi } from "vite-plus/test";
 import { pocketbase } from "./client";
 import { ensureAuthContextReady, getAuthSnapshot, setUnauthorizedRedirect, signOut } from "./auth";
 import { AppError } from "./errors";
+import { queryClient } from "@/lib/query-client";
 
 beforeEach(() => {
   signOut();
@@ -21,6 +22,14 @@ it("marks invalid unauthenticated contexts as unavailable", async () => {
 
   expect(authRefresh).toHaveBeenCalledTimes(1);
   expect(getAuthSnapshot().status).toBe("unavailable");
+});
+
+it("clears cached query data when signing out", () => {
+  queryClient.setQueryData(["private-data"], { tenant: "tenant-id" });
+
+  signOut();
+
+  expect(queryClient.getQueryData(["private-data"])).toBeUndefined();
 });
 
 it("keeps valid unauthenticated contexts on the sign-in path", async () => {

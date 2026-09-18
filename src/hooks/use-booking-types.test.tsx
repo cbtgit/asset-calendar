@@ -27,6 +27,7 @@ function setup() {
     <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
   );
   queryClient.setQueryData(bookingTypesKeys.list(), [bookingType]);
+  queryClient.setQueryData(bookingTypesKeys.detail(bookingType.id), bookingType);
   return { queryClient, wrapper };
 }
 
@@ -123,6 +124,12 @@ it("optimistically updates and sorts a booking type", async () => {
       surcharge_minor_units: 250,
     },
   ]);
+  expect(
+    queryClient.getQueryData<BookingType>(bookingTypesKeys.detail(bookingType.id)),
+  ).toMatchObject({
+    name: "Accounting",
+    surcharge_minor_units: 250,
+  });
 
   resolveUpdate({ ...bookingType, name: "Accounting", surcharge_minor_units: 250 });
   await mutation;
@@ -153,5 +160,9 @@ it("rolls back a failed booking type update", async () => {
   rejectUpdate(error);
   await expect(mutation).rejects.toMatchObject({ kind: "conflict" });
   expect(queryClient.getQueryData<BookingType[]>(bookingTypesKeys.list())).toEqual([bookingType]);
+  expect(queryClient.getQueryData<BookingType>(bookingTypesKeys.detail(bookingType.id))).toEqual(
+    bookingType,
+  );
   expect(invalidate).toHaveBeenCalledWith({ queryKey: bookingTypesKeys.list() });
+  expect(invalidate).toHaveBeenCalledWith({ queryKey: bookingTypesKeys.detail(bookingType.id) });
 });

@@ -25,6 +25,7 @@ function setup() {
     <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
   );
   queryClient.setQueryData(groupsKeys.list(), [group]);
+  queryClient.setQueryData(groupsKeys.detail(group.id), group);
   return { queryClient, wrapper };
 }
 
@@ -76,6 +77,7 @@ it("rolls back a failed delete", async () => {
   rejectDelete(error);
   await expect(mutation).rejects.toMatchObject({ kind: "server" });
   expect(queryClient.getQueryData<Group[]>(groupsKeys.list())).toEqual([group]);
+  expect(queryClient.getQueryData<Group>(groupsKeys.detail(group.id))).toEqual(group);
 });
 
 it("invalidates the directory after a failed rename", async () => {

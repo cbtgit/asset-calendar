@@ -1,14 +1,16 @@
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, render, screen } from "@testing-library/react";
 import { createMemoryHistory, createRouter, RouterProvider } from "@tanstack/react-router";
 import { afterEach, expect, it, vi } from "vite-plus/test";
 import type { BookingType } from "@/api/booking-types";
 import { pocketbase } from "@/api/client";
 import { bookingTypesKeys } from "@/api/query-keys";
+import { queryClient } from "@/lib/query-client";
 import { routeTree } from "@/routeTree.gen";
 
 afterEach(() => {
   cleanup();
+  queryClient.clear();
   pocketbase.authStore.clear();
   vi.restoreAllMocks();
 });
@@ -26,7 +28,6 @@ function saveAdministrator() {
 
 it("links each booking type to its edit route", async () => {
   saveAdministrator();
-  const queryClient = new QueryClient();
   const bookingType: BookingType = {
     id: "booking-type-1",
     tenant: "tenant-id",
@@ -77,7 +78,6 @@ it("loads the selected booking type in the edit route", async () => {
       updated: "2026-01-01T00:00:00Z",
     }),
   } as never);
-  const queryClient = new QueryClient();
   const router = createRouter({
     routeTree,
     history: createMemoryHistory({

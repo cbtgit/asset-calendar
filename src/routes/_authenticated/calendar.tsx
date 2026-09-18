@@ -1,6 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
 import dayjs from "dayjs";
+import { calendarResourcesQueryOptions } from "@/api/calendar-resources";
 import { CalendarSurface } from "@/components/calendar/calendar-surface";
+import { queryClient } from "@/lib/query-client";
 import { formatApplicationDate } from "@/lib/time";
 import type { CalendarView } from "@/lib/calendar";
 
@@ -27,6 +29,9 @@ export const Route = createFileRoute("/_authenticated/calendar")({
     view: normalizeCalendarView(search.view),
     resource: typeof search.resource === "string" ? search.resource : "",
   }),
+  loader: () => {
+    void queryClient.prefetchQuery(calendarResourcesQueryOptions()).catch(() => undefined);
+  },
   component: CalendarPage,
 });
 
