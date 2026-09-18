@@ -646,7 +646,10 @@ function normalizeBookingUpdate(
 
   const groupName = bookingUserGroupName(bookedForUser, tenantId);
   const bookingTypeName = bookingType?.get("name") ?? "";
-  const bookingTypeColor = bookingType?.get("color") || "";
+  const bookingTypeColor =
+    hasField(body, "booking_type") && body.booking_type !== storedRecord.get("booking_type")
+      ? bookingType?.get("color") || ""
+      : storedRecord.get("booking_type_color_snapshot") || "";
   info.body.booked_for_user = bookedForUser.id;
   info.body.booking_type = bookingType?.id ?? "";
   info.body.resource_base_rate_minor_units = storedResourceRate;
