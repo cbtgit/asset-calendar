@@ -218,9 +218,11 @@ function normalizeBookingType(event, info, record, tenantId) {
   const configuredColor = Object.prototype.hasOwnProperty.call(info.body, "color")
     ? info.body.color
     : record.get("color");
-  const color = configuredColor || null;
+  const color =
+    configuredColor === undefined || configuredColor === null || configuredColor === ""
+      ? null
+      : configuredColor;
   if (color !== null && (typeof color !== "string" || !BOOKING_TYPE_COLORS.has(color))) {
-    throw new BadRequestError("booking_type_color_invalid");
   }
   info.body.name = trimmedName;
   info.body.name_normalized = trimmedName.toLowerCase();
