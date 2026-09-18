@@ -1,4 +1,5 @@
 import { cleanup, render, screen } from "@testing-library/react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { afterEach, beforeEach, expect, it, vi } from "vite-plus/test";
 import { useNavigate } from "@tanstack/react-router";
 import { useCalendarResourcesQuery } from "@/hooks/use-calendar-resources";
@@ -46,7 +47,11 @@ beforeEach(() => {
 });
 
 it("exposes the selected desktop resource through aria-pressed", () => {
-  render(<CalendarSurface search={{ date: "2026-09-16", view: "week", resource: "resource-1" }} />);
+  render(
+    <QueryClientProvider client={new QueryClient()}>
+      <CalendarSurface search={{ date: "2026-09-16", view: "week", resource: "resource-1" }} />
+    </QueryClientProvider>,
+  );
 
   expect(screen.getByRole("button", { name: /Studio A/ }).getAttribute("aria-pressed")).toBe(
     "true",

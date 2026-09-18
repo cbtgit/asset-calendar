@@ -1,4 +1,5 @@
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
   createBrowserHistory,
   createRootRoute,
@@ -64,7 +65,11 @@ it("keeps the selected route after the drawer closes without traversing history"
   window.history.replaceState(null, "", "/calendar");
   const router = createRouter({ routeTree, history: createBrowserHistory() });
   await router.load();
-  render(<RouterProvider router={router} />);
+  render(
+    <QueryClientProvider client={new QueryClient()}>
+      <RouterProvider router={router} />
+    </QueryClientProvider>,
+  );
 
   fireEvent.click(await screen.findByRole("button", { name: "Open navigation" }));
   fireEvent.click(screen.getByRole("button", { name: "Administration" }));

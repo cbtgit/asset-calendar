@@ -3,6 +3,7 @@ import { toAppError } from "@/api/errors";
 import { activeUsersQueryOptions } from "@/api/users";
 import { bookingTypesQueryOptions } from "@/api/booking-types";
 import { useCreateBookingMutation, useUpdateBookingMutation } from "@/hooks/use-bookings";
+import { useTenantSettingsQuery } from "@/hooks/use-tenant-settings";
 import type { CalendarBooking } from "@/api/bookings";
 import { applicationDateTimeToUtc, utcToApplicationDateTime } from "@/lib/time";
 import { Button } from "@/components/base/Button";
@@ -42,7 +43,7 @@ function submittedDateTime(
   return applicationDateTimeToUtc(`${date}T${time}`);
 }
 
-function bookingErrorMessage(error: unknown): string {
+function bookingErrorMessage(error: unknown, bookingLockHours: number): string {
   if (!error) return "";
   const applicationError = toAppError(error);
   const message = applicationError.message.toLowerCase();
@@ -63,7 +64,8 @@ function bookingErrorMessage(error: unknown): string {
     return "This booking can no longer be edited because its current start is too soon.";
   }
   if (message.includes("booking_edit_start_too_soon")) {
-    return "Regular bookings must be moved to a start at least 24 hours from now.";
+    const hours = `${bookingLockHours} hour${bookingLockHours === 1 ? "" : "s"}`;
+    return `Regular bookings must be moved to a start at least ${hours} from now.`;
   }
   if (message.includes("booking_booked_for_user_inactive")) {
     return "Select an active user for this booking.";
@@ -109,6 +111,7 @@ export function BookingForm({
   const activeUsers = useQuery({ ...activeUsersQueryOptions(), enabled: isAdministrator });
   const bookingTypes = useQuery({ ...bookingTypesQueryOptions(), enabled: isAdministrator });
   const administratorQueryError = isAdministrator && (activeUsers.isError || bookingTypes.isError);
+  const tenantSettings = useTenantSettingsQuery();
 
   useEffect(() => {
     surfaceRef.current?.focus();
@@ -186,7 +189,8 @@ export function BookingForm({
   }
 
   const mutation = initialBooking ? updateMutation : createMutation;
-  const error = formError || bookingErrorMessage(mutation.error);
+  const error =
+    formError || bookingErrorMessage(mutation.error, tenantSettings.data?.booking_lock_hours ?? 24);
 
   return (
     <section

@@ -76,7 +76,7 @@ function renderActions(pending: boolean, mode: "create" | "edit", onCancel: () =
         Cancel
       </Button>
       <Button type="submit" variant="primary" disabled={pending}>
-        {pending ? "Saving…" : mode === "create" ? "Create group" : "Save changes"}
+        {pending ? "Saving…" : mode === "create" ? "Create group" : "Save"}
       </Button>
     </div>
   );

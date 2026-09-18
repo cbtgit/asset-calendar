@@ -1,4 +1,5 @@
 import { cleanup, render, screen } from "@testing-library/react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 import { afterEach, expect, it, vi } from "vite-plus/test";
 import { pocketbase } from "@/api/client";
@@ -47,7 +48,11 @@ it("exposes the current administration destinations from the Groups shell", () =
     role: "administrator",
   });
 
-  render(<AppShell />);
+  render(
+    <QueryClientProvider client={new QueryClient()}>
+      <AppShell />
+    </QueryClientProvider>,
+  );
 
   expect(screen.getByRole("link", { name: "Groups" })).toBeTruthy();
   expect(screen.getByRole("link", { name: "Booking Types" })).toBeTruthy();

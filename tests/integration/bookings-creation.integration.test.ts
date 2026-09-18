@@ -558,4 +558,57 @@ it("creates role-safe bookings with snapshots and end-exclusive conflicts", asyn
     },
   });
   expect(rawCreate.status).toBe(403);
+
+  const settingsResponse = await request(admin, "/api/collections/tenant_settings/records", {
+    host: "tenant.localhost",
+  });
+  expect(settingsResponse.status).toBe(200);
+  const settingsItems = (await settingsResponse.json()).items;
+  expect(settingsItems).toHaveLength(1);
+  expect(settingsItems[0]).toMatchObject({
+    tenant: adminRecord.tenant,
+    site_title: "Asset Calendar",
+    booking_lock_hours: 24,
+  });
+
+  const regularSettingsUpdate = await request(
+    regular,
+    `/api/collections/tenant_settings/records/${settingsItems[0].id}`,
+    {
+      method: "PATCH",
+      host: "tenant.localhost",
+      body: { site_title: "Not allowed", booking_lock_hours: 0 },
+    },
+  );
+  expect(regularSettingsUpdate.status).toBe(404);
+
+  const administratorSettingsUpdate = await request(
+    admin,
+    `/api/collections/tenant_settings/records/${settingsItems[0].id}`,
+    {
+      method: "PATCH",
+      host: "tenant.localhost",
+      body: { site_title: "Workshop", booking_lock_hours: 0 },
+    },
+  );
+  expect(administratorSettingsUpdate.status).toBe(200);
+  expect(await administratorSettingsUpdate.json()).toMatchObject({
+    site_title: "Workshop",
+    booking_lock_hours: 0,
+  });
+
+  const unlockedPastBooking = await createBooking(regular, {
+    resource: resource.id,
+    start: "2026-09-01T16:00:00.000Z",
+    end: "2026-09-01T17:00:00.000Z",
+  });
+  expect(unlockedPastBooking.status).toBe(200);
+  const unlockedPastBookingBody = await unlockedPastBooking.json();
+  expect(unlockedPastBookingBody).toMatchObject({ can_edit: true, can_delete: true });
+  const unlockedDelete = await request(
+    regular,
+    `/api/calendar/bookings/${unlockedPastBookingBody.id}`,
+    { method: "DELETE", host: "tenant.localhost" },
+  );
+  expect(unlockedDelete.status).toBe(200);
 });

@@ -17,6 +17,7 @@ import { Loading } from "@/components/base/Loading";
 import { useCalendarResourcesQuery } from "@/hooks/use-calendar-resources";
 import { useAuth } from "@/hooks/use-auth";
 import { useBookingsQuery, useDeleteBookingMutation } from "@/hooks/use-bookings";
+import { useTenantSettingsQuery } from "@/hooks/use-tenant-settings";
 import {
   getCalendarSearchFromDatesSet,
   type CalendarSearch,
@@ -64,12 +65,13 @@ function fallbackRange(date: string, view: CalendarView) {
   return { start: start.toISOString(), end: end.toISOString() };
 }
 
-function deletionErrorMessage(error: unknown): string {
+function deletionErrorMessage(error: unknown, bookingLockHours: number): string {
   if (!error) return "";
   const applicationError = toAppError(error);
   const message = applicationError.message.toLowerCase();
   if (message.includes("booking_delete_window_closed")) {
-    return "This booking can no longer be deleted because its start is too soon.";
+    const hours = `${bookingLockHours} hour${bookingLockHours === 1 ? "" : "s"}`;
+    return `This booking can no longer be deleted because its start is less than ${hours} away.`;
   }
   if (applicationError.kind === "unauthorized") {
     return "You are not allowed to delete this booking.";
@@ -99,6 +101,7 @@ export function CalendarSurface({ search }: CalendarSurfaceProps) {
   const bookingOpenerRef = useRef<HTMLElement | null>(null);
   const bookingOpenerIdRef = useRef<string | null>(null);
   const deleteMutation = useDeleteBookingMutation();
+  const tenantSettings = useTenantSettingsQuery();
   const initialView =
     effectiveView === "month"
       ? "dayGridMonth"
@@ -381,7 +384,10 @@ export function CalendarSurface({ search }: CalendarSurfaceProps) {
         <DeleteBookingDialog
           booking={activeBookingToDelete}
           pending={deleteMutation.isPending}
-          error={deletionErrorMessage(deleteMutation.error)}
+          error={deletionErrorMessage(
+            deleteMutation.error,
+            tenantSettings.data?.booking_lock_hours ?? 24,
+          )}
           onCancel={() => {
             if (!deleteMutation.isPending) setBookingToDelete(null);
           }}

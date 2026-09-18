@@ -116,7 +116,7 @@ it("replaces the history entry with groups after a successful rename", async () 
 
   const input = await screen.findByRole("textbox", { name: "Group name" });
   fireEvent.change(input, { target: { value: "Renamed" } });
-  fireEvent.click(screen.getByRole("button", { name: "Save changes" }));
+  fireEvent.click(screen.getByRole("button", { name: "Save" }));
   await waitFor(() => expect(router.state.location.pathname).toBe("/administration/groups"));
 
   router.history.back();

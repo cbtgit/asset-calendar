@@ -26,6 +26,11 @@ export const resourcesKeys = {
   detail: (id: string) => [...resourcesKeys.all, "detail", id] as const,
 };
 
+export const tenantSettingsKeys = {
+  all: ["tenant-settings"] as const,
+  current: (tenantId: string) => [...tenantSettingsKeys.all, "current", tenantId] as const,
+};
+
 export const calendarKeys = {
   all: ["calendar"] as const,
   resources: () => [...calendarKeys.all, "resources"] as const,
