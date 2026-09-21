@@ -18,7 +18,7 @@ export function ShellAccountTrigger({ isOpen, userName, onToggle }: ShellAccount
       <span className="shell-account-avatar" aria-hidden="true">
         {getShellUserInitials(userName)}
       </span>
-      <span>{userName}</span>
+      <span className="shell-account-name">{userName}</span>
       <span className="shell-account-chevron" aria-hidden="true" />
     </button>
   );

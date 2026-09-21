@@ -1,5 +1,7 @@
 .calendar-surface {
   display: grid;
+  min-height: 0;
+  grid-template-rows: auto minmax(0, 1fr);
   gap: var(--space-6);
 }
 
@@ -25,11 +27,12 @@
 .calendar-mobile-resource select {
   min-height: 2.75rem;
   min-width: min(100%, 18rem);
-  padding: 0 var(--space-3);
+  padding-inline: var(--space-3);
+  padding-inline-end: 2.5rem;
   border: 1px solid var(--color-border);
   border-radius: var(--radius-sm);
   color: var(--color-ink);
-  background: var(--color-surface);
+  background-color: var(--color-surface);
   font: inherit;
 }
 
@@ -37,6 +40,7 @@
   display: grid;
   grid-template-columns: 14rem minmax(0, 1fr);
   gap: var(--space-5);
+  min-height: 0;
   min-width: 0;
 }
 
@@ -50,7 +54,11 @@
 }
 
 .calendar-resource-panel {
-  align-self: start;
+  align-self: stretch;
+  height: 100%;
+  min-height: 0;
+  max-height: none;
+  overflow: auto;
   padding: var(--space-3);
 }
 
@@ -104,12 +112,12 @@
 
 .calendar-frame {
   min-width: 0;
-  min-height: 42rem;
+  min-height: 0;
   overflow: hidden;
 }
 
 .calendar-frame:has(.booking-form-surface) {
-  overflow: visible;
+  overflow: auto;
   border: 0;
   border-radius: 0;
   background: transparent;
@@ -117,11 +125,13 @@
 }
 
 .calendar-frame > div {
-  min-height: 42rem;
+  height: 100%;
+  min-height: 0;
 }
 
 .calendar-frame .fc {
-  min-height: 42rem;
+  height: 100%;
+  min-height: 0;
   --fc-border-color: var(--color-border);
   --fc-page-bg-color: var(--color-surface);
   --fc-neutral-bg-color: var(--color-surface-subtle);
@@ -140,6 +150,15 @@
   gap: var(--space-3);
   padding: var(--space-4);
   border-bottom: 1px solid var(--color-border);
+}
+
+.calendar-frame .fc .fc-toolbar-chunk {
+  align-items: center;
+  column-gap: var(--space-2);
+  display: flex;
+  flex-wrap: wrap;
+  min-width: 0;
+  row-gap: var(--space-2);
 }
 
 .calendar-frame .fc .fc-toolbar-title {
@@ -294,13 +313,17 @@
     display: none;
   }
 
-  .calendar-frame,
+  .calendar-frame {
+    height: 100%;
+    min-height: 0;
+  }
+
   .calendar-frame > div {
-    min-height: 36rem;
+    min-height: 0;
   }
 
   .calendar-frame .fc {
-    min-height: 36rem;
+    min-height: 0;
   }
 
   .calendar-frame .fc .fc-toolbar {

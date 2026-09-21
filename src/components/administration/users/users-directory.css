@@ -8,16 +8,17 @@
   padding: 0;
 }
 
+.users-directory {
+  container-type: inline-size;
+}
+
 .users-directory-row {
   align-items: center;
   background: var(--surface-raised, #fff);
   border: 1px solid var(--border-subtle, #d7dce2);
   display: grid;
   gap: 1rem;
-  grid-template-columns: minmax(12rem, 2fr) minmax(8rem, 1fr) minmax(8rem, 1fr) minmax(
-      8rem,
-      1fr
-    ) auto;
+  grid-template-columns: minmax(0, 2fr) minmax(0, 1fr) minmax(0, 1fr) auto;
   padding: 1rem;
 }
 
@@ -90,6 +91,47 @@
   gap: 0.75rem;
 }
 
+@container (max-width: 42rem) {
+  .users-directory-row {
+    align-items: start;
+    display: grid;
+    gap: 0.75rem;
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .users-directory-row > :first-child,
+  .users-directory-details,
+  .users-directory-status-actions {
+    grid-column: 1 / -1;
+    min-width: 0;
+  }
+
+  .users-directory-details {
+    display: grid;
+    gap: 0.75rem;
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .users-directory-status-actions {
+    align-items: center;
+    border-top: 1px solid var(--border-subtle, #d7dce2);
+    display: grid;
+    gap: 0.75rem;
+    grid-template-columns: minmax(0, 1fr) auto;
+    margin-top: 0;
+    padding-top: 0.75rem;
+  }
+
+  .users-directory-status {
+    display: block;
+    min-width: 0;
+  }
+
+  .users-directory-status-actions > .users-directory-edit {
+    align-self: center;
+  }
+}
+
 @media (width < 48rem) {
   .users-directory-row {
     display: block;
@@ -99,7 +141,7 @@
     border-top: 1px solid var(--border-subtle, #d7dce2);
     display: grid;
     gap: 1rem;
-    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-columns: minmax(0, 1fr);
     margin-top: 0.75rem;
     padding-top: 0.75rem;
   }

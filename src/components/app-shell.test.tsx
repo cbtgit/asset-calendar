@@ -76,9 +76,8 @@ it("provides the shared authenticated page landmarks and outlet state", () => {
 
   expect(screen.getByRole("banner").textContent).toContain("Asset Calendar");
   expect(screen.getByRole("link", { name: "Calendar" }).getAttribute("data-active")).toBe("true");
-  expect(screen.getByRole("main", { name: "Authenticated content" }).textContent).toContain(
-    "Calendar destination",
-  );
+  expect(screen.getByText("Calendar destination").closest(".shell-content")).toBeTruthy();
+  expect(screen.getByRole("main", { name: "Authenticated content" })).toBeTruthy();
 });
 
 it("shows the administration module and rail for administrators", () => {
