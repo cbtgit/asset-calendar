@@ -761,7 +761,7 @@ function bookingRecordsForRange(tenantId, resourceId, start, end) {
     BOOKING_COLLECTION,
     filter,
     "start,id",
-    MAX_BOOKING_RANGE_ROWS,
+    MAX_BOOKING_RANGE_ROWS + 1,
     0,
     resourceId
       ? {
@@ -776,7 +776,7 @@ function bookingRecordsForRange(tenantId, resourceId, start, end) {
           end: pocketBaseDateValue(end),
         },
   );
-  if (records.length >= MAX_BOOKING_RANGE_ROWS) {
+  if (records.length > MAX_BOOKING_RANGE_ROWS) {
     throw new BadRequestError("booking_range_too_many_records");
   }
   return records.filter((record) => {
@@ -923,7 +923,7 @@ function billingProjection(event) {
     BOOKING_COLLECTION,
     "tenant = {:tenant} && start < {:end}",
     "start,id",
-    MAX_BILLING_ROWS,
+    MAX_BILLING_ROWS + 1,
     0,
     {
       tenant: context.context.tenant.id,
@@ -931,7 +931,7 @@ function billingProjection(event) {
       end: pocketBaseDateValue(interval.end),
     },
   );
-  if (records.length >= MAX_BILLING_ROWS) {
+  if (records.length > MAX_BILLING_ROWS) {
     throw new BadRequestError("billing_interval_too_many_records");
   }
   const rows = records

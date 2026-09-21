@@ -109,6 +109,17 @@ function recordsForTenant(tenantId, activeOnly = false) {
   });
 }
 
+function activeAdministratorsForTenant(tenantId, limit = 0) {
+  return $app.findRecordsByFilter(
+    USER_COLLECTION,
+    "tenant = {:tenant} && role = 'administrator' && active = true",
+    "id",
+    limit,
+    0,
+    { tenant: tenantId },
+  );
+}
+
 function sendInvitation(user) {
   const invitation = invitationFlow.createInvitation({
     app: $app,
@@ -207,9 +218,7 @@ function updateUser(event) {
     user.get("role") === "administrator" &&
     user.get("active") === true &&
     (nextRole !== "administrator" || nextActive !== true) &&
-    recordsForTenant(tenantId).filter(
-      (record) => record.get("role") === "administrator" && record.get("active") === true,
-    ).length <= 1
+    activeAdministratorsForTenant(tenantId, 2).length <= 1
   ) {
     throw new BadRequestError("last_administrator_required");
   }

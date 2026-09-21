@@ -197,12 +197,12 @@ afterAll(async () => {
 it("enforces resource reads, writes, validation, and server-managed fields", async () => {
   const admin = new PocketBase(harness.baseUrl);
   await authenticate(admin, "admin-a@example.test");
-  const authRecord = admin.authStore.model;
+  const authRecord = admin.authStore.record;
   if (!authRecord) throw new Error("Expected the administrator auth record.");
 
   const adminB = new PocketBase(harness.baseUrl);
   await authenticate(adminB, "admin-b@example.test", "other.localhost");
-  const otherAuthRecord = adminB.authStore.model;
+  const otherAuthRecord = adminB.authStore.record;
   if (!otherAuthRecord) throw new Error("Expected the second administrator auth record.");
 
   const regular = new PocketBase(harness.baseUrl);
@@ -381,7 +381,7 @@ it("enforces the resolved tenant and role boundary on direct requests", async ()
     ],
   });
 
-  const groupRecord = admin.authStore.model;
+  const groupRecord = admin.authStore.record;
   if (!groupRecord) throw new Error("Expected the administrator auth record.");
   const groupId = groupRecord.organizational_unit;
   const trimmedGroup = await request(admin, "/api/collections/organizational_units/records", {
@@ -536,7 +536,7 @@ it("enforces the resolved tenant and role boundary on direct requests", async ()
   ]);
   expect(foreignBody).toEqual(unknownBody);
   expect(unknownBody).toEqual(rootBody);
-  const regularRecord = regular.authStore.model;
+  const regularRecord = regular.authStore.record;
   if (!regularRecord) throw new Error("Expected the regular user auth record.");
   const protectedUpdate = await request(
     regular,
@@ -605,7 +605,7 @@ it("enforces the resolved tenant and role boundary on direct requests", async ()
 it("manages users through projections and keeps active selection separate", async () => {
   const admin = new PocketBase(harness.baseUrl);
   await authenticate(admin, "admin-a@example.test");
-  const authRecord = admin.authStore.model;
+  const authRecord = admin.authStore.record;
   if (!authRecord) throw new Error("Expected the administrator auth record.");
 
   const createdResponse = await request(admin, "/api/users", {
@@ -722,12 +722,12 @@ it("manages users through projections and keeps active selection separate", asyn
 it("derives booking type normalization on the server", async () => {
   const admin = new PocketBase(harness.baseUrl);
   await authenticate(admin, "admin-a@example.test");
-  const authRecord = admin.authStore.model;
+  const authRecord = admin.authStore.record;
   if (!authRecord) throw new Error("Expected the administrator auth record.");
 
   const adminB = new PocketBase(harness.baseUrl);
   await authenticate(adminB, "admin-b@example.test", "other.localhost");
-  const otherAuthRecord = adminB.authStore.model;
+  const otherAuthRecord = adminB.authStore.record;
   if (!otherAuthRecord) throw new Error("Expected the second administrator auth record.");
 
   const wrongTenantCreate = await request(admin, "/api/collections/booking_types/records", {

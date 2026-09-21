@@ -163,12 +163,12 @@ afterAll(async () => {
 it("creates role-safe bookings with snapshots and end-exclusive conflicts", async () => {
   const admin = new PocketBase(harness.baseUrl);
   await authenticate(admin, "admin-a@example.test");
-  const adminRecord = admin.authStore.model;
+  const adminRecord = admin.authStore.record;
   if (!adminRecord) throw new Error("Expected the administrator auth record.");
 
   const regular = new PocketBase(harness.baseUrl);
   await authenticate(regular, "regular-a@example.test");
-  const regularRecord = regular.authStore.model;
+  const regularRecord = regular.authStore.record;
   if (!regularRecord) throw new Error("Expected the regular user auth record.");
 
   const resourcesResponse = await request(admin, "/api/collections/resources/records", {
