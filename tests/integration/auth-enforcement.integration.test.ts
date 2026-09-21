@@ -139,6 +139,7 @@ async function createBookingType(
   tenant: string,
   name: string,
   host = "tenant.localhost",
+  extra: Record<string, unknown> = {},
 ): Promise<Response> {
   const response = await request(pocketbase, "/api/collections/booking_types/records", {
     method: "POST",
@@ -147,6 +148,7 @@ async function createBookingType(
       tenant,
       name,
       surcharge_minor_units: 1250,
+      ...extra,
     },
   });
   return response;
@@ -560,6 +562,22 @@ it("enforces the resolved tenant and role boundary on direct requests", async ()
   });
   expect(ownUpdate.status).toBe(403);
 
+  const selfDemotion = await request(admin, `/api/users/${groupRecord.id}`, {
+    method: "PATCH",
+    host: "tenant.localhost",
+    body: { role: "regular" },
+  });
+  expect(selfDemotion.status).toBe(400);
+  expect((await selfDemotion.text()).toLowerCase()).toContain("last_administrator_required");
+
+  const selfDeactivation = await request(admin, `/api/users/${groupRecord.id}`, {
+    method: "PATCH",
+    host: "tenant.localhost",
+    body: { active: false },
+  });
+  expect(selfDeactivation.status).toBe(400);
+  expect((await selfDeactivation.text()).toLowerCase()).toContain("last_administrator_required");
+
   const deactivate = await request(admin, `/api/users/${regularRecord.id}`, {
     method: "PATCH",
     host: "tenant.localhost",
@@ -746,7 +764,74 @@ it("derives booking type normalization on the server", async () => {
   expect(createdBookingType).toMatchObject({
     name: "Training",
     tenant: authRecord.tenant,
+    color: "",
   });
+
+  const invalidCreate = await createBookingType(
+    admin,
+    authRecord.tenant,
+    "Invalid color",
+    "tenant.localhost",
+    { color: "#FFFFFF" },
+  );
+  expect(invalidCreate.status).toBe(400);
+  expect((await invalidCreate.text()).toLowerCase()).toContain("booking_type_color_invalid");
+
+  const emptyColorCreate = await createBookingType(
+    admin,
+    authRecord.tenant,
+    "Empty color",
+    "tenant.localhost",
+    { color: "" },
+  );
+  expect(emptyColorCreate.status).toBe(200);
+  expect((await emptyColorCreate.json()).color).toBe("");
+
+  const nullColorCreate = await createBookingType(
+    admin,
+    authRecord.tenant,
+    "Null color",
+    "tenant.localhost",
+    { color: null },
+  );
+  expect(nullColorCreate.status).toBe(200);
+  expect((await nullColorCreate.json()).color).toBe("");
+
+  const invalidUpdate = await request(
+    admin,
+    `/api/collections/booking_types/records/${createdBookingType.id}`,
+    {
+      method: "PATCH",
+      host: "tenant.localhost",
+      body: { color: "#FFFFFF" },
+    },
+  );
+  expect(invalidUpdate.status).toBe(400);
+  expect((await invalidUpdate.text()).toLowerCase()).toContain("booking_type_color_invalid");
+
+  const emptyColorUpdate = await request(
+    admin,
+    `/api/collections/booking_types/records/${createdBookingType.id}`,
+    {
+      method: "PATCH",
+      host: "tenant.localhost",
+      body: { color: "" },
+    },
+  );
+  expect(emptyColorUpdate.status).toBe(200);
+  expect((await emptyColorUpdate.json()).color).toBe("");
+
+  const nullColorUpdate = await request(
+    admin,
+    `/api/collections/booking_types/records/${createdBookingType.id}`,
+    {
+      method: "PATCH",
+      host: "tenant.localhost",
+      body: { color: null },
+    },
+  );
+  expect(nullColorUpdate.status).toBe(200);
+  expect((await nullColorUpdate.json()).color).toBe("");
 
   const otherCreated = await createBookingType(
     adminB,

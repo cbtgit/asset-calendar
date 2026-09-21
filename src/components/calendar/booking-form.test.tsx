@@ -59,6 +59,7 @@ function renderForm(
 it("keeps administrator-only selectors out of the regular form", () => {
   vi.spyOn(bookingsHook, "useCreateBookingMutation").mockReturnValue({
     mutateAsync: vi.fn(),
+    reset: vi.fn(),
     isPending: false,
     error: null,
   } as never);
@@ -75,6 +76,7 @@ it("submits administrator-selected user and booking type", async () => {
   const mutateAsync = vi.fn().mockResolvedValue({});
   vi.spyOn(bookingsHook, "useCreateBookingMutation").mockReturnValue({
     mutateAsync,
+    reset: vi.fn(),
     isPending: false,
     error: null,
   } as never);
@@ -104,6 +106,7 @@ it("shows a descriptive message for a booking conflict", async () => {
     .mockRejectedValue(new ApplicationError("validation", "Booking_resource_conflict."));
   vi.spyOn(bookingsHook, "useCreateBookingMutation").mockReturnValue({
     mutateAsync,
+    reset: vi.fn(),
     isPending: false,
     error: new ApplicationError("validation", "Booking_resource_conflict."),
   } as never);
@@ -124,11 +127,13 @@ it("initializes and submits administrator edit fields", async () => {
   const mutateAsync = vi.fn().mockResolvedValue({});
   vi.spyOn(bookingsHook, "useCreateBookingMutation").mockReturnValue({
     mutateAsync: vi.fn(),
+    reset: vi.fn(),
     isPending: false,
     error: null,
   } as never);
   vi.spyOn(bookingsHook, "useUpdateBookingMutation").mockReturnValue({
     mutateAsync,
+    reset: vi.fn(),
     isPending: false,
     error: null,
   } as never);
@@ -167,11 +172,13 @@ it("preserves an ambiguous autumn DST slot when the edit fields are unchanged", 
   const mutateAsync = vi.fn().mockResolvedValue({});
   vi.spyOn(bookingsHook, "useCreateBookingMutation").mockReturnValue({
     mutateAsync: vi.fn(),
+    reset: vi.fn(),
     isPending: false,
     error: null,
   } as never);
   vi.spyOn(bookingsHook, "useUpdateBookingMutation").mockReturnValue({
     mutateAsync,
+    reset: vi.fn(),
     isPending: false,
     error: null,
   } as never);

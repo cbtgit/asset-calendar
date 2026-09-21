@@ -180,7 +180,8 @@ function createUser(event) {
 function updateUser(event) {
   const context = recordAccess.administratorContext(event);
   const body = bodyOf(event);
-  const user = findUser(event.request.pathValue("id"), context.context.tenant.id);
+  const tenantId = context.context.tenant.id;
+  const user = findUser(event.request.pathValue("id"), tenantId);
 
   if (has(body, "email") || has(body, "email_normalized") || has(body, "tenant")) {
     throw new ForbiddenError("protected_user_field");
@@ -200,6 +201,19 @@ function updateUser(event) {
     throw new BadRequestError("unknown_user_field");
   }
 
+  const nextRole = has(body, "role") ? requireRole(body.role) : user.get("role");
+  const nextActive = has(body, "active") ? requireBoolean(body.active) : user.get("active");
+  if (
+    user.get("role") === "administrator" &&
+    user.get("active") === true &&
+    (nextRole !== "administrator" || nextActive !== true) &&
+    recordsForTenant(tenantId).filter(
+      (record) => record.get("role") === "administrator" && record.get("active") === true,
+    ).length <= 1
+  ) {
+    throw new BadRequestError("last_administrator_required");
+  }
+
   if (has(body, "first_name"))
     user.set("first_name", requireText(body.first_name, "first_name_required"));
   if (has(body, "last_name"))
@@ -207,8 +221,8 @@ function updateUser(event) {
   if (has(body, "group")) {
     user.set("organizational_unit", groupForTenant(body.group, context.context.tenant.id).id);
   }
-  if (has(body, "role")) user.set("role", requireRole(body.role));
-  if (has(body, "active")) user.set("active", requireBoolean(body.active));
+  if (has(body, "role")) user.set("role", nextRole);
+  if (has(body, "active")) user.set("active", nextActive);
 
   if (has(body, "action")) {
     if (body.action !== "resend_invitation") throw new BadRequestError("action_invalid");

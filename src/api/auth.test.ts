@@ -56,7 +56,7 @@ it("clears auth state and redirects after a protected request is rejected", () =
   pocketbase.afterSend?.(new Response(null, { status: 401 }), {});
 
   expect(pocketbase.authStore.isValid).toBe(false);
-  expect(pocketbase.authStore.model).toBeNull();
+  expect(pocketbase.authStore.record).toBeNull();
   expect(pocketbase.authStore.token).toBe("");
   expect(redirect).toHaveBeenCalledOnce();
 });
@@ -122,5 +122,5 @@ it("clears an expired persisted auth state before protected routing", async () =
 
   expect(reloadedAuth.getAuthSnapshot()).toEqual({ status: "unauthenticated", user: null });
   expect(reloadedClient.pocketbase.authStore.token).toBe("");
-  expect(reloadedClient.pocketbase.authStore.model).toBeNull();
+  expect(reloadedClient.pocketbase.authStore.record).toBeNull();
 });

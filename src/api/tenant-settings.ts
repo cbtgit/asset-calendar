@@ -3,6 +3,7 @@ import type { RecordModel } from "pocketbase";
 import { pocketbase } from "./client";
 import { toAppError } from "./errors";
 import { tenantSettingsKeys } from "./query-keys";
+import { getAuthSnapshot } from "./auth";
 
 export type TenantSettings = {
   id: string;
@@ -24,9 +25,17 @@ function records() {
   return pocketbase.collection<TenantSettingsRecord>("tenant_settings");
 }
 
-export async function getTenantSettings(): Promise<TenantSettings> {
+export async function getTenantSettings(
+  tenantId = getAuthSnapshot().user?.tenant,
+): Promise<TenantSettings> {
+  if (!tenantId) {
+    throw new Error("Cannot load tenant settings without an authenticated tenant.");
+  }
+
   try {
-    return await records().getFirstListItem("tenant != ''");
+    return await records().getFirstListItem(
+      pocketbase.filter("tenant = {:tenant}", { tenant: tenantId }),
+    );
   } catch (cause) {
     throw toAppError(cause);
   }
@@ -35,7 +44,7 @@ export async function getTenantSettings(): Promise<TenantSettings> {
 export function tenantSettingsQueryOptions(tenantId: string) {
   return queryOptions<TenantSettings>({
     queryKey: tenantSettingsKeys.current(tenantId),
-    queryFn: getTenantSettings,
+    queryFn: () => getTenantSettings(tenantId),
   });
 }
 

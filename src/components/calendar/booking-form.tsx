@@ -108,6 +108,7 @@ export function BookingForm({
   const [formError, setFormError] = useState("");
   const createMutation = useCreateBookingMutation();
   const updateMutation = useUpdateBookingMutation();
+  const mutation = initialBooking ? updateMutation : createMutation;
   const activeUsers = useQuery({ ...activeUsersQueryOptions(), enabled: isAdministrator });
   const bookingTypes = useQuery({ ...bookingTypesQueryOptions(), enabled: isAdministrator });
   const administratorQueryError = isAdministrator && (activeUsers.isError || bookingTypes.isError);
@@ -119,6 +120,7 @@ export function BookingForm({
 
   async function submit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    mutation.reset();
     setFormError("");
     if (!startDate || !startTime || !endDate || !endTime) {
       setFormError("Enter a start and end date and time.");
@@ -190,7 +192,6 @@ export function BookingForm({
     }
   }
 
-  const mutation = initialBooking ? updateMutation : createMutation;
   const error =
     formError || bookingErrorMessage(mutation.error, tenantSettings.data?.booking_lock_hours ?? 24);
 

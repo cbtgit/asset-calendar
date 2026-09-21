@@ -1,6 +1,5 @@
 import { queryOptions } from "@tanstack/react-query";
 import type { RecordModel } from "pocketbase";
-import { getAuthSnapshot } from "./auth";
 import { pocketbase } from "./client";
 import { toAppError } from "./errors";
 import { resourcesKeys } from "./query-keys";
@@ -74,11 +73,6 @@ function toResourcePayload(input: ResourceCreate): ResourcePayload {
 }
 
 export async function createResource(input: ResourceCreate): Promise<Resource> {
-  const tenant = getAuthSnapshot().user?.tenant;
-  if (!tenant) {
-    throw new Error("Cannot create a resource without an authenticated tenant.");
-  }
-
   try {
     return await records().create(toResourcePayload(input));
   } catch (cause) {

@@ -120,7 +120,8 @@ function optimisticUpdatedBooking(
       ? {
           booking_type: input.booking_type ?? null,
           booking_type_name: input.optimisticBooking?.booking_type_name ?? null,
-          booking_type_color: input.optimisticBooking?.booking_type_color ?? null,
+          booking_type_color:
+            input.optimisticBooking?.booking_type_color ?? current?.booking_type_color ?? null,
         }
       : {}),
   };

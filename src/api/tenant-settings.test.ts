@@ -15,12 +15,14 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-it("loads the current tenant settings", async () => {
+it("loads settings scoped to the authenticated tenant", async () => {
   const getFirstListItem = vi.fn().mockResolvedValue(settings);
   vi.spyOn(pocketbase, "collection").mockReturnValue({ getFirstListItem } as never);
 
-  await expect(getTenantSettings()).resolves.toEqual(settings);
-  expect(getFirstListItem).toHaveBeenCalledWith("tenant != ''");
+  await expect(getTenantSettings("tenant-id")).resolves.toEqual(settings);
+  expect(getFirstListItem).toHaveBeenCalledWith(
+    pocketbase.filter("tenant = {:tenant}", { tenant: "tenant-id" }),
+  );
 });
 
 it("updates only editable tenant settings fields", async () => {

@@ -150,7 +150,7 @@ it("logs out and replaces history with sign-in", () => {
   screen.getByRole("menuitem", { name: "Log out" }).click();
 
   expect(pocketbase.authStore.isValid).toBe(false);
-  expect(pocketbase.authStore.model).toBeNull();
+  expect(pocketbase.authStore.record).toBeNull();
   expect(pocketbase.authStore.token).toBe("");
   expect(navigate).toHaveBeenCalledWith({ to: "/sign-in", replace: true });
 });
