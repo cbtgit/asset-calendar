@@ -299,7 +299,7 @@ export function CalendarSurface({ search }: CalendarSurfaceProps) {
             </div>
           </aside>
 
-          <main className="calendar-frame" aria-label="Resource calendar">
+          <section className="calendar-frame" aria-label="Resource calendar">
             {selectedResource ? (
               activeBookingDraft ? (
                 activeBookingDraft.kind === "detail" ? (
@@ -421,7 +421,7 @@ export function CalendarSurface({ search }: CalendarSurfaceProps) {
                 <p>Select an active resource to view its calendar.</p>
               </div>
             )}
-          </main>
+          </section>
         </div>
       )}
       {activeBookingToDelete ? (

@@ -77,7 +77,7 @@ it("provides the shared authenticated page landmarks and outlet state", () => {
   expect(screen.getByRole("banner").textContent).toContain("Asset Calendar");
   expect(screen.getByRole("link", { name: "Calendar" }).getAttribute("data-active")).toBe("true");
   expect(screen.getByText("Calendar destination").closest(".shell-content")).toBeTruthy();
-  expect(screen.queryByRole("main", { name: "Authenticated content" })).toBeNull();
+  expect(screen.getByRole("main", { name: "Authenticated content" })).toBeTruthy();
 });
 
 it("shows the administration module and rail for administrators", () => {
@@ -100,8 +100,7 @@ it("shows the administration module and rail for administrators", () => {
   expect(administrationLink).toBeTruthy();
   expect(administrationLink.getAttribute("data-administrator")).toBeNull();
   expect(administrationLink.getAttribute("href")).toBe("/administration/users");
-  expect(screen.getByRole("complementary", { name: "Administration rail" })).toBeTruthy();
-  expect(screen.queryByRole("navigation", { name: "Administration navigation" })).toBeNull();
+  expect(screen.getByRole("navigation", { name: "Administration navigation" })).toBeTruthy();
   expect(screen.getByRole("link", { name: "Groups" }).getAttribute("data-active")).toBe("true");
   expect(screen.getAllByRole("link").map((link) => link.textContent)).toEqual([
     "Asset Calendar",
@@ -130,7 +129,7 @@ it("hides the administration destination from regular users", () => {
   renderAppShell();
 
   expect(screen.queryByRole("link", { name: "Administration" })).toBeNull();
-  expect(screen.queryByRole("complementary", { name: "Administration rail" })).toBeNull();
+  expect(screen.queryByRole("navigation", { name: "Administration navigation" })).toBeNull();
 });
 
 it("logs out and replaces history with sign-in", () => {

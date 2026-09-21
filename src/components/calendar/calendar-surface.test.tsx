@@ -55,7 +55,11 @@ it("exposes the selected desktop resource through aria-pressed", () => {
     </QueryClientProvider>,
   );
 
-  expect(screen.getByRole("main", { name: "Resource calendar" }).className).toBe("calendar-frame");
+  expect(
+    screen
+      .getAllByRole("region", { name: "Resource calendar" })
+      .find((element) => element.className === "calendar-frame"),
+  ).toBeTruthy();
   expect(screen.getByRole("button", { name: /Studio A/ }).getAttribute("aria-pressed")).toBe(
     "true",
   );

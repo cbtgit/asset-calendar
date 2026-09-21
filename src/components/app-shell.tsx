@@ -26,15 +26,9 @@ export function AppShell() {
       />
       <div className="shell-body">
         {administrator && activeModule === "administration" ? <AdministrationRail /> : null}
-        {activeModule === "calendar" ? (
-          <div className="shell-content">
-            <Outlet />
-          </div>
-        ) : (
-          <main className="shell-content" aria-label="Authenticated content">
-            <Outlet />
-          </main>
-        )}
+        <main className="shell-content" aria-label="Authenticated content">
+          <Outlet />
+        </main>
       </div>
     </div>
   );

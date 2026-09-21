@@ -3,7 +3,7 @@ import { BookOpen, Boxes, ReceiptText, Settings, UserRound, Users } from "lucide
 
 export function AdministrationRail() {
   return (
-    <aside aria-label="Administration rail" className="shell-rail">
+    <nav aria-label="Administration navigation" className="shell-rail">
       <p className="shell-rail-label">Administration</p>
       <Link
         className="shell-rail-link"
@@ -60,6 +60,6 @@ export function AdministrationRail() {
         <Settings aria-hidden="true" className="shell-rail-icon" />
         Settings
       </Link>
-    </aside>
+    </nav>
   );
 }

@@ -86,6 +86,8 @@
   grid-column: 3;
   position: relative;
   margin-left: auto;
+  min-width: 0;
+  max-width: 100%;
 }
 
 .shell-account-trigger {
@@ -102,6 +104,8 @@
   font: inherit;
   font-size: var(--font-size-control);
   font-weight: var(--font-weight-semibold);
+  min-width: 0;
+  max-width: 100%;
 }
 
 .shell-account-trigger:hover,

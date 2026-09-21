@@ -72,9 +72,15 @@
   -webkit-font-smoothing: antialiased;
 }
 
+html,
+body,
+#root {
+  height: 100dvh;
+  min-height: 100dvh;
+}
+
 body {
   min-width: 320px;
-  min-height: 100vh;
   margin: 0;
 }
 
