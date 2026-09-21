@@ -1,5 +1,7 @@
 .calendar-surface {
   display: grid;
+  min-height: 0;
+  grid-template-rows: auto minmax(0, 1fr);
   gap: var(--space-6);
 }
 
@@ -37,6 +39,7 @@
   display: grid;
   grid-template-columns: 14rem minmax(0, 1fr);
   gap: var(--space-5);
+  min-height: 0;
   min-width: 0;
 }
 
@@ -50,7 +53,11 @@
 }
 
 .calendar-resource-panel {
-  align-self: start;
+  align-self: stretch;
+  height: 100%;
+  min-height: 0;
+  max-height: none;
+  overflow: auto;
   padding: var(--space-3);
 }
 
@@ -104,12 +111,12 @@
 
 .calendar-frame {
   min-width: 0;
-  min-height: 42rem;
-  overflow: hidden;
+  min-height: 0;
+  overflow: auto;
 }
 
 .calendar-frame:has(.booking-form-surface) {
-  overflow: visible;
+  overflow: auto;
   border: 0;
   border-radius: 0;
   background: transparent;
@@ -294,7 +301,11 @@
     display: none;
   }
 
-  .calendar-frame,
+  .calendar-frame {
+    height: 100%;
+    min-height: 0;
+  }
+
   .calendar-frame > div {
     min-height: 36rem;
   }

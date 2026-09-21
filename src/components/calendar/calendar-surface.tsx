@@ -227,11 +227,19 @@ export function CalendarSurface({ search }: CalendarSurfaceProps) {
     bookingToDelete && bookingToDelete.resource === selectedResource?.id ? bookingToDelete : null;
 
   if (resources.isPending) {
-    return <Loading />;
+    return (
+      <section className="calendar-surface" aria-label="Calendar">
+        <Loading />
+      </section>
+    );
   }
 
   if (resources.isError) {
-    return <p role="alert">Unable to load calendar resources: {resources.error.message}</p>;
+    return (
+      <section className="calendar-surface" aria-label="Calendar">
+        <p role="alert">Unable to load calendar resources: {resources.error.message}</p>
+      </section>
+    );
   }
 
   return (
@@ -291,7 +299,7 @@ export function CalendarSurface({ search }: CalendarSurfaceProps) {
             </div>
           </aside>
 
-          <div className="calendar-frame">
+          <main className="calendar-frame" aria-label="Resource calendar">
             {selectedResource ? (
               activeBookingDraft ? (
                 activeBookingDraft.kind === "detail" ? (
@@ -413,7 +421,7 @@ export function CalendarSurface({ search }: CalendarSurfaceProps) {
                 <p>Select an active resource to view its calendar.</p>
               </div>
             )}
-          </div>
+          </main>
         </div>
       )}
       {activeBookingToDelete ? (

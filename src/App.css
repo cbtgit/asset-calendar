@@ -1,7 +1,11 @@
 .shell {
-  min-height: 100vh;
+  display: flex;
+  height: 100dvh;
+  min-height: 0;
+  flex-direction: column;
   max-width: 120rem;
   margin-inline: auto;
+  overflow: hidden;
   background: var(--color-surface);
 }
 
@@ -172,12 +176,17 @@
 
 .shell-body {
   display: flex;
-  min-height: calc(100vh - var(--shell-header-height));
+  min-width: 0;
+  min-height: 0;
+  flex: 1 1 auto;
+  overflow: hidden;
 }
 
 .shell-rail {
   width: var(--shell-rail-width);
   flex: 0 0 var(--shell-rail-width);
+  min-height: 0;
+  overflow: auto;
   padding: var(--space-7) var(--space-5);
   border-right: 1px solid var(--color-border);
   background: var(--color-surface);
@@ -229,9 +238,23 @@
   width: min(100%, 72rem);
   flex: 1;
   min-width: 0;
+  min-height: 0;
   margin: 0 auto;
+  overflow: auto;
   padding: var(--space-7);
   background: var(--color-content-background);
+}
+
+.shell[data-active-module="calendar"] .shell-content {
+  display: flex;
+  min-height: 0;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.shell[data-active-module="calendar"] .calendar-surface {
+  min-height: 0;
+  flex: 1 1 auto;
 }
 
 .shell-content .eyebrow {
@@ -489,7 +512,7 @@
     display: flex;
     min-height: 0;
     flex-direction: column;
-    overflow: hidden;
+    overflow: auto;
   }
 
   .shell[data-active-module="administration"] .booking-types-list,
