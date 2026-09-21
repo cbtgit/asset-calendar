@@ -139,6 +139,7 @@ async function createBookingType(
   tenant: string,
   name: string,
   host = "tenant.localhost",
+  extra: Record<string, unknown> = {},
 ): Promise<Response> {
   const response = await request(pocketbase, "/api/collections/booking_types/records", {
     method: "POST",
@@ -147,6 +148,7 @@ async function createBookingType(
       tenant,
       name,
       surcharge_minor_units: 1250,
+      ...extra,
     },
   });
   return response;
@@ -195,12 +197,12 @@ afterAll(async () => {
 it("enforces resource reads, writes, validation, and server-managed fields", async () => {
   const admin = new PocketBase(harness.baseUrl);
   await authenticate(admin, "admin-a@example.test");
-  const authRecord = admin.authStore.model;
+  const authRecord = admin.authStore.record;
   if (!authRecord) throw new Error("Expected the administrator auth record.");
 
   const adminB = new PocketBase(harness.baseUrl);
   await authenticate(adminB, "admin-b@example.test", "other.localhost");
-  const otherAuthRecord = adminB.authStore.model;
+  const otherAuthRecord = adminB.authStore.record;
   if (!otherAuthRecord) throw new Error("Expected the second administrator auth record.");
 
   const regular = new PocketBase(harness.baseUrl);
@@ -379,7 +381,7 @@ it("enforces the resolved tenant and role boundary on direct requests", async ()
     ],
   });
 
-  const groupRecord = admin.authStore.model;
+  const groupRecord = admin.authStore.record;
   if (!groupRecord) throw new Error("Expected the administrator auth record.");
   const groupId = groupRecord.organizational_unit;
   const trimmedGroup = await request(admin, "/api/collections/organizational_units/records", {
@@ -534,7 +536,7 @@ it("enforces the resolved tenant and role boundary on direct requests", async ()
   ]);
   expect(foreignBody).toEqual(unknownBody);
   expect(unknownBody).toEqual(rootBody);
-  const regularRecord = regular.authStore.model;
+  const regularRecord = regular.authStore.record;
   if (!regularRecord) throw new Error("Expected the regular user auth record.");
   const protectedUpdate = await request(
     regular,
@@ -559,6 +561,22 @@ it("enforces the resolved tenant and role boundary on direct requests", async ()
     body: { first_name: "Updated" },
   });
   expect(ownUpdate.status).toBe(403);
+
+  const selfDemotion = await request(admin, `/api/users/${groupRecord.id}`, {
+    method: "PATCH",
+    host: "tenant.localhost",
+    body: { role: "regular" },
+  });
+  expect(selfDemotion.status).toBe(400);
+  expect((await selfDemotion.text()).toLowerCase()).toContain("last_administrator_required");
+
+  const selfDeactivation = await request(admin, `/api/users/${groupRecord.id}`, {
+    method: "PATCH",
+    host: "tenant.localhost",
+    body: { active: false },
+  });
+  expect(selfDeactivation.status).toBe(400);
+  expect((await selfDeactivation.text()).toLowerCase()).toContain("last_administrator_required");
 
   const deactivate = await request(admin, `/api/users/${regularRecord.id}`, {
     method: "PATCH",
@@ -587,7 +605,7 @@ it("enforces the resolved tenant and role boundary on direct requests", async ()
 it("manages users through projections and keeps active selection separate", async () => {
   const admin = new PocketBase(harness.baseUrl);
   await authenticate(admin, "admin-a@example.test");
-  const authRecord = admin.authStore.model;
+  const authRecord = admin.authStore.record;
   if (!authRecord) throw new Error("Expected the administrator auth record.");
 
   const createdResponse = await request(admin, "/api/users", {
@@ -704,12 +722,12 @@ it("manages users through projections and keeps active selection separate", asyn
 it("derives booking type normalization on the server", async () => {
   const admin = new PocketBase(harness.baseUrl);
   await authenticate(admin, "admin-a@example.test");
-  const authRecord = admin.authStore.model;
+  const authRecord = admin.authStore.record;
   if (!authRecord) throw new Error("Expected the administrator auth record.");
 
   const adminB = new PocketBase(harness.baseUrl);
   await authenticate(adminB, "admin-b@example.test", "other.localhost");
-  const otherAuthRecord = adminB.authStore.model;
+  const otherAuthRecord = adminB.authStore.record;
   if (!otherAuthRecord) throw new Error("Expected the second administrator auth record.");
 
   const wrongTenantCreate = await request(admin, "/api/collections/booking_types/records", {
@@ -746,7 +764,74 @@ it("derives booking type normalization on the server", async () => {
   expect(createdBookingType).toMatchObject({
     name: "Training",
     tenant: authRecord.tenant,
+    color: "",
   });
+
+  const invalidCreate = await createBookingType(
+    admin,
+    authRecord.tenant,
+    "Invalid color",
+    "tenant.localhost",
+    { color: "#FFFFFF" },
+  );
+  expect(invalidCreate.status).toBe(400);
+  expect((await invalidCreate.text()).toLowerCase()).toContain("booking_type_color_invalid");
+
+  const emptyColorCreate = await createBookingType(
+    admin,
+    authRecord.tenant,
+    "Empty color",
+    "tenant.localhost",
+    { color: "" },
+  );
+  expect(emptyColorCreate.status).toBe(200);
+  expect((await emptyColorCreate.json()).color).toBe("");
+
+  const nullColorCreate = await createBookingType(
+    admin,
+    authRecord.tenant,
+    "Null color",
+    "tenant.localhost",
+    { color: null },
+  );
+  expect(nullColorCreate.status).toBe(200);
+  expect((await nullColorCreate.json()).color).toBe("");
+
+  const invalidUpdate = await request(
+    admin,
+    `/api/collections/booking_types/records/${createdBookingType.id}`,
+    {
+      method: "PATCH",
+      host: "tenant.localhost",
+      body: { color: "#FFFFFF" },
+    },
+  );
+  expect(invalidUpdate.status).toBe(400);
+  expect((await invalidUpdate.text()).toLowerCase()).toContain("booking_type_color_invalid");
+
+  const emptyColorUpdate = await request(
+    admin,
+    `/api/collections/booking_types/records/${createdBookingType.id}`,
+    {
+      method: "PATCH",
+      host: "tenant.localhost",
+      body: { color: "" },
+    },
+  );
+  expect(emptyColorUpdate.status).toBe(200);
+  expect((await emptyColorUpdate.json()).color).toBe("");
+
+  const nullColorUpdate = await request(
+    admin,
+    `/api/collections/booking_types/records/${createdBookingType.id}`,
+    {
+      method: "PATCH",
+      host: "tenant.localhost",
+      body: { color: null },
+    },
+  );
+  expect(nullColorUpdate.status).toBe(200);
+  expect((await nullColorUpdate.json()).color).toBe("");
 
   const otherCreated = await createBookingType(
     adminB,

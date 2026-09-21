@@ -53,7 +53,7 @@ export function useGroupForm(props: GroupFormProps) {
 
     const onSuccess = () => {
       setAnnouncement(props.mode === "create" ? "Group created." : "Group renamed.");
-      window.setTimeout(props.onSuccess, 0);
+      props.onSuccess();
     };
     if (props.mode === "create") createMutation.mutate({ name: trimmedName }, { onSuccess });
     else renameMutation.mutate({ id: props.groupId, input: { name: trimmedName } }, { onSuccess });

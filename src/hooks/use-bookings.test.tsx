@@ -19,6 +19,7 @@ const booking: CalendarBooking = {
   start: "2026-11-30T09:00:00.000Z",
   end: "2026-11-30T10:00:00.000Z",
   booker_display_name: "Regular A",
+  booking_type_color: "#168C6C",
 };
 
 const range = {
@@ -143,6 +144,49 @@ it("optimistically removes a booking when an update leaves the visible range", a
     ),
   ).toEqual([]);
   resolveUpdate({ ...booking, start: "2026-12-01T09:00:00.000Z", end: "2026-12-01T10:00:00.000Z" });
+  await mutation;
+});
+
+it("preserves the current booking type color when no optimistic booking is provided", async () => {
+  let resolveUpdate!: (value: CalendarBooking) => void;
+  vi.spyOn(bookingsApi, "updateBooking").mockReturnValue(
+    new Promise<CalendarBooking>((resolve) => {
+      resolveUpdate = resolve;
+    }),
+  );
+  const { queryClient, wrapper } = setup();
+  const { result } = renderHook(() => useUpdateBookingMutation(), { wrapper });
+
+  let mutation!: Promise<unknown>;
+  await act(async () => {
+    mutation = result.current.mutateAsync({
+      id: booking.id,
+      start: booking.start,
+      end: booking.end,
+      booking_type: "booking-type-1",
+    });
+    await Promise.resolve();
+  });
+
+  expect(
+    queryClient.getQueryData<CalendarBooking[]>(
+      bookingsKeys.visible(
+        "tenant-id",
+        "user-1",
+        "regular",
+        range.resourceId,
+        range.start,
+        range.end,
+      ),
+    ),
+  ).toEqual([
+    expect.objectContaining({
+      booking_type: "booking-type-1",
+      booking_type_color: "#168C6C",
+    }),
+  ]);
+
+  resolveUpdate({ ...booking, booking_type: "booking-type-1" });
   await mutation;
 });
 

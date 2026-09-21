@@ -24,14 +24,14 @@ export function isAdministrator(user: AuthUser | null): boolean {
   return user?.role === "administrator";
 }
 
-const hasPersistedAuthState = Boolean(pocketbase.authStore.token || pocketbase.authStore.model);
+const hasPersistedAuthState = Boolean(pocketbase.authStore.token || pocketbase.authStore.record);
 if (!pocketbase.authStore.isValid && hasPersistedAuthState) {
   pocketbase.authStore.clear();
 }
 
 const initialSnapshot: AuthSnapshot = {
   status: pocketbase.authStore.isValid ? "loading" : "unauthenticated",
-  user: (pocketbase.authStore.model as AuthUser | null) ?? null,
+  user: (pocketbase.authStore.record as AuthUser | null) ?? null,
 };
 
 let snapshot = initialSnapshot;
@@ -47,7 +47,7 @@ function publish(next: AuthSnapshot) {
 function snapshotFromStore(status: AuthStatus): AuthSnapshot {
   return {
     status,
-    user: (pocketbase.authStore.model as AuthUser | null) ?? null,
+    user: (pocketbase.authStore.record as AuthUser | null) ?? null,
   };
 }
 

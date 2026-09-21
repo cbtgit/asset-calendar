@@ -41,7 +41,7 @@ it("loads resources and one resource for editing", async () => {
   expect(getOne).toHaveBeenCalledWith(resource.id);
 });
 
-it("creates a resource with a tenant-scoped payload", async () => {
+it("creates a resource with a server-assigned tenant", async () => {
   const create = vi.fn().mockResolvedValue(resource);
   vi.spyOn(pocketbase, "collection").mockReturnValue({ create } as never);
 

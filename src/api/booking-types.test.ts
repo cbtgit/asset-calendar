@@ -64,7 +64,7 @@ it("loads one booking type for editing", async () => {
   expect(getOne).toHaveBeenCalledWith("booking-type-1");
 });
 
-it("creates a booking type with a tenant-scoped payload", async () => {
+it("creates a booking type with a server-assigned tenant", async () => {
   const created = {
     id: "booking-type-1",
     tenant: "tenant-id",
@@ -83,7 +83,6 @@ it("creates a booking type with a tenant-scoped payload", async () => {
     createBookingType({ name: "  Training  ", surchargeMinorUnits: 1250, color: "#168C6C" }),
   ).resolves.toEqual(created);
   expect(create).toHaveBeenCalledWith({
-    tenant: "tenant-id",
     name: "Training",
     surcharge_minor_units: 1250,
     nonbillable: false,
@@ -98,20 +97,11 @@ it("creates a non-billable booking type with an explicit capability", async () =
   await createBookingType({ name: "Maintenance", nonbillable: true });
 
   expect(create).toHaveBeenCalledWith({
-    tenant: "tenant-id",
     name: "Maintenance",
     surcharge_minor_units: 0,
     nonbillable: true,
     color: null,
   });
-});
-
-it("rejects creation without an authenticated tenant", async () => {
-  signOut();
-
-  await expect(createBookingType({ name: "Training", surchargeMinorUnits: 1250 })).rejects.toThrow(
-    "Cannot create a booking type without an authenticated tenant.",
-  );
 });
 
 it("updates a booking type without changing its tenant", async () => {

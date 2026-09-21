@@ -12,6 +12,10 @@ const BOOKING_COLLECTION = "bookings";
 const TENANT_SETTINGS_COLLECTION = "tenant_settings";
 const DEFAULT_SITE_TITLE = "Asset Calendar";
 const DEFAULT_BOOKING_LOCK_HOURS = 24;
+const MAX_BOOKING_RANGE_DAYS = 366;
+const MAX_BILLING_INTERVAL_DAYS = 400;
+const MAX_BOOKING_RANGE_ROWS = 10000;
+const MAX_BILLING_ROWS = 10000;
 const BOOKING_TYPE_COLORS = new Set([
   "#3E7D98",
   "#168C6C",
@@ -223,6 +227,7 @@ function normalizeBookingType(event, info, record, tenantId) {
       ? null
       : configuredColor;
   if (color !== null && (typeof color !== "string" || !BOOKING_TYPE_COLORS.has(color))) {
+    throw new BadRequestError("booking_type_color_invalid");
   }
   info.body.name = trimmedName;
   info.body.name_normalized = trimmedName.toLowerCase();
@@ -718,6 +723,9 @@ function bookingDateRange(event) {
   const start = parseBookingDate(requestQueryValue(event, "start"), "booking_range_start_invalid");
   const end = parseBookingDate(requestQueryValue(event, "end"), "booking_range_end_invalid");
   if (end <= start) throw new BadRequestError("booking_range_invalid");
+  if (end.getTime() - start.getTime() > MAX_BOOKING_RANGE_DAYS * 24 * 60 * 60 * 1000) {
+    throw new BadRequestError("booking_range_too_large");
+  }
   return { start, end };
 }
 
@@ -753,7 +761,7 @@ function bookingRecordsForRange(tenantId, resourceId, start, end) {
     BOOKING_COLLECTION,
     filter,
     "start,id",
-    0,
+    MAX_BOOKING_RANGE_ROWS + 1,
     0,
     resourceId
       ? {
@@ -768,6 +776,9 @@ function bookingRecordsForRange(tenantId, resourceId, start, end) {
           end: pocketBaseDateValue(end),
         },
   );
+  if (records.length > MAX_BOOKING_RANGE_ROWS) {
+    throw new BadRequestError("booking_range_too_many_records");
+  }
   return records.filter((record) => {
     const existingStart = Date.parse(String(record.get("start")));
     const existingEnd = Date.parse(String(record.get("end")));
@@ -840,6 +851,9 @@ function billingInterval(event) {
   const start = applicationDateToUtc(startValue, "billing_start_invalid");
   const end = applicationDateToUtc(endValue, "billing_end_invalid");
   if (end <= start) throw new BadRequestError("billing_interval_invalid");
+  if (end.getTime() - start.getTime() > MAX_BILLING_INTERVAL_DAYS * 24 * 60 * 60 * 1000) {
+    throw new BadRequestError("billing_interval_too_large");
+  }
   return { start, end, startValue, endValue };
 }
 
@@ -909,7 +923,7 @@ function billingProjection(event) {
     BOOKING_COLLECTION,
     "tenant = {:tenant} && start < {:end}",
     "start,id",
-    0,
+    MAX_BILLING_ROWS + 1,
     0,
     {
       tenant: context.context.tenant.id,
@@ -917,6 +931,9 @@ function billingProjection(event) {
       end: pocketBaseDateValue(interval.end),
     },
   );
+  if (records.length > MAX_BILLING_ROWS) {
+    throw new BadRequestError("billing_interval_too_many_records");
+  }
   const rows = records
     .filter((record) => Date.parse(String(record.get("start"))) >= interval.start.getTime())
     .filter((record) => {
@@ -959,7 +976,8 @@ function billingProjection(event) {
 
 function csvField(value) {
   const text = String(value ?? "");
-  return /[",\r\n]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
+  const safeText = /^[=+\-@\t\r\n]/.test(text) ? `'${text}` : text;
+  return /[",\r\n]/.test(safeText) ? `"${safeText.replace(/"/g, '""')}"` : safeText;
 }
 
 function billingCsv(projection) {

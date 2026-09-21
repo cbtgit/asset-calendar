@@ -24,6 +24,7 @@ export default defineConfig(({ mode }) => {
       ignorePatterns: ["dist/**", "src/routeTree.gen.ts", "src/types/pocketbase-types.ts"],
       plugins: ["react", "typescript", "oxc"],
       rules: {
+        "no-empty": "error",
         "react/rules-of-hooks": "error",
         "react/only-export-components": [
           "warn",

@@ -3,7 +3,6 @@ import { pocketbase } from "./client.ts";
 import { toAppError } from "./errors.ts";
 import { queryOptions } from "@tanstack/react-query";
 import { bookingTypesKeys } from "./query-keys.ts";
-import { getAuthSnapshot } from "./auth.ts";
 import { ADMIN_LIST_STALE_TIME } from "./query-config.ts";
 
 export const BOOKING_TYPE_COLORS = [
@@ -44,7 +43,6 @@ export type BookingTypeUpdate = BookingTypeCreate;
 type BookingTypeRecord = RecordModel & BookingType;
 
 type BookingTypePayload = {
-  tenant: string;
   name: string;
   surcharge_minor_units: number;
   nonbillable: boolean;
@@ -88,11 +86,10 @@ export function bookingTypeQueryOptions(id: string) {
   });
 }
 
-function toBookingTypePayload(input: BookingTypeCreate, tenant: string): BookingTypePayload {
+function toBookingTypePayload(input: BookingTypeCreate): BookingTypePayload {
   const name = input.name.trim();
 
   return {
-    tenant,
     name,
     surcharge_minor_units: input.surchargeMinorUnits ?? 0,
     nonbillable: input.nonbillable ?? false,
@@ -101,14 +98,8 @@ function toBookingTypePayload(input: BookingTypeCreate, tenant: string): Booking
 }
 
 export async function createBookingType(input: BookingTypeCreate): Promise<BookingType> {
-  const tenant = getAuthSnapshot().user?.tenant;
-
-  if (!tenant) {
-    throw new Error("Cannot create a booking type without an authenticated tenant.");
-  }
-
   try {
-    return await records().create(toBookingTypePayload(input, tenant));
+    return await records().create(toBookingTypePayload(input));
   } catch (cause) {
     throw toAppError(cause);
   }

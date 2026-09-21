@@ -59,9 +59,15 @@ if ! curl --fail --silent --show-error --retry 30 --retry-connrefused --retry-de
 fi
 
 trap - EXIT INT TERM HUP
+active=$(readlink -f "$current")
 find "$releases" -mindepth 1 -maxdepth 1 -type d -printf '%T@ %p\n' \
   | sort -nr \
-  | awk "NR > $retention {print \$2}" \
+  | awk -v active="$active" -v retention="$retention" '
+      $2 != active { candidates[++count] = $2 }
+      END {
+        for (index = retention + 1; index <= count; index++) print candidates[index]
+      }
+    ' \
   | xargs -r rm -rf
 
 echo "Activated $release_dir"

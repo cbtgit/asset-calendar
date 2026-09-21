@@ -163,12 +163,12 @@ afterAll(async () => {
 it("creates role-safe bookings with snapshots and end-exclusive conflicts", async () => {
   const admin = new PocketBase(harness.baseUrl);
   await authenticate(admin, "admin-a@example.test");
-  const adminRecord = admin.authStore.model;
+  const adminRecord = admin.authStore.record;
   if (!adminRecord) throw new Error("Expected the administrator auth record.");
 
   const regular = new PocketBase(harness.baseUrl);
   await authenticate(regular, "regular-a@example.test");
-  const regularRecord = regular.authStore.model;
+  const regularRecord = regular.authStore.record;
   if (!regularRecord) throw new Error("Expected the regular user auth record.");
 
   const resourcesResponse = await request(admin, "/api/collections/resources/records", {
@@ -182,6 +182,17 @@ it("creates role-safe bookings with snapshots and end-exclusive conflicts", asyn
   );
   if (!resource || !archivedResource) throw new Error("Expected booking test resources.");
   expect(resource.archived_at).toBe("");
+
+  const formulaResourceResponse = await request(admin, "/api/collections/resources/records", {
+    method: "POST",
+    host: "tenant.localhost",
+    body: {
+      name: '=HYPERLINK("http://x")',
+      base_rate_minor_units: 0,
+    },
+  });
+  expect(formulaResourceResponse.status).toBe(200);
+  const formulaResource = await formulaResourceResponse.json();
 
   const bookingTypeResponse = await request(admin, "/api/collections/booking_types/records", {
     method: "POST",
@@ -306,6 +317,14 @@ it("creates role-safe bookings with snapshots and end-exclusive conflicts", asyn
     booking_type_name: "Maintenance",
   });
 
+  const formulaBooking = await createBooking(admin, {
+    resource: formulaResource.id,
+    booked_for_user: regularRecord.id,
+    start: scenarioTime(7),
+    end: scenarioTime(8),
+  });
+  expect(formulaBooking.status).toBe(200);
+
   const privileged = new PocketBase(harness.baseUrl);
   await authenticateSuperuser(privileged);
   const storedBookings = await request(privileged, "/api/collections/bookings/records", {
@@ -373,6 +392,24 @@ it("creates role-safe bookings with snapshots and end-exclusive conflicts", asyn
   });
   expect(JSON.stringify(billingPreviewBody)).not.toContain("Maintenance");
 
+  const oversizedBookingRange = await request(
+    regular,
+    `/api/calendar/bookings?resource=${encodeURIComponent(resource.id)}&start=1970-01-01T00:00:00.000Z&end=2999-01-01T00:00:00.000Z`,
+    { host: "tenant.localhost" },
+  );
+  expect(oversizedBookingRange.status).toBe(400);
+  expect((await oversizedBookingRange.text()).toLowerCase()).toContain("booking_range_too_large");
+
+  const oversizedBillingInterval = await request(
+    admin,
+    "/api/billing/export?start=1970-01-01&end=2999-01-01",
+    { host: "tenant.localhost" },
+  );
+  expect(oversizedBillingInterval.status).toBe(400);
+  expect((await oversizedBillingInterval.text()).toLowerCase()).toContain(
+    "billing_interval_too_large",
+  );
+
   const billingCsv = await request(
     admin,
     "/api/billing/export?start=2026-01-01&end=2027-01-01&format=csv",
@@ -388,6 +425,7 @@ it("creates role-safe bookings with snapshots and end-exclusive conflicts", asyn
     "start,end,duration_hours,booker,group,resource,booking_type,amount\r\n",
   );
   expect(billingCsvBody).toContain(",Regular A,Unit A,Room A,,15.00\r\n");
+  expect(billingCsvBody).toContain('"\'=HYPERLINK(""http://x"")"');
   expect(billingCsvBody).not.toContain("Maintenance");
 
   const regularBillingPreview = await request(

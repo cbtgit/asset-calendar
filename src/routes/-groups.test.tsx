@@ -53,8 +53,8 @@ it("renders the directory at the groups index", async () => {
   await renderGroups(["/administration/groups"]);
 
   expect(await screen.findByRole("heading", { name: "Groups" })).toBeTruthy();
-  expect(await screen.findByText("2 groups")).toBeTruthy();
   expect(screen.getByText("Operations")).toBeTruthy();
+  expect(screen.getByText("Finance")).toBeTruthy();
   expect(screen.getByText("3 members")).toBeTruthy();
   expect(screen.getByRole("link", { name: "Add Group" }).getAttribute("href")).toBe(
     "/administration/groups/new",

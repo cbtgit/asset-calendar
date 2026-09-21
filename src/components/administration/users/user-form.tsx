@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
-import { ApplicationError } from "@/api/errors";
+import { ApplicationError, hasValidationCode } from "@/api/errors";
 import type { User, UserCreate, UserRole, UserUpdate } from "@/api/users";
 import { Loading } from "@/components/base/Loading";
 import { useGroupsQuery } from "@/hooks/use-groups";
@@ -56,6 +56,9 @@ export function UserForm(props: UserFormProps) {
   const conflict =
     mutation.error instanceof ApplicationError &&
     mutation.error.message.toLowerCase().includes("email_already_exists");
+  const lastAdministrator =
+    mutation.error instanceof ApplicationError &&
+    hasValidationCode(mutation.error, "last_administrator_required");
 
   useEffect(() => {
     firstNameRef.current?.focus();
@@ -97,7 +100,12 @@ export function UserForm(props: UserFormProps) {
   if (groups.isError) return <p role="alert">Unable to load groups: {groups.error.message}</p>;
 
   const error =
-    validationError ?? (conflict ? "A user with this email already exists." : undefined);
+    validationError ??
+    (lastAdministrator
+      ? "Keep at least one active administrator for this tenant."
+      : conflict
+        ? "A user with this email already exists."
+        : undefined);
   const pending = mutation.isPending || resendMutation.isPending;
 
   return (
@@ -134,8 +142,8 @@ export function UserForm(props: UserFormProps) {
               value={email}
               disabled={editing || pending}
               onChange={(event) => setEmail(event.target.value)}
-              aria-describedby={conflict ? "user-form-error" : undefined}
-              aria-invalid={conflict}
+              aria-describedby={conflict || lastAdministrator ? "user-form-error" : undefined}
+              aria-invalid={conflict || lastAdministrator}
             />
           </label>
           <label>
