@@ -14,10 +14,6 @@ function UserRow({ user }: { user: User }) {
       </div>
       <div className="users-directory-details">
         <div>
-          <span className="users-directory-label">Group</span>
-          <span>{user.group}</span>
-        </div>
-        <div>
           <span className="users-directory-label">Role</span>
           <span>{user.role === "administrator" ? "Administrator" : "Regular user"}</span>
         </div>

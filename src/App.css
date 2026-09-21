@@ -111,14 +111,23 @@
 
 .shell-account-avatar {
   display: grid;
+  flex: 0 0 1.75rem;
   width: 1.75rem;
   height: 1.75rem;
+  aspect-ratio: 1;
   place-items: center;
   border-radius: 50%;
   color: var(--color-surface);
   background: var(--color-status);
   font-size: var(--font-size-caption);
   font-weight: var(--font-weight-strong);
+}
+
+.shell-account-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .shell-account-chevron {
@@ -509,9 +518,8 @@
       .users-directory-list,
       .billing-export
     ) {
-    display: flex;
+    display: block;
     min-height: 0;
-    flex-direction: column;
     overflow: auto;
   }
 
@@ -519,22 +527,14 @@
   .shell[data-active-module="administration"] .resources-list,
   .shell[data-active-module="administration"] .groups-directory-list,
   .shell[data-active-module="administration"] .users-directory-list {
-    min-height: 0;
-    flex: 1 1 auto;
-    overflow-y: auto;
-  }
-
-  .shell[data-active-module="administration"] .billing-export-groups {
-    min-height: 0;
-    flex: 1 1 auto;
+    min-height: auto;
+    overflow: visible;
   }
 
   .shell[data-active-module="administration"] .groups-directory,
   .shell[data-active-module="administration"] .users-directory {
-    display: flex;
-    flex: 1 1 auto;
-    min-height: 0;
-    flex-direction: column;
+    display: block;
+    min-height: auto;
   }
 }
 

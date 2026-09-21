@@ -50,8 +50,12 @@
   border: 1px solid var(--color-border);
   border-radius: var(--radius-sm);
   color: var(--color-ink);
-  background: var(--color-surface);
+  background-color: var(--color-surface);
   font: inherit;
+}
+
+.booking-form select {
+  padding-inline-end: 2.5rem;
 }
 
 .booking-form-surface .booking-form-error {
