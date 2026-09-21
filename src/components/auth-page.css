@@ -11,7 +11,7 @@
 }
 
 .auth-page p {
-  color: #52606d;
+  color: var(--color-muted);
   line-height: 1.5;
 }
 
@@ -28,18 +28,18 @@
 }
 
 .auth-form input {
-  border: 1px solid #9aa5b1;
+  border: 1px solid var(--color-border-strong);
   border-radius: 0.25rem;
   padding: 0.75rem;
   color: inherit;
-  background: #fff;
+  background: var(--color-surface);
   font: inherit;
 }
 
 .auth-form input:focus-visible,
 .auth-form button:focus-visible,
 .auth-page a:focus-visible {
-  outline: 3px solid #84a98c;
+  outline: 3px solid var(--color-focus);
   outline-offset: 2px;
 }
 
@@ -55,13 +55,13 @@
 
 .auth-error {
   margin: 1rem 0 0;
-  color: #9b2226 !important;
+  color: var(--color-destructive) !important;
   font-weight: var(--font-weight-bold);
 }
 
 .auth-link {
   display: inline-block;
   margin-top: 1.5rem;
-  color: #2f5d50;
+  color: var(--color-brand-dark);
   font-weight: var(--font-weight-bold);
 }

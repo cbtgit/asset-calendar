@@ -68,13 +68,13 @@
 
 .shell-module-link:hover {
   color: var(--color-brand-dark);
-  background: rgb(255 255 255 / 70%);
+  background: var(--color-surface-hover);
 }
 
 .shell-module-link[data-active="true"] {
   color: var(--color-surface);
   background: var(--color-brand);
-  box-shadow: 0 0.125rem 0.25rem rgb(36 84 180 / 18%);
+  box-shadow: 0 0.125rem 0.25rem var(--color-shadow-brand);
 }
 
 .shell-rail-link:hover,
@@ -359,7 +359,7 @@
     inset: 0;
     width: 100%;
     border: 0;
-    background: rgb(23 32 51 / 35%);
+    background: var(--color-overlay);
     cursor: pointer;
   }
 
@@ -374,7 +374,7 @@
     flex-direction: column;
     padding: var(--space-4);
     background: var(--color-surface);
-    box-shadow: -0.5rem 0 2rem rgb(23 32 51 / 15%);
+    box-shadow: -0.5rem 0 2rem var(--color-shadow-drawer);
     outline: none;
     animation: shell-mobile-drawer-in 180ms ease-out both;
   }

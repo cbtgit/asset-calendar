@@ -15,7 +15,7 @@
   display: block;
   width: 2.75rem;
   height: 2.75rem;
-  border: 0.25rem solid rgb(47 102 210 / 18%);
+  border: 0.25rem solid var(--color-brand-muted);
   border-top-color: var(--color-brand);
   border-radius: 50%;
   animation: loading-spin 800ms linear infinite;

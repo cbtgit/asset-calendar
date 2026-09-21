@@ -21,8 +21,8 @@
 
 .booking-type-row {
   align-items: center;
-  background: var(--surface-raised, #fff);
-  border: 1px solid var(--border-subtle, #d7dce2);
+  background: var(--color-surface-raised);
+  border: 1px solid var(--color-border-subtle);
   display: flex;
   gap: var(--space-4);
   justify-content: space-between;

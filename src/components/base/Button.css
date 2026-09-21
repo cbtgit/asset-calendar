@@ -29,8 +29,8 @@
 }
 
 .button-danger {
-  border-color: #b42318;
-  color: #b42318;
+  border-color: var(--color-destructive);
+  color: var(--color-destructive);
 }
 
 .button-compact {

@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { toAppError } from "@/api/errors";
 import { activeUsersQueryOptions } from "@/api/users";
-import { bookingTypesQueryOptions } from "@/api/booking-types";
+import { bookingTypesQueryOptions, DEFAULT_BOOKING_TYPE_COLOR } from "@/api/booking-types";
 import { useCreateBookingMutation, useUpdateBookingMutation } from "@/hooks/use-bookings";
 import { useTenantSettingsQuery } from "@/hooks/use-tenant-settings";
 import type { CalendarBooking } from "@/api/bookings";
@@ -160,7 +160,7 @@ export function BookingForm({
                     selectedUser?.email ||
                     initialBooking.booker_display_name,
                   booking_type_name: selectedType?.name ?? null,
-                  booking_type_color: selectedType?.color ?? null,
+                  booking_type_color: selectedType?.color ?? DEFAULT_BOOKING_TYPE_COLOR,
                 }
               : {}),
           },
@@ -179,7 +179,7 @@ export function BookingForm({
             ? {
                 optimisticBookerDisplayName: selectedUser?.display_name || selectedUser?.email,
                 optimisticBookingTypeName: selectedType?.name ?? null,
-                optimisticBookingTypeColor: selectedType?.color ?? null,
+                optimisticBookingTypeColor: selectedType?.color ?? DEFAULT_BOOKING_TYPE_COLOR,
               }
             : {}),
         });

@@ -136,7 +136,7 @@
   --fc-page-bg-color: var(--color-surface);
   --fc-neutral-bg-color: var(--color-surface-subtle);
   --fc-list-event-hover-bg-color: var(--color-surface-subtle);
-  --fc-today-bg-color: rgb(47 102 210 / 8%);
+  --fc-today-bg-color: var(--color-brand-soft);
   --fc-now-indicator-color: var(--color-focus);
   --fc-button-bg-color: var(--color-brand);
   --fc-button-border-color: var(--color-brand);
@@ -262,7 +262,7 @@
   display: grid;
   place-items: center;
   padding: var(--space-5);
-  background: rgb(15 23 42 / 42%);
+  background: var(--color-overlay-strong);
 }
 
 .booking-delete-dialog {

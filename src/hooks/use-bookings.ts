@@ -9,6 +9,7 @@ import {
   type CalendarBooking,
   type BookingRange,
 } from "@/api/bookings";
+import { DEFAULT_BOOKING_TYPE_COLOR } from "@/api/booking-types";
 import { getAuthSnapshot } from "@/api/auth";
 import { bookingsKeys } from "@/api/query-keys";
 
@@ -40,7 +41,7 @@ function optimisticBooking(input: BookingCreateMutationInput): CalendarBooking {
     booker_display_name: input.optimisticBookerDisplayName ?? displayName(),
     booking_type: input.booking_type ?? null,
     booking_type_name: input.optimisticBookingTypeName ?? null,
-    booking_type_color: input.optimisticBookingTypeColor ?? null,
+    booking_type_color: input.optimisticBookingTypeColor ?? DEFAULT_BOOKING_TYPE_COLOR,
     booked_for_user: input.booked_for_user ?? getAuthSnapshot().user?.id,
     created_by_user: getAuthSnapshot().user?.id,
   };
