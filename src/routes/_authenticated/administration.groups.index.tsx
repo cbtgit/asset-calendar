@@ -21,10 +21,7 @@ function GroupsIndexPage() {
   return (
     <>
       <p className="eyebrow">Administration</p>
-      <h1 ref={headingRef} tabIndex={-1}>
-        Groups
-      </h1>
-      <GroupsDirectory />
+      <GroupsDirectory headingRef={headingRef} />
     </>
   );
 }

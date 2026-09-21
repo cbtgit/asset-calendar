@@ -1,4 +1,5 @@
 import { useState } from "react";
+import type { RefObject } from "react";
 import type { Group } from "@/api/groups";
 import { Loading } from "@/components/base/Loading";
 import { useDeleteGroupMutation, useGroupsQuery } from "@/hooks/use-groups";
@@ -9,7 +10,11 @@ import { GroupsDirectoryLoadError } from "./groups-directory-load-error";
 import { GroupsDirectoryMutationError } from "./groups-directory-mutation-error";
 import "./groups-directory.css";
 
-export function GroupsDirectory() {
+export function GroupsDirectory({
+  headingRef,
+}: {
+  headingRef: RefObject<HTMLHeadingElement | null>;
+}) {
   const groups = useGroupsQuery();
   const deleteMutation = useDeleteGroupMutation();
   const [pendingDelete, setPendingDelete] = useState<Group | null>(null);
@@ -33,7 +38,7 @@ export function GroupsDirectory() {
 
   return (
     <section className="groups-directory" aria-label="Groups directory">
-      <GroupsDirectoryHeader count={groups.data.length} />
+      <GroupsDirectoryHeader headingRef={headingRef} />
       {deleteMutation.isError ? (
         <GroupsDirectoryMutationError message={deleteMutation.error.message} />
       ) : null}

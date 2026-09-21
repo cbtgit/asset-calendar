@@ -14,12 +14,6 @@
   margin: 0;
 }
 
-.groups-directory-count {
-  color: var(--color-muted);
-  font-size: var(--font-size-control);
-  font-weight: var(--font-weight-semibold);
-}
-
 .groups-directory-add,
 .groups-directory-action,
 .groups-directory-dialog-actions button,

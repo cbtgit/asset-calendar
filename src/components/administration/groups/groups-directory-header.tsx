@@ -1,12 +1,17 @@
 import { Link } from "@tanstack/react-router";
+import type { RefObject } from "react";
 
-export function GroupsDirectoryHeader({ count }: { count: number }) {
+export function GroupsDirectoryHeader({
+  headingRef,
+}: {
+  headingRef: RefObject<HTMLHeadingElement | null>;
+}) {
   return (
     <div className="groups-directory-header">
       <div>
-        <p className="groups-directory-count">
-          {count} {count === 1 ? "group" : "groups"}
-        </p>
+        <h1 ref={headingRef} tabIndex={-1}>
+          Groups
+        </h1>
         <p>Manage the groups available to your organization.</p>
       </div>
       <Link className="groups-directory-add" to="/administration/groups/new">
