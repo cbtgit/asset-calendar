@@ -7,13 +7,15 @@ import { getAuthSnapshot } from "./auth.ts";
 import { ADMIN_LIST_STALE_TIME } from "./query-config.ts";
 
 export const BOOKING_TYPE_COLORS = [
-  { value: "#2F66D2", label: "Blue" },
-  { value: "#168C6C", label: "Teal" },
+  { value: "#3E7D98", label: "Teal" },
+  { value: "#168C6C", label: "Green" },
   { value: "#CF7B36", label: "Orange" },
   { value: "#B42318", label: "Red" },
   { value: "#52606D", label: "Slate" },
   { value: "#7A5C00", label: "Gold" },
 ] as const;
+
+export const DEFAULT_BOOKING_TYPE_COLOR = BOOKING_TYPE_COLORS[0].value;
 
 export type BookingTypeColor = (typeof BOOKING_TYPE_COLORS)[number]["value"];
 

@@ -13,7 +13,7 @@ const TENANT_SETTINGS_COLLECTION = "tenant_settings";
 const DEFAULT_SITE_TITLE = "Asset Calendar";
 const DEFAULT_BOOKING_LOCK_HOURS = 24;
 const BOOKING_TYPE_COLORS = new Set([
-  "#2F66D2",
+  "#3E7D98",
   "#168C6C",
   "#CF7B36",
   "#B42318",

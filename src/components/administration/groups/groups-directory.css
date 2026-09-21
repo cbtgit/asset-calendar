@@ -58,8 +58,8 @@
 
 .groups-directory-row {
   align-items: center;
-  background: var(--surface-raised, #fff);
-  border: 1px solid var(--border-subtle, #d7dce2);
+  background: var(--color-surface-raised);
+  border: 1px solid var(--color-border-subtle);
   display: grid;
   gap: var(--space-4);
   grid-template-columns: minmax(0, 1fr) 8rem 16rem;
@@ -108,8 +108,8 @@
 }
 
 .groups-directory-delete {
-  border-color: #b42318;
-  color: #b42318;
+  border-color: var(--color-destructive);
+  color: var(--color-destructive);
 }
 
 .groups-directory-hint {
@@ -131,7 +131,7 @@
 
 .groups-directory-error,
 .groups-directory-state [role="alert"] {
-  color: #b42318;
+  color: var(--color-destructive);
 }
 
 .groups-directory-state {
@@ -149,7 +149,7 @@
   display: grid;
   place-items: center;
   padding: var(--space-5);
-  background: rgb(23 32 51 / 35%);
+  background: var(--color-overlay);
 }
 
 .groups-directory-dialog {

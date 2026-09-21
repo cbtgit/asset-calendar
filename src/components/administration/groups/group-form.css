@@ -29,7 +29,7 @@
 }
 
 .group-form input[aria-invalid="true"] {
-  border-color: #b42318;
+  border-color: var(--color-destructive);
 }
 
 .group-form input:disabled,
@@ -65,7 +65,7 @@
 
 .group-form-error {
   margin: 0;
-  color: #b42318;
+  color: var(--color-destructive);
   font-size: var(--font-size-control);
 }
 

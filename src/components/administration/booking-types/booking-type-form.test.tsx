@@ -51,7 +51,7 @@ describe("BookingTypeForm", () => {
     expect(screen.getByLabelText("Booking type")).toBeTruthy();
     expect(screen.getByLabelText("Hourly price")).toBeTruthy();
     expect(screen.getAllByRole("radio")).toHaveLength(6);
-    expect(screen.getByRole("radio", { name: "Teal" })).toHaveProperty("checked", false);
+    expect(screen.getByRole("radio", { name: "Green" })).toHaveProperty("checked", false);
     expect(screen.getByRole("button", { name: "Save" })).toBeTruthy();
   });
 
@@ -171,7 +171,7 @@ describe("BookingTypeForm", () => {
     expect(screen.getByRole("heading", { name: "Edit Booking Type" })).toBeTruthy();
     expect((screen.getByLabelText("Booking type") as HTMLInputElement).value).toBe("Operations");
     expect((screen.getByLabelText("Hourly price") as HTMLInputElement).value).toBe("12,50");
-    expect(screen.getByRole("radio", { name: "Teal" })).toHaveProperty("checked", true);
+    expect(screen.getByRole("radio", { name: "Green" })).toHaveProperty("checked", true);
 
     fireEvent.change(screen.getByLabelText("Booking type"), {
       target: { value: "Updated operations" },
@@ -211,7 +211,7 @@ describe("BookingTypeForm", () => {
       name: "Maintenance",
       surchargeMinorUnits: 0,
       nonbillable: true,
-      color: "#2F66D2",
+      color: "#3E7D98",
     });
   });
 });

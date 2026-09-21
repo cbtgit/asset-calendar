@@ -7,6 +7,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { useBookingsQuery, useDeleteBookingMutation } from "@/hooks/use-bookings";
 import { CalendarSurface, getAdjacentBookingRanges } from "./calendar-surface";
 import { toCalendarEvents } from "./calendar-events";
+import { DEFAULT_BOOKING_TYPE_COLOR } from "@/api/booking-types";
 
 vi.mock("@tanstack/react-router", () => ({ useNavigate: vi.fn() }));
 vi.mock("@/hooks/use-calendar-resources", () => ({ useCalendarResourcesQuery: vi.fn() }));
@@ -133,7 +134,8 @@ it("uses booking type snapshots for event labels and colors", () => {
   expect(typed.backgroundColor).toBe("#168C6C");
   expect(typed.borderColor).toBe("#168C6C");
   expect(untyped.title).toBe("Regular B");
-  expect(untyped.backgroundColor).toBeUndefined();
+  expect(untyped.backgroundColor).toBe(DEFAULT_BOOKING_TYPE_COLOR);
+  expect(untyped.borderColor).toBe(DEFAULT_BOOKING_TYPE_COLOR);
   expect(legacyTyped.title).toBe("Legacy - Regular C");
-  expect(legacyTyped.backgroundColor).toBeUndefined();
+  expect(legacyTyped.backgroundColor).toBe(DEFAULT_BOOKING_TYPE_COLOR);
 });
