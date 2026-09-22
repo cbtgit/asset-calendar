@@ -17,20 +17,22 @@ export function MobileNavigationLinks({
 }: MobileNavigationLinksProps) {
   return (
     <nav aria-label="Mobile primary navigation" className="shell-mobile-links">
-      <MobileNavigationModuleSection
-        module="calendar"
-        expandedModule={expandedModule}
-        onToggleModule={onToggleModule}
-      >
-        <Link
-          className="shell-mobile-child-link"
-          to="/calendar"
-          search={{ date: "", view: "week", resource: "" }}
-          onClick={onSelectRoute}
+      {isAdministrator ? (
+        <MobileNavigationModuleSection
+          module="calendar"
+          expandedModule={expandedModule}
+          onToggleModule={onToggleModule}
         >
-          Calendar
-        </Link>
-      </MobileNavigationModuleSection>
+          <Link
+            className="shell-mobile-child-link"
+            to="/calendar"
+            search={{ date: "", view: "week", resource: "" }}
+            onClick={onSelectRoute}
+          >
+            Calendar
+          </Link>
+        </MobileNavigationModuleSection>
+      ) : null}
       {isAdministrator ? (
         <MobileNavigationModuleSection
           module="administration"
