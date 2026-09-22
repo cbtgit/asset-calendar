@@ -136,7 +136,7 @@ async function authenticate(
 
 async function createBookingType(
   pocketbase: PocketBase,
-  tenant: string,
+  tenant: string | undefined,
   name: string,
   host = "tenant.localhost",
   extra: Record<string, unknown> = {},
@@ -145,7 +145,7 @@ async function createBookingType(
     method: "POST",
     host,
     body: {
-      tenant,
+      ...(tenant === undefined ? {} : { tenant }),
       name,
       surcharge_minor_units: 1250,
       ...extra,
@@ -730,6 +730,11 @@ it("derives booking type normalization on the server", async () => {
   const otherAuthRecord = adminB.authStore.record;
   if (!otherAuthRecord) throw new Error("Expected the second administrator auth record.");
 
+  const beforeAuthorizedCreate = await request(admin, "/api/collections/booking_types/records", {
+    host: "tenant.localhost",
+  });
+  expect((await beforeAuthorizedCreate.json()).items).toHaveLength(0);
+
   const wrongTenantCreate = await request(admin, "/api/collections/booking_types/records", {
     method: "POST",
     host: "tenant.localhost",
@@ -739,7 +744,8 @@ it("derives booking type normalization on the server", async () => {
       surcharge_minor_units: 1250,
     },
   });
-  expect(wrongTenantCreate.status).toBe(400);
+  expect(wrongTenantCreate.status).toBe(200);
+  expect((await wrongTenantCreate.json()).tenant).toBe(authRecord.tenant);
 
   const normalizedOverride = await request(admin, "/api/collections/booking_types/records", {
     method: "POST",
@@ -753,10 +759,15 @@ it("derives booking type normalization on the server", async () => {
   });
   expect(normalizedOverride.status).toBe(403);
 
-  const beforeAuthorizedCreate = await request(admin, "/api/collections/booking_types/records", {
-    host: "tenant.localhost",
-  });
-  expect((await beforeAuthorizedCreate.json()).items).toHaveLength(0);
+  const serverAssignedTenant = await createBookingType(
+    admin,
+    undefined,
+    "Server assigned tenant",
+    "tenant.localhost",
+    { color: "#52606D" },
+  );
+  expect(serverAssignedTenant.status).toBe(200);
+  expect((await serverAssignedTenant.json()).tenant).toBe(authRecord.tenant);
 
   const created = await createBookingType(admin, authRecord.tenant, "  Training  ");
   expect(created.status).toBe(200);
