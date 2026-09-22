@@ -1,5 +1,5 @@
 const DEFAULT_SENDER = "calendar@localhost";
-const INVITATION_SUBJECT = "Your Asset Calendar invitation";
+const DEFAULT_SITE_TITLE = "Asset Calendar";
 const messages = {
   capture: [],
   test: [],
@@ -19,26 +19,37 @@ function escapeHtml(value) {
   );
 }
 
-function createInvitationMessage({ recipient, link, expiresAt, from = DEFAULT_SENDER }) {
+function createInvitationMessage({
+  recipient,
+  link,
+  expiresAt,
+  siteTitle = DEFAULT_SITE_TITLE,
+  from = DEFAULT_SENDER,
+}) {
   const expiry = new Date(expiresAt);
   if (
     typeof recipient !== "string" ||
     recipient.trim() === "" ||
     typeof link !== "string" ||
     link.trim() === "" ||
+    typeof siteTitle !== "string" ||
+    siteTitle.trim() === "" ||
+    /[\r\n]/.test(siteTitle) ||
     !Number.isFinite(expiry.getTime())
   ) {
     throw new Error("Invitation mail data is invalid.");
   }
 
+  const normalizedSiteTitle = siteTitle.trim();
   const text = [
-    "You have been invited to Asset Calendar.",
+    `You have been invited to ${normalizedSiteTitle}.`,
     `Open this link to set your password: ${link}`,
     `This link expires on ${expiry.toISOString()}.`,
   ].join("\n\n");
+  const safeSiteTitle = escapeHtml(normalizedSiteTitle);
   const safeLink = escapeHtml(link);
   const html = [
-    "<p>You have been invited to Asset Calendar.</p>",
+    `<p>You have been invited to ${safeSiteTitle}.</p>`,
     `<p><a href="${safeLink}">Set your password</a></p>`,
     `<p>This link expires on ${escapeHtml(expiry.toISOString())}.</p>`,
   ].join("");
@@ -46,7 +57,7 @@ function createInvitationMessage({ recipient, link, expiresAt, from = DEFAULT_SE
   return {
     from: { address: from },
     to: [{ address: recipient }],
-    subject: INVITATION_SUBJECT,
+    subject: `Your ${normalizedSiteTitle} invitation`,
     text,
     html,
   };
@@ -104,7 +115,6 @@ function clearMessages(transport) {
 }
 
 module.exports = {
-  INVITATION_SUBJECT,
   clearMessages,
   createInvitationMessage,
   getMessages,

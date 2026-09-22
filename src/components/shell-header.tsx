@@ -25,14 +25,16 @@ export function ShellHeader({ activeModule, isAdministrator, navigationKey }: Sh
         <span>{siteTitle}</span>
       </Link>
       <nav aria-label="Primary navigation" className="shell-modules">
-        <Link
-          className="shell-module-link"
-          data-active={activeModule === "calendar" ? "true" : undefined}
-          to="/calendar"
-          search={{ date: "", view: "week", resource: "" }}
-        >
-          Calendar
-        </Link>
+        {isAdministrator ? (
+          <Link
+            className="shell-module-link"
+            data-active={activeModule === "calendar" ? "true" : undefined}
+            to="/calendar"
+            search={{ date: "", view: "week", resource: "" }}
+          >
+            Calendar
+          </Link>
+        ) : null}
         {isAdministrator ? (
           <Link
             className="shell-module-link"

@@ -8,8 +8,9 @@ type MailTransport = {
     recipient: string;
     link: string;
     expiresAt: string;
+    siteTitle?: string;
     from?: string;
-  }) => { text: string; html: string };
+  }) => { subject: string; text: string; html: string };
   getMessages: (transport?: "capture" | "test") => Array<{
     from: { address: string };
     to: Array<{ address: string }>;
@@ -38,8 +39,12 @@ it("creates plain-text and HTML-safe invitation content", () => {
     recipient: "person@example.test",
     link: "https://example.test/setup?token=abc&next=<safe>",
     expiresAt: "2026-10-09T12:00:00.000Z",
+    siteTitle: "Nejsum Lab Booking",
   });
 
+  expect(message.subject).toBe("Your Nejsum Lab Booking invitation");
+  expect(message.text).toContain("You have been invited to Nejsum Lab Booking.");
+  expect(message.html).toContain("You have been invited to Nejsum Lab Booking.");
   expect(message.text).toContain("https://example.test/setup?token=abc&next=<safe>");
   expect(message.html).toContain("https://example.test/setup?token=abc&amp;next=&lt;safe&gt;");
   expect(message.text).not.toContain("Correct horse battery staple!");

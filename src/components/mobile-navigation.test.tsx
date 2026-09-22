@@ -78,6 +78,7 @@ it("opens the drawer, moves focus into it, locks scrolling, and keeps Escape ine
   fireEvent.keyDown(document, { key: "Escape" });
   expect(screen.getByRole("complementary", { name: "Mobile navigation" })).toBeTruthy();
   expect(screen.queryByRole("button", { name: "Administration" })).toBeNull();
+  expect(screen.queryByRole("button", { name: "Calendar" })).toBeNull();
 });
 
 it("shows administrator destinations and closes on outside tap with focus restoration", () => {

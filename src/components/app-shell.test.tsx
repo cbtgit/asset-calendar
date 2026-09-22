@@ -71,6 +71,13 @@ let shellQueryClient: QueryClient;
 it("provides the shared authenticated page landmarks and outlet state", () => {
   vi.mocked(useNavigate).mockReturnValue(vi.fn() as never);
   mockRouterLocation({ pathname: "/calendar", href: "/calendar" });
+  pocketbase.authStore.save("token", {
+    id: "admin-1",
+    collectionId: "users",
+    collectionName: "users",
+    email: "admin@example.test",
+    role: "administrator",
+  });
 
   renderAppShell();
 
@@ -129,6 +136,7 @@ it("hides the administration destination from regular users", () => {
   renderAppShell();
 
   expect(screen.queryByRole("link", { name: "Administration" })).toBeNull();
+  expect(screen.queryByRole("link", { name: "Calendar" })).toBeNull();
   expect(screen.queryByRole("navigation", { name: "Administration navigation" })).toBeNull();
 });
 

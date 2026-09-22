@@ -5,6 +5,8 @@ const mailTransport = require(`${__hooks}/mail-transport.cjs`);
 const configuration = authConfig.validateAuthConfig(authConfig.readPocketBaseEnvironment());
 const USER_COLLECTION = "users";
 const INVITATION_COLLECTION = "user_invitations";
+const TENANT_SETTINGS_COLLECTION = "tenant_settings";
+const DEFAULT_SITE_TITLE = "Asset Calendar";
 const TOKEN_LENGTH = 64;
 const INVALID_INVITATION_MESSAGE = "Invalid or expired invitation.";
 const GENERIC_INVITATION_MESSAGE = "If the invitation is eligible, an email will be sent.";
@@ -66,6 +68,18 @@ function invitationLink(invitationUrl, token) {
   return `${invitationUrl}${separator}token=${encodeURIComponent(token)}`;
 }
 
+function tenantSiteTitle(app, tenantId) {
+  try {
+    const settings = app.findFirstRecordByData(TENANT_SETTINGS_COLLECTION, "tenant", tenantId);
+    const siteTitle = settings.get("site_title");
+    return typeof siteTitle === "string" && siteTitle.trim() !== ""
+      ? siteTitle.trim()
+      : DEFAULT_SITE_TITLE;
+  } catch {
+    return DEFAULT_SITE_TITLE;
+  }
+}
+
 function isUsed(invitation) {
   const usedAt = invitation.get("used_at");
   return usedAt !== undefined && usedAt !== null && String(usedAt) !== "";
@@ -119,6 +133,7 @@ function createInvitation({
     recipient: user.get("email"),
     link: invitationLink(invitationUrl, token),
     expiresAt: expiresAt.toISOString(),
+    siteTitle: tenantSiteTitle(app, tenantId),
   };
 }
 
