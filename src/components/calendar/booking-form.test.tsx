@@ -86,7 +86,7 @@ it("submits administrator-selected user and booking type", async () => {
   fireEvent.change(screen.getByLabelText("End time"), { target: { value: "10:00" } });
   fireEvent.change(screen.getByLabelText("User"), { target: { value: "user-2" } });
   fireEvent.change(screen.getByLabelText("Booking type"), { target: { value: "type-1" } });
-  fireEvent.submit(screen.getByRole("button", { name: "Create booking" }).closest("form")!);
+  fireEvent.submit(screen.getByRole("button", { name: "Save" }).closest("form")!);
 
   await waitFor(() => expect(mutateAsync).toHaveBeenCalled());
   expect(mutateAsync.mock.calls[0][0]).toMatchObject({
@@ -114,7 +114,7 @@ it("shows a descriptive message for a booking conflict", async () => {
 
   fireEvent.change(screen.getByLabelText("Start time"), { target: { value: "09:00" } });
   fireEvent.change(screen.getByLabelText("End time"), { target: { value: "10:00" } });
-  fireEvent.submit(screen.getByRole("button", { name: "Create booking" }).closest("form")!);
+  fireEvent.submit(screen.getByRole("button", { name: "Save" }).closest("form")!);
 
   await waitFor(() =>
     expect(screen.getByRole("alert").textContent).toBe(

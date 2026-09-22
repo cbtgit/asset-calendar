@@ -19,6 +19,7 @@ import { BookingDetail } from "@/components/calendar/booking-detail";
 import { toCalendarEvents } from "@/components/calendar/calendar-events";
 import { BookingForm } from "@/components/calendar/booking-form";
 import { DeleteBookingDialog } from "@/components/calendar/delete-booking-dialog";
+import { Button } from "@/components/base/Button";
 import { Loading } from "@/components/base/Loading";
 import { useCalendarResourcesQuery } from "@/hooks/use-calendar-resources";
 import { useAuth } from "@/hooks/use-auth";
@@ -157,7 +158,7 @@ export function CalendarSurface({ search }: CalendarSurfaceProps) {
   }
 
   useEffect(() => {
-    if (bookingDraft || !bookingOpenerIdRef.current) return;
+    if (bookingDraft || (!bookingOpenerRef.current && !bookingOpenerIdRef.current)) return;
 
     const openerId = bookingOpenerIdRef.current;
     const frame = requestAnimationFrame(() => {
@@ -245,27 +246,42 @@ export function CalendarSurface({ search }: CalendarSurfaceProps) {
   return (
     <section className="calendar-surface" aria-labelledby="calendar-title">
       <header className="calendar-heading">
-        <div>
+        <div className="calendar-heading-copy">
           <p className="eyebrow">Calendar</p>
           <h1 id="calendar-title">Resource calendar</h1>
         </div>
-        <label className="calendar-mobile-resource">
-          <span>Resource</span>
-          <select
-            value={selectedResource?.id ?? ""}
-            onChange={(event) => updateSearch({ resource: event.target.value })}
-            disabled={activeResources.length === 0}
-          >
-            <option value="" disabled>
-              Select a resource
-            </option>
-            {activeResources.map((resource) => (
-              <option key={resource.id} value={resource.id}>
-                {resource.name}
+        <div className="calendar-heading-actions">
+          <label className="calendar-mobile-resource">
+            <span>Resource</span>
+            <select
+              value={selectedResource?.id ?? ""}
+              onChange={(event) => updateSearch({ resource: event.target.value })}
+              disabled={activeResources.length === 0}
+            >
+              <option value="" disabled>
+                Select a resource
               </option>
-            ))}
-          </select>
-        </label>
+              {activeResources.map((resource) => (
+                <option key={resource.id} value={resource.id}>
+                  {resource.name}
+                </option>
+              ))}
+            </select>
+          </label>
+          <Button
+            className="calendar-create-booking"
+            variant="primary"
+            disabled={!selectedResource}
+            onClick={(event) => {
+              if (!selectedResource) return;
+              bookingOpenerRef.current = event.currentTarget;
+              bookingOpenerIdRef.current = null;
+              setBookingDraft({ kind: "create", resourceId: selectedResource.id });
+            }}
+          >
+            Create booking
+          </Button>
+        </div>
       </header>
 
       {activeResources.length === 0 ? (
