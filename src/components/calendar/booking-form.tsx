@@ -338,7 +338,7 @@ export function BookingForm({
             variant="primary"
             disabled={mutation.isPending || Boolean(administratorQueryError)}
           >
-            {mutation.isPending ? "Saving..." : initialBooking ? "Save changes" : "Create booking"}
+            {mutation.isPending ? "Saving..." : initialBooking ? "Save changes" : "Save"}
           </Button>
         </div>
       </form>

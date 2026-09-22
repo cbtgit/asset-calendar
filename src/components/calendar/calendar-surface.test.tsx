@@ -4,7 +4,12 @@ import { afterEach, beforeEach, expect, it, vi } from "vite-plus/test";
 import { useNavigate } from "@tanstack/react-router";
 import { useCalendarResourcesQuery } from "@/hooks/use-calendar-resources";
 import { useAuth } from "@/hooks/use-auth";
-import { useBookingsQuery, useDeleteBookingMutation } from "@/hooks/use-bookings";
+import {
+  useBookingsQuery,
+  useCreateBookingMutation,
+  useDeleteBookingMutation,
+  useUpdateBookingMutation,
+} from "@/hooks/use-bookings";
 import { CalendarSurface, getAdjacentBookingRanges } from "./calendar-surface";
 import { toCalendarEvents } from "./calendar-events";
 import { DEFAULT_BOOKING_TYPE_COLOR } from "@/api/booking-types";
@@ -14,7 +19,9 @@ vi.mock("@/hooks/use-calendar-resources", () => ({ useCalendarResourcesQuery: vi
 vi.mock("@/hooks/use-auth", () => ({ useAuth: vi.fn() }));
 vi.mock("@/hooks/use-bookings", () => ({
   useBookingsQuery: vi.fn(),
+  useCreateBookingMutation: vi.fn(),
   useDeleteBookingMutation: vi.fn(),
+  useUpdateBookingMutation: vi.fn(),
 }));
 
 afterEach(() => {
@@ -32,6 +39,18 @@ beforeEach(() => {
     data: [],
     isPending: false,
     isError: false,
+  } as never);
+  vi.mocked(useCreateBookingMutation).mockReturnValue({
+    mutateAsync: vi.fn(),
+    isPending: false,
+    error: null,
+    reset: vi.fn(),
+  } as never);
+  vi.mocked(useUpdateBookingMutation).mockReturnValue({
+    mutateAsync: vi.fn(),
+    isPending: false,
+    error: null,
+    reset: vi.fn(),
   } as never);
   vi.mocked(useDeleteBookingMutation).mockReturnValue({
     mutateAsync: vi.fn(),
@@ -85,6 +104,20 @@ it("prefetches the visible range for a resource on pointer entry", () => {
       queryKey: expect.arrayContaining(["bookings", "visible", "resource-2"]),
     }),
   );
+});
+
+it("opens the inline create form for the selected resource", () => {
+  const queryClient = new QueryClient();
+  render(
+    <QueryClientProvider client={queryClient}>
+      <CalendarSurface search={{ date: "2026-09-16", view: "week", resource: "resource-1" }} />
+    </QueryClientProvider>,
+  );
+
+  fireEvent.click(screen.getByRole("button", { name: "Create booking" }));
+
+  expect(screen.getByText("New booking", { exact: true })).toBeTruthy();
+  expect(screen.getByRole("heading", { name: "Studio A" })).toBeTruthy();
 });
 
 it("calculates the immediately adjacent booking ranges", () => {
