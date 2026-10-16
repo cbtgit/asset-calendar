@@ -5,7 +5,6 @@ const configuration = authConfig.validateAuthConfig(authConfig.readPocketBaseEnv
 const TENANT_FIELD = "tenant";
 const TENANT_COLLECTION = "tenants";
 const USER_COLLECTION = "users";
-const ORGANIZATIONAL_UNIT_COLLECTION = "organizational_units";
 const BOOKING_TYPE_COLLECTION = "booking_types";
 const RESOURCE_COLLECTION = "resources";
 const BOOKING_COLLECTION = "bookings";
@@ -30,7 +29,7 @@ const PROTECTED_USER_FIELDS = [
   "tenant",
   "role",
   "active",
-  "organizational_unit",
+  "account_reference_number",
   "password_setup_pending",
 ];
 
@@ -144,47 +143,11 @@ function ensureTenantSettings(record) {
   tenantSettingsRecord(record.id, true);
 }
 
-function ensureOrganizationalUnitTenant(value, tenantId) {
-  if (!value) return;
-  try {
-    const unit = $app.findRecordById("organizational_units", value);
-    if (unit.get(TENANT_FIELD) !== tenantId) deny();
-  } catch {
-    deny();
-  }
-}
-
 function applyServerTenant(info, record, tenantId) {
   if (recordTenant(record) !== undefined) {
     info.body[TENANT_FIELD] = tenantId;
     record.set(TENANT_FIELD, tenantId);
   }
-}
-
-function normalizeOrganizationalUnit(event, info, record, tenantId) {
-  const missing = String(Math.random());
-  const raw = new DynamicModel({ name_normalized: missing });
-  event.bindBody(raw);
-  if (raw.name_normalized !== missing) deny();
-  if (Object.prototype.hasOwnProperty.call(info.body, TENANT_FIELD)) deny();
-  if (Object.prototype.hasOwnProperty.call(info.body, "name_normalized")) deny();
-
-  const name = Object.prototype.hasOwnProperty.call(info.body, "name")
-    ? info.body.name
-    : record.get("name");
-  if (typeof name !== "string" || name.trim() === "") {
-    throw new BadRequestError("organizational_unit_name_required");
-  }
-  const trimmedName = name.trim();
-  if (trimmedName.length > 200) {
-    throw new BadRequestError("organizational_unit_name_too_long");
-  }
-  info.body.name = trimmedName;
-  info.body.name_normalized = trimmedName.toLowerCase();
-  info.body[TENANT_FIELD] = tenantId;
-  record.set("name", trimmedName);
-  record.set("name_normalized", info.body.name_normalized);
-  record.set(TENANT_FIELD, tenantId);
 }
 
 function normalizeBookingType(event, info, record, tenantId) {
@@ -287,8 +250,8 @@ const PROTECTED_BOOKING_FIELDS = [
   "booking_type_surcharge_minor_units",
   "effective_rate_minor_units",
   "booker_display_name_snapshot",
-  "booker_group_snapshot",
   "booker_email_snapshot",
+  "account_reference_number_snapshot",
   "resource_name_snapshot",
   "booking_type_name_snapshot",
   "booking_type_color_snapshot",
@@ -352,14 +315,9 @@ function userDisplayName(record) {
   return name || String(record.get("email") || "").trim();
 }
 
-function bookingUserGroupName(user, tenantId) {
-  const group = findTenantRecord(
-    ORGANIZATIONAL_UNIT_COLLECTION,
-    user.get("organizational_unit"),
-    tenantId,
-    "booking_user_group_invalid",
-  );
-  return group.get("name");
+function accountReferenceNumber(user) {
+  const value = user.get("account_reference_number");
+  return typeof value === "string" ? value.trim() : "";
 }
 
 function ensureBookingRate(value, code) {
@@ -480,7 +438,6 @@ function normalizeBooking(event, info, record, context) {
     throw new BadRequestError("booking_effective_rate_invalid");
   }
 
-  const groupName = bookingUserGroupName(bookedForUser, tenantId);
   const bookingTypeName = bookingType?.get("name") ?? "";
   const bookingTypeColor = bookingType?.get("color") || "";
   info.body[TENANT_FIELD] = tenantId;
@@ -494,8 +451,8 @@ function normalizeBooking(event, info, record, context) {
   info.body.booking_type_surcharge_minor_units = bookingTypeSurcharge;
   info.body.effective_rate_minor_units = effectiveRate;
   info.body.booker_display_name_snapshot = userDisplayName(bookedForUser);
-  info.body.booker_group_snapshot = groupName;
   info.body.booker_email_snapshot = bookedForUser.get("email");
+  info.body.account_reference_number_snapshot = accountReferenceNumber(bookedForUser);
   info.body.resource_name_snapshot = resource.get("name");
   info.body.booking_type_name_snapshot = bookingTypeName;
   info.body.booking_type_color_snapshot = bookingTypeColor;
@@ -511,8 +468,8 @@ function normalizeBooking(event, info, record, context) {
   record.set("booking_type_surcharge_minor_units", bookingTypeSurcharge);
   record.set("effective_rate_minor_units", effectiveRate);
   record.set("booker_display_name_snapshot", userDisplayName(bookedForUser));
-  record.set("booker_group_snapshot", groupName);
   record.set("booker_email_snapshot", bookedForUser.get("email"));
+  record.set("account_reference_number_snapshot", accountReferenceNumber(bookedForUser));
   record.set("resource_name_snapshot", resource.get("name"));
   record.set("booking_type_name_snapshot", bookingTypeName);
   record.set("booking_type_color_snapshot", bookingTypeColor);
@@ -649,7 +606,10 @@ function normalizeBookingUpdate(
     throw new BadRequestError("booking_effective_rate_invalid");
   }
 
-  const groupName = bookingUserGroupName(bookedForUser, tenantId);
+  const bookerChanged = bookedForUser.id !== storedRecord.get("booked_for_user");
+  const accountReferenceSnapshot = bookerChanged
+    ? accountReferenceNumber(bookedForUser)
+    : String(storedRecord.get("account_reference_number_snapshot") || "");
   const bookingTypeName = bookingType?.get("name") ?? "";
   const bookingTypeColor =
     hasField(body, "booking_type") && body.booking_type !== storedRecord.get("booking_type")
@@ -661,8 +621,8 @@ function normalizeBookingUpdate(
   info.body.booking_type_surcharge_minor_units = bookingTypeSurcharge;
   info.body.effective_rate_minor_units = effectiveRate;
   info.body.booker_display_name_snapshot = userDisplayName(bookedForUser);
-  info.body.booker_group_snapshot = groupName;
   info.body.booker_email_snapshot = bookedForUser.get("email");
+  info.body.account_reference_number_snapshot = accountReferenceSnapshot;
   info.body.resource_name_snapshot = resource.get("name");
   info.body.booking_type_name_snapshot = bookingTypeName;
   info.body.booking_type_color_snapshot = bookingTypeColor;
@@ -673,8 +633,8 @@ function normalizeBookingUpdate(
   record.set("booking_type_surcharge_minor_units", bookingTypeSurcharge);
   record.set("effective_rate_minor_units", effectiveRate);
   record.set("booker_display_name_snapshot", userDisplayName(bookedForUser));
-  record.set("booker_group_snapshot", groupName);
   record.set("booker_email_snapshot", bookedForUser.get("email"));
+  record.set("account_reference_number_snapshot", accountReferenceSnapshot);
   record.set("resource_name_snapshot", resource.get("name"));
   record.set("booking_type_name_snapshot", bookingTypeName);
   record.set("booking_type_color_snapshot", bookingTypeColor);
@@ -903,7 +863,8 @@ function billingRow(record) {
     end: end.toISOString(),
     duration_hours: formatDecimal(durationNumerator, durationDenominator),
     booker: String(record.get("booker_display_name_snapshot") || ""),
-    group: String(record.get("booker_group_snapshot") || ""),
+    booker_email: String(record.get("booker_email_snapshot") || ""),
+    account_reference_number: String(record.get("account_reference_number_snapshot") || ""),
     resource: String(record.get("resource_name_snapshot") || ""),
     booking_type: String(record.get("booking_type_name_snapshot") || ""),
     amount: amountFromMinorUnits(amountMinorUnits),
@@ -951,23 +912,30 @@ function billingProjection(event) {
     })
     .map(billingRow);
 
-  const groups = new Map();
+  const users = new Map();
   let grandTotal = 0n;
   for (const row of rows) {
-    const existing = groups.get(row.group) ?? { name: row.group, rows: [], total: 0n };
+    const key = row.booker_email.trim().toLowerCase();
+    const existing = users.get(key) ?? {
+      name: row.booker,
+      email: row.booker_email,
+      rows: [],
+      total: 0n,
+    };
     existing.rows.push(row);
     existing.total += row.amount_minor_units;
-    groups.set(row.group, existing);
+    users.set(key, existing);
     grandTotal += row.amount_minor_units;
   }
 
   return {
     start: interval.startValue,
     end: interval.endValue,
-    groups: [...groups.values()].map((group) => ({
-      name: group.name,
-      records: group.rows.map(({ amount_minor_units: _amount, ...row }) => row),
-      total: amountFromMinorUnits(group.total),
+    users: [...users.values()].map((user) => ({
+      name: user.name,
+      email: user.email,
+      records: user.rows.map(({ amount_minor_units: _amount, ...row }) => row),
+      total: amountFromMinorUnits(user.total),
     })),
     total: amountFromMinorUnits(grandTotal),
     rows,
@@ -986,7 +954,8 @@ function billingCsv(projection) {
     "end",
     "duration_hours",
     "booker",
-    "group",
+    "booker_email",
+    "account_reference_number",
     "resource",
     "booking_type",
     "amount",
@@ -1011,7 +980,7 @@ function billingExportRoute(event) {
   return event.json(200, {
     start: projection.start,
     end: projection.end,
-    groups: projection.groups,
+    users: projection.users,
     total: projection.total,
   });
 }
@@ -1125,71 +1094,6 @@ function calendarBookingDeleteRoute(event) {
   return event.json(200, { id: record.id });
 }
 
-function memberCount(record) {
-  return $app.findRecordsByFilter(
-    USER_COLLECTION,
-    "tenant = {:tenant} && organizational_unit = {:group}",
-    "",
-    0,
-    0,
-    {
-      tenant: record.get(TENANT_FIELD),
-      group: record.id,
-    },
-  ).length;
-}
-
-function guardOrganizationalUnitDelete(record) {
-  if (memberCount(record) > 0) {
-    throw new BadRequestError("organizational_unit_has_members");
-  }
-}
-
-function groupsProjectionRoute(event) {
-  const context = applicationContext({
-    ...event,
-    collection: {
-      name: ORGANIZATIONAL_UNIT_COLLECTION,
-      fields: [{ name: TENANT_FIELD }],
-    },
-  });
-  // This route always requires a tenant-scoped authenticated administrator.
-  if (!context) deny();
-  if (context.auth.get("role") !== "administrator") deny();
-
-  const groupId = event.request.pathValue("id");
-  let groups;
-  if (groupId) {
-    try {
-      const group = $app.findRecordById(ORGANIZATIONAL_UNIT_COLLECTION, groupId);
-      if (group.get(TENANT_FIELD) !== context.context.tenant.id) {
-        throw new NotFoundError("group_not_found");
-      }
-      groups = [group];
-    } catch (error) {
-      if (error instanceof NotFoundError) throw error;
-      throw new NotFoundError("group_not_found");
-    }
-  } else {
-    groups = $app.findRecordsByFilter(
-      ORGANIZATIONAL_UNIT_COLLECTION,
-      "tenant = {:tenant}",
-      "name_normalized,id",
-      0,
-      0,
-      { tenant: context.context.tenant.id },
-    );
-  }
-  const items = groups.map((record) => ({
-    id: record.id,
-    name: record.get("name"),
-    created: record.get("created"),
-    updated: record.get("updated"),
-    member_count: memberCount(record),
-  }));
-  return event.json(200, groupId ? items[0] : { items });
-}
-
 function calendarResourcesRoute(event) {
   const context = applicationContext({
     ...event,
@@ -1245,9 +1149,7 @@ function deleteRecord(event) {
   const context = applicationContext(event);
   if (!context) return event.next();
   ensureRecordTenant(event.record, context.context.tenant.id);
-  if (collectionName({ record: event.record }) === ORGANIZATIONAL_UNIT_COLLECTION) {
-    guardOrganizationalUnitDelete(event.record);
-  } else if (collectionName({ record: event.record }) === BOOKING_COLLECTION) {
+  if (collectionName({ record: event.record }) === BOOKING_COLLECTION) {
     authorizeBookingDelete(
       event.record,
       context,
@@ -1261,9 +1163,7 @@ function createRecord(event) {
   const context = applicationContext(event);
   if (!context) return event.next();
 
-  if (collectionName({ record: event.record }) === ORGANIZATIONAL_UNIT_COLLECTION) {
-    normalizeOrganizationalUnit(event, context.info, event.record, context.context.tenant.id);
-  } else if (collectionName({ record: event.record }) === BOOKING_TYPE_COLLECTION) {
+  if (collectionName({ record: event.record }) === BOOKING_TYPE_COLLECTION) {
     normalizeBookingType(event, context.info, event.record, context.context.tenant.id);
   } else if (collectionName({ record: event.record }) === RESOURCE_COLLECTION) {
     normalizeResource(event, context.info, event.record, context.context.tenant.id);
@@ -1274,7 +1174,6 @@ function createRecord(event) {
   } else {
     applyServerTenant(context.info, event.record, context.context.tenant.id);
   }
-  ensureOrganizationalUnitTenant(context.info.body.organizational_unit, context.context.tenant.id);
   return event.next();
 }
 
@@ -1284,9 +1183,7 @@ function updateRecord(event) {
 
   ensureRecordTenant(event.record, context.context.tenant.id);
   protectUserFields(context, event.record);
-  if (collectionName({ record: event.record }) === ORGANIZATIONAL_UNIT_COLLECTION) {
-    normalizeOrganizationalUnit(event, context.info, event.record, context.context.tenant.id);
-  } else if (collectionName({ record: event.record }) === BOOKING_TYPE_COLLECTION) {
+  if (collectionName({ record: event.record }) === BOOKING_TYPE_COLLECTION) {
     normalizeBookingType(event, context.info, event.record, context.context.tenant.id);
   } else if (collectionName({ record: event.record }) === RESOURCE_COLLECTION) {
     normalizeResource(event, context.info, event.record, context.context.tenant.id);
@@ -1305,7 +1202,6 @@ function updateRecord(event) {
   } else {
     applyServerTenant(context.info, event.record, context.context.tenant.id);
   }
-  ensureOrganizationalUnitTenant(context.info.body.organizational_unit, context.context.tenant.id);
   return event.next();
 }
 
@@ -1352,7 +1248,6 @@ module.exports = {
   calendarResourcesRoute,
   createRecord,
   deleteRecord,
-  groupsProjectionRoute,
   administratorContext,
   rejectInactive,
   updateRecord,

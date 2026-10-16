@@ -19,21 +19,16 @@ import { Route as AuthenticatedAdministrationRouteImport } from './routes/_authe
 import { Route as AuthenticatedCalendarRouteImport } from './routes/_authenticated/calendar'
 import { Route as AuthenticatedAdministrationBillingRouteImport } from './routes/_authenticated/administration.billing'
 import { Route as AuthenticatedAdministrationBookingTypesRouteImport } from './routes/_authenticated/administration.booking-types'
-import { Route as AuthenticatedAdministrationGroupsRouteImport } from './routes/_authenticated/administration.groups'
 import { Route as AuthenticatedAdministrationResourcesRouteImport } from './routes/_authenticated/administration.resources'
 import { Route as AuthenticatedAdministrationSettingsRouteImport } from './routes/_authenticated/administration.settings'
 import { Route as AuthenticatedAdministrationUsersRouteImport } from './routes/_authenticated/administration.users'
-import { Route as AuthenticatedGroupsNewRouteImport } from './routes/_authenticated/groups.new'
 import { Route as AuthenticatedAdministrationBookingTypesIndexRouteImport } from './routes/_authenticated/administration.booking-types.index'
 import { Route as AuthenticatedAdministrationBookingTypesNewRouteImport } from './routes/_authenticated/administration.booking-types.new'
-import { Route as AuthenticatedAdministrationGroupsIndexRouteImport } from './routes/_authenticated/administration.groups.index'
-import { Route as AuthenticatedAdministrationGroupsNewRouteImport } from './routes/_authenticated/administration.groups.new'
 import { Route as AuthenticatedAdministrationResourcesIndexRouteImport } from './routes/_authenticated/administration.resources.index'
 import { Route as AuthenticatedAdministrationResourcesNewRouteImport } from './routes/_authenticated/administration.resources.new'
 import { Route as AuthenticatedAdministrationUsersIndexRouteImport } from './routes/_authenticated/administration.users.index'
 import { Route as AuthenticatedAdministrationUsersNewRouteImport } from './routes/_authenticated/administration.users.new'
 import { Route as AuthenticatedAdministrationBookingTypesBookingTypeIdEditRouteImport } from './routes/_authenticated/administration.booking-types.$bookingTypeId.edit'
-import { Route as AuthenticatedAdministrationGroupsGroupIdEditRouteImport } from './routes/_authenticated/administration.groups.$groupId.edit'
 import { Route as AuthenticatedAdministrationResourcesResourceIdEditRouteImport } from './routes/_authenticated/administration.resources.$resourceId.edit'
 import { Route as AuthenticatedAdministrationUsersUserIdEditRouteImport } from './routes/_authenticated/administration.users.$userId.edit'
 
@@ -89,12 +84,6 @@ const AuthenticatedAdministrationBookingTypesRoute =
     path: '/booking-types',
     getParentRoute: () => AuthenticatedAdministrationRoute,
   } as any)
-const AuthenticatedAdministrationGroupsRoute =
-  AuthenticatedAdministrationGroupsRouteImport.update({
-    id: '/groups',
-    path: '/groups',
-    getParentRoute: () => AuthenticatedAdministrationRoute,
-  } as any)
 const AuthenticatedAdministrationResourcesRoute =
   AuthenticatedAdministrationResourcesRouteImport.update({
     id: '/resources',
@@ -113,11 +102,6 @@ const AuthenticatedAdministrationUsersRoute =
     path: '/users',
     getParentRoute: () => AuthenticatedAdministrationRoute,
   } as any)
-const AuthenticatedGroupsNewRoute = AuthenticatedGroupsNewRouteImport.update({
-  id: '/groups/new',
-  path: '/groups/new',
-  getParentRoute: () => AuthenticatedRoute,
-} as any)
 const AuthenticatedAdministrationBookingTypesIndexRoute =
   AuthenticatedAdministrationBookingTypesIndexRouteImport.update({
     id: '/',
@@ -129,18 +113,6 @@ const AuthenticatedAdministrationBookingTypesNewRoute =
     id: '/new',
     path: '/new',
     getParentRoute: () => AuthenticatedAdministrationBookingTypesRoute,
-  } as any)
-const AuthenticatedAdministrationGroupsIndexRoute =
-  AuthenticatedAdministrationGroupsIndexRouteImport.update({
-    id: '/',
-    path: '/',
-    getParentRoute: () => AuthenticatedAdministrationGroupsRoute,
-  } as any)
-const AuthenticatedAdministrationGroupsNewRoute =
-  AuthenticatedAdministrationGroupsNewRouteImport.update({
-    id: '/new',
-    path: '/new',
-    getParentRoute: () => AuthenticatedAdministrationGroupsRoute,
   } as any)
 const AuthenticatedAdministrationResourcesIndexRoute =
   AuthenticatedAdministrationResourcesIndexRouteImport.update({
@@ -172,12 +144,6 @@ const AuthenticatedAdministrationBookingTypesBookingTypeIdEditRoute =
     path: '/$bookingTypeId/edit',
     getParentRoute: () => AuthenticatedAdministrationBookingTypesRoute,
   } as any)
-const AuthenticatedAdministrationGroupsGroupIdEditRoute =
-  AuthenticatedAdministrationGroupsGroupIdEditRouteImport.update({
-    id: '/$groupId/edit',
-    path: '/$groupId/edit',
-    getParentRoute: () => AuthenticatedAdministrationGroupsRoute,
-  } as any)
 const AuthenticatedAdministrationResourcesResourceIdEditRoute =
   AuthenticatedAdministrationResourcesResourceIdEditRouteImport.update({
     id: '/$resourceId/edit',
@@ -201,21 +167,16 @@ export interface FileRoutesByFullPath {
   '/calendar': typeof AuthenticatedCalendarRoute
   '/administration/billing': typeof AuthenticatedAdministrationBillingRoute
   '/administration/booking-types': typeof AuthenticatedAdministrationBookingTypesRouteWithChildren
-  '/administration/groups': typeof AuthenticatedAdministrationGroupsRouteWithChildren
   '/administration/resources': typeof AuthenticatedAdministrationResourcesRouteWithChildren
   '/administration/settings': typeof AuthenticatedAdministrationSettingsRoute
   '/administration/users': typeof AuthenticatedAdministrationUsersRouteWithChildren
-  '/groups/new': typeof AuthenticatedGroupsNewRoute
   '/administration/booking-types/new': typeof AuthenticatedAdministrationBookingTypesNewRoute
-  '/administration/groups/new': typeof AuthenticatedAdministrationGroupsNewRoute
   '/administration/resources/new': typeof AuthenticatedAdministrationResourcesNewRoute
   '/administration/users/new': typeof AuthenticatedAdministrationUsersNewRoute
   '/administration/booking-types/': typeof AuthenticatedAdministrationBookingTypesIndexRoute
-  '/administration/groups/': typeof AuthenticatedAdministrationGroupsIndexRoute
   '/administration/resources/': typeof AuthenticatedAdministrationResourcesIndexRoute
   '/administration/users/': typeof AuthenticatedAdministrationUsersIndexRoute
   '/administration/booking-types/$bookingTypeId/edit': typeof AuthenticatedAdministrationBookingTypesBookingTypeIdEditRoute
-  '/administration/groups/$groupId/edit': typeof AuthenticatedAdministrationGroupsGroupIdEditRoute
   '/administration/resources/$resourceId/edit': typeof AuthenticatedAdministrationResourcesResourceIdEditRoute
   '/administration/users/$userId/edit': typeof AuthenticatedAdministrationUsersUserIdEditRoute
 }
@@ -229,17 +190,13 @@ export interface FileRoutesByTo {
   '/': typeof AuthenticatedIndexRoute
   '/administration/billing': typeof AuthenticatedAdministrationBillingRoute
   '/administration/settings': typeof AuthenticatedAdministrationSettingsRoute
-  '/groups/new': typeof AuthenticatedGroupsNewRoute
   '/administration/booking-types/new': typeof AuthenticatedAdministrationBookingTypesNewRoute
-  '/administration/groups/new': typeof AuthenticatedAdministrationGroupsNewRoute
   '/administration/resources/new': typeof AuthenticatedAdministrationResourcesNewRoute
   '/administration/users/new': typeof AuthenticatedAdministrationUsersNewRoute
   '/administration/booking-types': typeof AuthenticatedAdministrationBookingTypesIndexRoute
-  '/administration/groups': typeof AuthenticatedAdministrationGroupsIndexRoute
   '/administration/resources': typeof AuthenticatedAdministrationResourcesIndexRoute
   '/administration/users': typeof AuthenticatedAdministrationUsersIndexRoute
   '/administration/booking-types/$bookingTypeId/edit': typeof AuthenticatedAdministrationBookingTypesBookingTypeIdEditRoute
-  '/administration/groups/$groupId/edit': typeof AuthenticatedAdministrationGroupsGroupIdEditRoute
   '/administration/resources/$resourceId/edit': typeof AuthenticatedAdministrationResourcesResourceIdEditRoute
   '/administration/users/$userId/edit': typeof AuthenticatedAdministrationUsersUserIdEditRoute
 }
@@ -255,21 +212,16 @@ export interface FileRoutesById {
   '/_authenticated/': typeof AuthenticatedIndexRoute
   '/_authenticated/administration/billing': typeof AuthenticatedAdministrationBillingRoute
   '/_authenticated/administration/booking-types': typeof AuthenticatedAdministrationBookingTypesRouteWithChildren
-  '/_authenticated/administration/groups': typeof AuthenticatedAdministrationGroupsRouteWithChildren
   '/_authenticated/administration/resources': typeof AuthenticatedAdministrationResourcesRouteWithChildren
   '/_authenticated/administration/settings': typeof AuthenticatedAdministrationSettingsRoute
   '/_authenticated/administration/users': typeof AuthenticatedAdministrationUsersRouteWithChildren
-  '/_authenticated/groups/new': typeof AuthenticatedGroupsNewRoute
   '/_authenticated/administration/booking-types/new': typeof AuthenticatedAdministrationBookingTypesNewRoute
-  '/_authenticated/administration/groups/new': typeof AuthenticatedAdministrationGroupsNewRoute
   '/_authenticated/administration/resources/new': typeof AuthenticatedAdministrationResourcesNewRoute
   '/_authenticated/administration/users/new': typeof AuthenticatedAdministrationUsersNewRoute
   '/_authenticated/administration/booking-types/': typeof AuthenticatedAdministrationBookingTypesIndexRoute
-  '/_authenticated/administration/groups/': typeof AuthenticatedAdministrationGroupsIndexRoute
   '/_authenticated/administration/resources/': typeof AuthenticatedAdministrationResourcesIndexRoute
   '/_authenticated/administration/users/': typeof AuthenticatedAdministrationUsersIndexRoute
   '/_authenticated/administration/booking-types/$bookingTypeId/edit': typeof AuthenticatedAdministrationBookingTypesBookingTypeIdEditRoute
-  '/_authenticated/administration/groups/$groupId/edit': typeof AuthenticatedAdministrationGroupsGroupIdEditRoute
   '/_authenticated/administration/resources/$resourceId/edit': typeof AuthenticatedAdministrationResourcesResourceIdEditRoute
   '/_authenticated/administration/users/$userId/edit': typeof AuthenticatedAdministrationUsersUserIdEditRoute
 }
@@ -285,21 +237,16 @@ export interface FileRouteTypes {
     | '/calendar'
     | '/administration/billing'
     | '/administration/booking-types'
-    | '/administration/groups'
     | '/administration/resources'
     | '/administration/settings'
     | '/administration/users'
-    | '/groups/new'
     | '/administration/booking-types/new'
-    | '/administration/groups/new'
     | '/administration/resources/new'
     | '/administration/users/new'
     | '/administration/booking-types/'
-    | '/administration/groups/'
     | '/administration/resources/'
     | '/administration/users/'
     | '/administration/booking-types/$bookingTypeId/edit'
-    | '/administration/groups/$groupId/edit'
     | '/administration/resources/$resourceId/edit'
     | '/administration/users/$userId/edit'
   fileRoutesByTo: FileRoutesByTo
@@ -313,17 +260,13 @@ export interface FileRouteTypes {
     | '/'
     | '/administration/billing'
     | '/administration/settings'
-    | '/groups/new'
     | '/administration/booking-types/new'
-    | '/administration/groups/new'
     | '/administration/resources/new'
     | '/administration/users/new'
     | '/administration/booking-types'
-    | '/administration/groups'
     | '/administration/resources'
     | '/administration/users'
     | '/administration/booking-types/$bookingTypeId/edit'
-    | '/administration/groups/$groupId/edit'
     | '/administration/resources/$resourceId/edit'
     | '/administration/users/$userId/edit'
   id:
@@ -338,21 +281,16 @@ export interface FileRouteTypes {
     | '/_authenticated/'
     | '/_authenticated/administration/billing'
     | '/_authenticated/administration/booking-types'
-    | '/_authenticated/administration/groups'
     | '/_authenticated/administration/resources'
     | '/_authenticated/administration/settings'
     | '/_authenticated/administration/users'
-    | '/_authenticated/groups/new'
     | '/_authenticated/administration/booking-types/new'
-    | '/_authenticated/administration/groups/new'
     | '/_authenticated/administration/resources/new'
     | '/_authenticated/administration/users/new'
     | '/_authenticated/administration/booking-types/'
-    | '/_authenticated/administration/groups/'
     | '/_authenticated/administration/resources/'
     | '/_authenticated/administration/users/'
     | '/_authenticated/administration/booking-types/$bookingTypeId/edit'
-    | '/_authenticated/administration/groups/$groupId/edit'
     | '/_authenticated/administration/resources/$resourceId/edit'
     | '/_authenticated/administration/users/$userId/edit'
   fileRoutesById: FileRoutesById
@@ -437,13 +375,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAdministrationBookingTypesRouteImport
       parentRoute: typeof AuthenticatedAdministrationRoute
     }
-    '/_authenticated/administration/groups': {
-      id: '/_authenticated/administration/groups'
-      path: '/groups'
-      fullPath: '/administration/groups'
-      preLoaderRoute: typeof AuthenticatedAdministrationGroupsRouteImport
-      parentRoute: typeof AuthenticatedAdministrationRoute
-    }
     '/_authenticated/administration/resources': {
       id: '/_authenticated/administration/resources'
       path: '/resources'
@@ -465,13 +396,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAdministrationUsersRouteImport
       parentRoute: typeof AuthenticatedAdministrationRoute
     }
-    '/_authenticated/groups/new': {
-      id: '/_authenticated/groups/new'
-      path: '/groups/new'
-      fullPath: '/groups/new'
-      preLoaderRoute: typeof AuthenticatedGroupsNewRouteImport
-      parentRoute: typeof AuthenticatedRoute
-    }
     '/_authenticated/administration/booking-types/': {
       id: '/_authenticated/administration/booking-types/'
       path: '/'
@@ -485,20 +409,6 @@ declare module '@tanstack/react-router' {
       fullPath: '/administration/booking-types/new'
       preLoaderRoute: typeof AuthenticatedAdministrationBookingTypesNewRouteImport
       parentRoute: typeof AuthenticatedAdministrationBookingTypesRoute
-    }
-    '/_authenticated/administration/groups/': {
-      id: '/_authenticated/administration/groups/'
-      path: '/'
-      fullPath: '/administration/groups/'
-      preLoaderRoute: typeof AuthenticatedAdministrationGroupsIndexRouteImport
-      parentRoute: typeof AuthenticatedAdministrationGroupsRoute
-    }
-    '/_authenticated/administration/groups/new': {
-      id: '/_authenticated/administration/groups/new'
-      path: '/new'
-      fullPath: '/administration/groups/new'
-      preLoaderRoute: typeof AuthenticatedAdministrationGroupsNewRouteImport
-      parentRoute: typeof AuthenticatedAdministrationGroupsRoute
     }
     '/_authenticated/administration/resources/': {
       id: '/_authenticated/administration/resources/'
@@ -534,13 +444,6 @@ declare module '@tanstack/react-router' {
       fullPath: '/administration/booking-types/$bookingTypeId/edit'
       preLoaderRoute: typeof AuthenticatedAdministrationBookingTypesBookingTypeIdEditRouteImport
       parentRoute: typeof AuthenticatedAdministrationBookingTypesRoute
-    }
-    '/_authenticated/administration/groups/$groupId/edit': {
-      id: '/_authenticated/administration/groups/$groupId/edit'
-      path: '/$groupId/edit'
-      fullPath: '/administration/groups/$groupId/edit'
-      preLoaderRoute: typeof AuthenticatedAdministrationGroupsGroupIdEditRouteImport
-      parentRoute: typeof AuthenticatedAdministrationGroupsRoute
     }
     '/_authenticated/administration/resources/$resourceId/edit': {
       id: '/_authenticated/administration/resources/$resourceId/edit'
@@ -578,27 +481,6 @@ const AuthenticatedAdministrationBookingTypesRouteChildren: AuthenticatedAdminis
 const AuthenticatedAdministrationBookingTypesRouteWithChildren =
   AuthenticatedAdministrationBookingTypesRoute._addFileChildren(
     AuthenticatedAdministrationBookingTypesRouteChildren,
-  )
-
-interface AuthenticatedAdministrationGroupsRouteChildren {
-  AuthenticatedAdministrationGroupsNewRoute: typeof AuthenticatedAdministrationGroupsNewRoute
-  AuthenticatedAdministrationGroupsIndexRoute: typeof AuthenticatedAdministrationGroupsIndexRoute
-  AuthenticatedAdministrationGroupsGroupIdEditRoute: typeof AuthenticatedAdministrationGroupsGroupIdEditRoute
-}
-
-const AuthenticatedAdministrationGroupsRouteChildren: AuthenticatedAdministrationGroupsRouteChildren =
-  {
-    AuthenticatedAdministrationGroupsNewRoute:
-      AuthenticatedAdministrationGroupsNewRoute,
-    AuthenticatedAdministrationGroupsIndexRoute:
-      AuthenticatedAdministrationGroupsIndexRoute,
-    AuthenticatedAdministrationGroupsGroupIdEditRoute:
-      AuthenticatedAdministrationGroupsGroupIdEditRoute,
-  }
-
-const AuthenticatedAdministrationGroupsRouteWithChildren =
-  AuthenticatedAdministrationGroupsRoute._addFileChildren(
-    AuthenticatedAdministrationGroupsRouteChildren,
   )
 
 interface AuthenticatedAdministrationResourcesRouteChildren {
@@ -646,7 +528,6 @@ const AuthenticatedAdministrationUsersRouteWithChildren =
 interface AuthenticatedAdministrationRouteChildren {
   AuthenticatedAdministrationBillingRoute: typeof AuthenticatedAdministrationBillingRoute
   AuthenticatedAdministrationBookingTypesRoute: typeof AuthenticatedAdministrationBookingTypesRouteWithChildren
-  AuthenticatedAdministrationGroupsRoute: typeof AuthenticatedAdministrationGroupsRouteWithChildren
   AuthenticatedAdministrationResourcesRoute: typeof AuthenticatedAdministrationResourcesRouteWithChildren
   AuthenticatedAdministrationSettingsRoute: typeof AuthenticatedAdministrationSettingsRoute
   AuthenticatedAdministrationUsersRoute: typeof AuthenticatedAdministrationUsersRouteWithChildren
@@ -658,8 +539,6 @@ const AuthenticatedAdministrationRouteChildren: AuthenticatedAdministrationRoute
       AuthenticatedAdministrationBillingRoute,
     AuthenticatedAdministrationBookingTypesRoute:
       AuthenticatedAdministrationBookingTypesRouteWithChildren,
-    AuthenticatedAdministrationGroupsRoute:
-      AuthenticatedAdministrationGroupsRouteWithChildren,
     AuthenticatedAdministrationResourcesRoute:
       AuthenticatedAdministrationResourcesRouteWithChildren,
     AuthenticatedAdministrationSettingsRoute:
@@ -677,7 +556,6 @@ interface AuthenticatedRouteChildren {
   AuthenticatedAdministrationRoute: typeof AuthenticatedAdministrationRouteWithChildren
   AuthenticatedCalendarRoute: typeof AuthenticatedCalendarRoute
   AuthenticatedIndexRoute: typeof AuthenticatedIndexRoute
-  AuthenticatedGroupsNewRoute: typeof AuthenticatedGroupsNewRoute
 }
 
 const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
@@ -685,7 +563,6 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
     AuthenticatedAdministrationRouteWithChildren,
   AuthenticatedCalendarRoute: AuthenticatedCalendarRoute,
   AuthenticatedIndexRoute: AuthenticatedIndexRoute,
-  AuthenticatedGroupsNewRoute: AuthenticatedGroupsNewRoute,
 }
 
 const AuthenticatedRouteWithChildren = AuthenticatedRoute._addFileChildren(

@@ -5,7 +5,6 @@ const invitationFlow = require(`${__hooks}/invitation-flow.cjs`);
 
 const configuration = authConfig.validateAuthConfig(authConfig.readPocketBaseEnvironment());
 const USER_COLLECTION = "users";
-const GROUP_COLLECTION = "organizational_units";
 const INVITATION_COLLECTION = "user_invitations";
 const MAX_NAME_LENGTH = 100;
 
@@ -45,20 +44,6 @@ function requireBoolean(value) {
   return value;
 }
 
-function groupForTenant(groupId, tenantId) {
-  if (typeof groupId !== "string" || groupId.trim() === "") {
-    throw new BadRequestError("group_required");
-  }
-  let group;
-  try {
-    group = $app.findRecordById(GROUP_COLLECTION, groupId);
-  } catch {
-    throw new BadRequestError("group_invalid");
-  }
-  if (group.get("tenant") !== tenantId) throw new BadRequestError("group_invalid");
-  return group;
-}
-
 function emailExists(email) {
   try {
     $app.findFirstRecordByData(USER_COLLECTION, "email_normalized", email);
@@ -93,7 +78,7 @@ function projection(record) {
     last_name: record.get("last_name"),
     display_name: displayName(record),
     email: record.get("email"),
-    group: record.get("organizational_unit"),
+    account_reference_number: record.get("account_reference_number") || "",
     role: record.get("role"),
     active: record.get("active") === true,
     password_setup_pending: record.get("password_setup_pending") === true,
@@ -161,7 +146,12 @@ function createUser(event) {
   const firstName = requireText(body.first_name ?? "", "first_name_required");
   const lastName = requireText(body.last_name ?? "", "last_name_required");
   const role = requireRole(body.role);
-  const groupId = groupForTenant(body.group, tenantId).id;
+  const accountReferenceNumber = has(body, "account_reference_number")
+    ? requireText(body.account_reference_number, "account_reference_number_invalid", {
+        max: 200,
+        required: false,
+      })
+    : "";
 
   if (emailExists(email)) throw new BadRequestError("email_already_exists");
 
@@ -172,7 +162,7 @@ function createUser(event) {
   user.set("password", temporaryPassword);
   user.set("passwordConfirm", temporaryPassword);
   user.set("tenant", tenantId);
-  user.set("organizational_unit", groupId);
+  user.set("account_reference_number", accountReferenceNumber);
   user.set("first_name", firstName);
   user.set("last_name", lastName);
   user.set("role", role);
@@ -203,7 +193,7 @@ function updateUser(event) {
       (key) =>
         key !== "first_name" &&
         key !== "last_name" &&
-        key !== "group" &&
+        key !== "account_reference_number" &&
         key !== "role" &&
         key !== "active" &&
         key !== "action",
@@ -227,8 +217,14 @@ function updateUser(event) {
     user.set("first_name", requireText(body.first_name, "first_name_required"));
   if (has(body, "last_name"))
     user.set("last_name", requireText(body.last_name, "last_name_required"));
-  if (has(body, "group")) {
-    user.set("organizational_unit", groupForTenant(body.group, context.context.tenant.id).id);
+  if (has(body, "account_reference_number")) {
+    user.set(
+      "account_reference_number",
+      requireText(body.account_reference_number, "account_reference_number_invalid", {
+        max: 200,
+        required: false,
+      }),
+    );
   }
   if (has(body, "role")) user.set("role", nextRole);
   if (has(body, "active")) user.set("active", nextActive);
@@ -258,7 +254,6 @@ function listActiveUsers(event) {
       id: record.id,
       display_name: displayName(record),
       email: record.get("email"),
-      group: record.get("organizational_unit"),
       role: record.get("role"),
     })),
   });

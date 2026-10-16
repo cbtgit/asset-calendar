@@ -22,7 +22,6 @@ function renderForm(
       id: "user-2",
       display_name: "Regular A",
       email: "regular@example.test",
-      group: "group-1",
       role: "regular",
     },
   ]);

@@ -89,9 +89,9 @@ it("provides the shared authenticated page landmarks and outlet state", () => {
 
 it("shows the administration module and rail for administrators", () => {
   vi.mocked(useNavigate).mockReturnValue(vi.fn() as never);
-  mockRouterLocation({ pathname: "/administration/groups", href: "/administration/groups" }, [
+  mockRouterLocation({ pathname: "/administration/users", href: "/administration/users" }, [
     "/_authenticated/administration",
-    "/_authenticated/administration/groups",
+    "/_authenticated/administration/users",
   ]);
   pocketbase.authStore.save("token", {
     id: "admin-1",
@@ -108,13 +108,11 @@ it("shows the administration module and rail for administrators", () => {
   expect(administrationLink.getAttribute("data-administrator")).toBeNull();
   expect(administrationLink.getAttribute("href")).toBe("/administration/users");
   expect(screen.getByRole("navigation", { name: "Administration navigation" })).toBeTruthy();
-  expect(screen.getByRole("link", { name: "Groups" }).getAttribute("data-active")).toBe("true");
   expect(screen.getAllByRole("link").map((link) => link.textContent)).toEqual([
     "Asset Calendar",
     "Calendar",
     "Administration",
     "Users",
-    "Groups",
     "Booking Types",
     "Resources",
     "Billing",

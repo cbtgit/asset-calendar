@@ -2,8 +2,7 @@ import { QueryClient } from "@tanstack/react-query";
 import { expect, it, vi } from "vite-plus/test";
 import { pocketbase } from "./client";
 import { bookingTypeQueryOptions } from "./booking-types";
-import { groupQueryOptions } from "./groups";
-import { resourcesKeys, bookingTypesKeys, groupsKeys, usersKeys } from "./query-keys";
+import { resourcesKeys, bookingTypesKeys, usersKeys } from "./query-keys";
 import { resourceQueryOptions } from "./resources";
 import { userQueryOptions, type User } from "./users";
 
@@ -13,7 +12,7 @@ const user: User = {
   last_name: "Lovelace",
   display_name: "Ada Lovelace",
   email: "ada@example.test",
-  group: "group-1",
+  account_reference_number: "",
   role: "regular",
   active: true,
   password_setup_pending: false,
@@ -22,7 +21,6 @@ const user: User = {
 };
 
 it("uses the detail key for every administration detail query", () => {
-  expect(groupQueryOptions("group-1").queryKey).toEqual(groupsKeys.detail("group-1"));
   expect(bookingTypeQueryOptions("booking-type-1").queryKey).toEqual(
     bookingTypesKeys.detail("booking-type-1"),
   );

@@ -12,7 +12,7 @@ const user = {
   last_name: "Lovelace",
   display_name: "Ada Lovelace",
   email: "ada@example.test",
-  group: "group-1",
+  account_reference_number: "AC-42",
   role: "regular" as const,
   active: true,
   password_setup_pending: true,
@@ -21,10 +21,19 @@ const user = {
 };
 
 it("uses server-owned projections for directory and active users", async () => {
-  const send = vi.spyOn(pocketbase, "send").mockResolvedValue({ items: [user] });
+  const activeUser = {
+    id: user.id,
+    display_name: user.display_name,
+    email: user.email,
+    role: user.role,
+  };
+  const send = vi
+    .spyOn(pocketbase, "send")
+    .mockResolvedValueOnce({ items: [user] })
+    .mockResolvedValueOnce({ items: [activeUser] });
 
   await expect(getUsers()).resolves.toEqual([user]);
-  await expect(getActiveUsers()).resolves.toEqual([user]);
+  await expect(getActiveUsers()).resolves.toEqual([activeUser]);
   expect(send).toHaveBeenNthCalledWith(1, "/api/users", { method: "GET" });
   expect(send).toHaveBeenNthCalledWith(2, "/api/users/active", { method: "GET" });
 });
@@ -35,7 +44,7 @@ it("sends creation, update, and invitation mutations through user routes", async
     first_name: "Ada",
     last_name: "Lovelace",
     email: "ada@example.test",
-    group: "group-1",
+    account_reference_number: "AC-42",
     role: "regular" as const,
   };
 

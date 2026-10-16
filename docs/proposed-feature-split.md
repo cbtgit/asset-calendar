@@ -1,11 +1,18 @@
 # Asset Calendar Proposed Feature Split
 
-**Status:** Reconciled delivery contract
-**Last updated:** 2026-09-15
+**Status:** Historical delivery plan; see supersession note below
+**Last updated:** 2026-10-16
 **Source:** [Product requirements](./product-requirements.md)
 
 The non-secret production operator boundary is defined in the
 [production bootstrap contract](./production-bootstrap-contract.md).
+
+**Supersession note:** Groups administration and its navigation were removed
+from the product by migration `1710000016`. F03.5/F04 group-specific details
+below are retained only as historical planning context. The current product
+contract is [product requirements](./product-requirements.md); billing
+categories use normalized user email, with an optional account/reference
+number displayed separately.
 
 The current `create-booking-type` branch covers the administrator booking-type
 catalog for listing, creating, and editing records. It does not seed
@@ -45,7 +52,7 @@ features are implemented.
   ownership.
 - Production data is never stored inside a release directory and is never used
   by local development, CI, or agent environments.
-- Production tenant, group, and initial administrator records are manually
+- Production tenant and initial administrator records are manually
   provisioned; F03 does not add tenant onboarding.
 
 ## 3. PocketBase terminology
@@ -74,12 +81,11 @@ F01 Application foundation and isolated runtime
  └─> F02 Initial VPS deployment and continuous delivery
       └─> F03 Tenant isolation, authentication, and password lifecycle
      └─> F03.5 Authenticated application shell and navigation
-      ├─> F04 Groups administration
-       │    └─> F06 Tenant user administration
-       └─> F05 Resource administration
+      ├─> F06 Tenant user administration
+      └─> F05 Resource administration
          └─> F07 Calendar navigation and resource selection
 
-F04 + F05 + F06 + F07
+    F05 + F06 + F07
  └─> F08 Regular booking creation and visibility
       ├─> F09 Booking editing and deletion
       └─> F10 Administrative, training, and maintenance bookings
@@ -87,7 +93,7 @@ F04 + F05 + F06 + F07
 F08 + F09 + F10
  └─> F12 Invoicing exports
 
-F03.5 + F04 + F05 + F06 + F07 + F08 + F09 + F10
+F03.5 + F05 + F06 + F07 + F08 + F09 + F10
  └─> F11 Cross-feature mobile and accessibility validation
 
 F01-F12
@@ -309,7 +315,7 @@ outside the release before the service starts.
 
 **Depends on:** F01 and F02
 
-**Blocks:** F04, F05, F06, F07, F08, and F12
+**Blocks:** F05, F06, F07, F08, and F12
 
 #### Description
 
@@ -317,7 +323,7 @@ Implement tenant-aware authentication and first-time password setup. Tenant
 identity comes from the trusted host or subdomain and cannot be selected by
 request parameters or body fields.
 
-The production tenant, initial group, and initial administrator already exist
+The production tenant and initial administrator already exist
 and are outside the application workflow. F03 includes sign-in,
 sign-out, inactive-user rejection, invitation email delivery, one-time password
 setup, SMTP configuration, and public and protected routes.
@@ -337,7 +343,7 @@ existing browser session is not forcibly signed out before normal expiry.
 Migrations create:
 
 - A tenant collection with a unique subdomain.
-- A user auth collection with tenant, name, role, group, active
+- A user auth collection with tenant, name, role, active
   status, and first-time password setup state.
 
 Collection rules restrict every user operation to the authenticated user's
@@ -370,8 +376,8 @@ A user authenticates only through the correct tenant host, cannot access
 another tenant, and completes password setup through their invitation before
 normal application access. The existing tenant administrator can create a user
 and the user can receive and complete the invitation flow. Production readiness
-still depends on the manual bootstrap of the existing tenant, initial group,
-and active administrator; the lookup and preservation
+still depends on the manual bootstrap of the existing tenant and active
+administrator; the lookup and preservation
 rules are defined in the [production bootstrap
 contract](./production-bootstrap-contract.md).
 
@@ -409,7 +415,7 @@ operator's secrets or production delivery data.
 
 **Depends on:** F03
 
-**Blocks:** F04, F05, F06, F07, F08, F09, F10, F11, and F12
+**Blocks:** F05, F06, F07, F08, F09, F10, F11, and F12
 
 #### Description
 
@@ -645,16 +651,20 @@ focus, and placeholder behavior protected against regression.
 
 ---
 
-### F04 - Groups administration
+### F04 - Groups administration (removed)
 
-**Status:** Merged and implemented
+**Status:** Removed by migration `1710000016_remove_groups_add_account_reference.js`
+
+This section is retained as a record of the original feature contract only.
+The group routes, API, collection, user relation, and booking snapshot no
+longer exist. Do not use the historical requirements below for new work.
 
 **Can start:** When tenant-scoped administrator authorization and the shared
 application shell are stable
 
 **Depends on:** F03 and F03.5
 
-**Blocks:** F06 and group snapshots in F08
+**Blocks:** None; this feature has been removed.
 
 #### Description
 
@@ -913,10 +923,10 @@ interactions.
 
 ### F06 - Tenant user administration and active-user selection
 
-**Can start:** When authentication, groups, and the shared
+**Can start:** When authentication and the shared
 application shell are stable
 
-**Depends on:** F03, F03.5, and F04
+**Depends on:** F03 and F03.5
 
 **Blocks:** F08 and F10
 
@@ -925,18 +935,19 @@ application shell are stable
 Allow administrators to create and manage tenant users while retaining booking
 history and providing active-user selection data for future booking workflows.
 
-The feature includes user listing, creation, group assignment, role changes,
-reversible deactivation, invitation email delivery, password setup, and
+The feature includes user listing and creation, account/reference-number
+editing, role changes, reversible deactivation, invitation email delivery, password setup, and
 active-user selection data.
 
 #### PocketBase data and backend behavior
 
-The auth collection requires a tenant, group, normalized globally unique email,
-role, active status, and password-setup state.
+The auth collection requires a tenant, normalized globally unique email, role,
+active status, and password-setup state. Users may have an optional
+administrator-managed account/reference number of up to 200 characters.
 
-A creation hook derives the tenant server-side, verifies the selected group is
-in that tenant, normalizes the email, and sends the invitation email with a
-one-time password-setup link. Email is immutable after creation.
+A creation hook derives the tenant server-side, normalizes the email, and sends
+the invitation email with a one-time password-setup link. Email is immutable
+after creation.
 
 Administrators may demote or deactivate themselves through the normal mutation
 path. A tenant may temporarily have zero active administrators; PocketBase
@@ -947,8 +958,8 @@ booking selectors and booking creation.
 
 The user list and user editor are responsive from their first implementation.
 On narrow screens, user records remain scannable without horizontal scrolling,
-and create/edit, role, group, invitation, and deactivation actions use a
-full-width or full-screen surface with the same focus, validation, and
+and create/edit, role, account/reference-number, invitation, and deactivation
+actions use a full-width or full-screen surface with the same focus, validation, and
 confirmation behavior as desktop.
 
 #### Why hooks are needed
@@ -1029,9 +1040,9 @@ current URL state, and view only permitted booking information.
 
 ### F08 - Regular booking creation, snapshots, and visibility
 
-**Can start:** When units, resources, users, and the calendar are stable
+**Can start:** When resources, users, and the calendar are stable
 
-**Depends on:** F03.5, F04, F05, F06, and F07
+**Depends on:** F03.5, F05, F06, and F07
 
 **Blocks:** F09, F10, F11, and F12
 
@@ -1072,7 +1083,7 @@ A creation hook:
 5. Checks overlap on the same resource using end-exclusive intervals.
 6. Loads the applicable trusted resource base rate and booking-type surcharge;
    a null booking type contributes zero surcharge.
-7. Copies booker, group, email, resource, optional booking-type name, and
+7. Copies booker, email, optional account/reference number, resource, optional booking-type name, and
    pricing snapshots.
 8. Rejects client attempts to supply protected values.
 
@@ -1090,7 +1101,7 @@ administrator-only booking type, a forged booking type for a regular booking,
 or a manipulated rate. The server must derive protected values from
 authenticated identity and trusted records.
 
-Snapshots prevent later name, group, email, resource, booking-type, or pricing
+Snapshots prevent later name, email, account/reference number, resource, booking-type, or pricing
 changes from rewriting historical invoicing data. Tenant currency is immutable,
 so a booking does not need a separate currency snapshot.
 
@@ -1250,9 +1261,9 @@ outside this capability change.
 
 ### F11 - Cross-feature mobile and accessibility validation
 
-**Can start:** Incrementally as UI features land; completes after F04-F10 and F12
+**Can start:** Incrementally as UI features land; completes after F05-F10 and F12
 
-**Depends on:** F03.5, F04, F05, F06, F07, F08, F09, and F10
+**Depends on:** F03.5, F05, F06, F07, F08, F09, and F10
 
 **Blocks:** F13
 
@@ -1264,7 +1275,7 @@ feature where mobile behavior is implemented. It finds cross-feature gaps,
 inconsistent interaction patterns, and accessibility regressions after the
 shell, administration, calendar, booking, and export surfaces exist.
 
-The validation covers desktop and narrow-screen navigation, Groups and resource
+The validation covers desktop and narrow-screen navigation, resource
 administration, user administration, calendar selection, booking
 creation/edit/delete, booking-type workflows, and export controls. It checks
 that each workflow avoids horizontal scrolling, preserves role and tenant
@@ -1458,12 +1469,11 @@ role-aware navigation, user actions, and a route-owned content area.
 
 ### Phase 4 - Tenant administration
 
-- F04 Groups administration (merged and implemented).
+- F04 Groups administration (removed by migration `1710000016`).
 - F05 Resource administration and permanent archival.
 - F06 Tenant user administration and administrator protection.
 
-F05 may proceed in parallel with the completed F04 work after F03.5. F06 waits
-for F04.
+F05 and F06 depend on F03.5 but not on the removed F04 work.
 
 **Milestone:** Administrators can configure the tenant data needed for booking
 on desktop and narrow screens.

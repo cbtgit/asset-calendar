@@ -12,7 +12,7 @@ export type User = {
   last_name: string;
   display_name: string;
   email: string;
-  group: string;
+  account_reference_number: string;
   role: UserRole;
   active: boolean;
   password_setup_pending: boolean;
@@ -24,7 +24,6 @@ export type ActiveUser = {
   id: string;
   display_name: string;
   email: string;
-  group: string;
   role: UserRole;
 };
 
@@ -32,12 +31,12 @@ export type UserCreate = {
   first_name: string;
   last_name: string;
   email: string;
-  group: string;
+  account_reference_number?: string;
   role: UserRole;
 };
 
 export type UserUpdate = Partial<
-  Pick<UserCreate, "first_name" | "last_name" | "group" | "role">
+  Pick<UserCreate, "first_name" | "last_name" | "account_reference_number" | "role">
 > & {
   active?: boolean;
 };

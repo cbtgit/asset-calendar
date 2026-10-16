@@ -21,10 +21,9 @@ async function createSeededMigrations(): Promise<string> {
   migrationsDir = await mkdtemp(resolve(tmpdir(), "asset-calendar-auth-migrations-"));
   await cp(productionMigrations, migrationsDir, { recursive: true });
   await writeFile(
-    resolve(migrationsDir, "1710000004_auth_enforcement_fixture.js"),
+    resolve(migrationsDir, "1710000017_auth_enforcement_fixture.js"),
     `migrate((app) => {
   const tenants = app.findCollectionByNameOrId("tenants");
-  const units = app.findCollectionByNameOrId("organizational_units");
   const users = app.findCollectionByNameOrId("users");
   const tenantA = new Record(tenants);
   tenantA.set("name", "Tenant A");
@@ -34,29 +33,19 @@ async function createSeededMigrations(): Promise<string> {
   tenantB.set("name", "Tenant B");
   tenantB.set("subdomain", "other");
   app.save(tenantB);
-  const unitA = new Record(units);
-  unitA.set("tenant", tenantA.id);
-  unitA.set("name", "Unit A");
-  unitA.set("name_normalized", "unit a");
-  app.save(unitA);
-  const unitB = new Record(units);
-  unitB.set("tenant", tenantB.id);
-  unitB.set("name", "Unit B");
-  unitB.set("name_normalized", "unit b");
-  app.save(unitB);
   for (const data of [
-    { email: "admin-a@example.test", tenant: tenantA.id, unit: unitA.id, role: "administrator", active: true },
-    { email: "regular-a@example.test", tenant: tenantA.id, unit: unitA.id, role: "regular", active: true },
-    { email: "admin-b@example.test", tenant: tenantB.id, unit: unitB.id, role: "administrator", active: true },
-    { email: "inactive-a@example.test", tenant: tenantA.id, unit: unitA.id, role: "regular", active: false },
-    { email: "pending-a@example.test", tenant: tenantA.id, unit: unitA.id, role: "regular", active: true, pending: true },
+    { email: "admin-a@example.test", tenant: tenantA.id, role: "administrator", active: true },
+    { email: "regular-a@example.test", tenant: tenantA.id, role: "regular", active: true },
+    { email: "admin-b@example.test", tenant: tenantB.id, role: "administrator", active: true },
+    { email: "inactive-a@example.test", tenant: tenantA.id, role: "regular", active: false },
+    { email: "pending-a@example.test", tenant: tenantA.id, role: "regular", active: true, pending: true },
   ]) {
     const user = new Record(users);
     user.set("email", data.email);
+    user.set("email_normalized", data.email);
     user.set("password", ${JSON.stringify(password)});
     user.set("passwordConfirm", ${JSON.stringify(password)});
     user.set("tenant", data.tenant);
-    user.set("organizational_unit", data.unit);
     user.set("role", data.role);
     user.set("active", data.active);
     user.set("password_setup_pending", data.pending === true);
@@ -65,21 +54,7 @@ async function createSeededMigrations(): Promise<string> {
 }, () => {});`,
   );
   await writeFile(
-    resolve(migrationsDir, "1710000006_auth_groups_sort_fixture.js"),
-    `migrate((app) => {
-  const units = app.findCollectionByNameOrId("organizational_units");
-  const tenant = app.findRecordsByFilter("tenants", "subdomain = 'tenant'", "", 1, 0)[0];
-  for (const name of ["banana", "Cherry", "apple", "Date"]) {
-    const unit = new Record(units);
-    unit.set("tenant", tenant.id);
-    unit.set("name", name);
-    unit.set("name_normalized", name.toLowerCase());
-    app.save(unit);
-  }
-}, () => {});`,
-  );
-  await writeFile(
-    resolve(migrationsDir, "1710000010_calendar_resources_fixture.js"),
+    resolve(migrationsDir, "1710000018_calendar_resources_fixture.js"),
     `migrate((app) => {
   const resources = app.findCollectionByNameOrId("resources");
   const tenantA = app.findRecordsByFilter("tenants", "subdomain = 'tenant'", "", 1, 0)[0];
@@ -354,120 +329,11 @@ it("enforces the resolved tenant and role boundary on direct requests", async ()
   const admin = new PocketBase(harness.baseUrl);
   await authenticate(admin, "admin-a@example.test");
 
-  const groupsResponse = await request(admin, "/api/groups", { host: "tenant.localhost" });
-  expect(groupsResponse.status).toBe(200);
-  expect(await groupsResponse.json()).toMatchObject({
-    items: [
-      {
-        name: "apple",
-        member_count: 0,
-      },
-      {
-        name: "banana",
-        member_count: 0,
-      },
-      {
-        name: "Cherry",
-        member_count: 0,
-      },
-      {
-        name: "Date",
-        member_count: 0,
-      },
-      {
-        name: "Unit A",
-        member_count: 4,
-      },
-    ],
-  });
-
-  const groupRecord = admin.authStore.record;
-  if (!groupRecord) throw new Error("Expected the administrator auth record.");
-  const groupId = groupRecord.organizational_unit;
-  const trimmedGroup = await request(admin, "/api/collections/organizational_units/records", {
-    method: "POST",
-    host: "tenant.localhost",
-    body: { name: "  Trimmed group  " },
-  });
-  expect(trimmedGroup.status).toBe(200);
-  expect((await trimmedGroup.json()).name).toBe("Trimmed group");
-
-  const directGroup = await request(admin, `/api/groups/${groupId}`, { host: "tenant.localhost" });
-  expect(directGroup.status).toBe(200);
-  expect(await directGroup.json()).toMatchObject({ id: groupId, name: "Unit A", member_count: 4 });
-
-  const duplicateGroup = await request(admin, "/api/collections/organizational_units/records", {
-    method: "POST",
-    host: "tenant.localhost",
-    body: { name: " unit a " },
-  });
-  expect(duplicateGroup.status).toBe(400);
-
-  const normalizedOverride = await request(admin, "/api/collections/organizational_units/records", {
-    method: "POST",
-    host: "tenant.localhost",
-    body: { name: "Override", name_normalized: "unit a" },
-  });
-  expect(normalizedOverride.status).toBe(403);
-  const groupsAfterOverride = await request(admin, "/api/groups", { host: "tenant.localhost" });
-  expect((await groupsAfterOverride.json()).items).not.toContainEqual(
-    expect.objectContaining({ name: "Override" }),
-  );
-
-  const blankGroup = await request(admin, "/api/collections/organizational_units/records", {
-    method: "POST",
-    host: "tenant.localhost",
-    body: { name: "   " },
-  });
-  expect(blankGroup.status).toBe(400);
-
-  const longGroup = await request(admin, "/api/collections/organizational_units/records", {
-    method: "POST",
-    host: "tenant.localhost",
-    body: { name: "x".repeat(201) },
-  });
-  expect(longGroup.status).toBe(400);
-
-  const otherAdmin = new PocketBase(harness.baseUrl);
-  await authenticate(otherAdmin, "admin-b@example.test", "other.localhost");
-  const sameNameOtherTenant = await request(
-    otherAdmin,
-    "/api/collections/organizational_units/records",
-    {
-      method: "POST",
-      host: "other.localhost",
-      body: { name: " unit a " },
-    },
-  );
-  expect(sameNameOtherTenant.status).toBe(200);
-  const otherGroup = await sameNameOtherTenant.json();
-  const crossTenantView = await request(admin, `/api/groups/${otherGroup.id}`, {
-    host: "tenant.localhost",
-  });
-  expect(crossTenantView.status).toBe(404);
-
-  const foreignGroup = await request(
-    admin,
-    `/api/collections/organizational_units/records/${groupId}`,
-    {
-      method: "PATCH",
-      host: "tenant.localhost",
-      body: { tenant: "foreign-tenant" },
-    },
-  );
-  expect(foreignGroup.status).toBe(403);
-
-  const assignedGroupDelete = await request(
-    admin,
-    `/api/collections/organizational_units/records/${groupId}`,
-    { method: "DELETE", host: "tenant.localhost" },
-  );
-  expect(assignedGroupDelete.status).toBe(400);
+  const adminRecord = admin.authStore.record;
+  if (!adminRecord) throw new Error("Expected the administrator auth record.");
 
   const regular = new PocketBase(harness.baseUrl);
   await authenticate(regular, "regular-a@example.test");
-  const regularGroups = await request(regular, "/api/groups", { host: "tenant.localhost" });
-  expect(regularGroups.status).toBe(403);
   const regularUserBookingTypes = await request(regular, "/api/collections/booking_types/records", {
     host: "tenant.localhost",
   });
@@ -480,7 +346,7 @@ it("enforces the resolved tenant and role boundary on direct requests", async ()
       method: "POST",
       host: "tenant.localhost",
       body: {
-        tenant: groupRecord.tenant,
+        tenant: adminRecord.tenant,
         name: "Unauthorized booking type",
         surcharge_minor_units: 1250,
       },
@@ -504,7 +370,6 @@ it("enforces the resolved tenant and role boundary on direct requests", async ()
   expect(users.items[0]).toEqual(
     expect.objectContaining({
       email: expect.any(String),
-      group: expect.any(String),
       role: expect.any(String),
       active: expect.any(Boolean),
     }),
@@ -548,7 +413,7 @@ it("enforces the resolved tenant and role boundary on direct requests", async ()
         role: "administrator",
         tenant: "foreign-tenant",
         active: false,
-        organizational_unit: "foreign-unit",
+        account_reference_number: "user-controlled",
         password_setup_pending: true,
       },
     },
@@ -562,7 +427,7 @@ it("enforces the resolved tenant and role boundary on direct requests", async ()
   });
   expect(ownUpdate.status).toBe(403);
 
-  const selfDemotion = await request(admin, `/api/users/${groupRecord.id}`, {
+  const selfDemotion = await request(admin, `/api/users/${adminRecord.id}`, {
     method: "PATCH",
     host: "tenant.localhost",
     body: { role: "regular" },
@@ -570,7 +435,7 @@ it("enforces the resolved tenant and role boundary on direct requests", async ()
   expect(selfDemotion.status).toBe(400);
   expect((await selfDemotion.text()).toLowerCase()).toContain("last_administrator_required");
 
-  const selfDeactivation = await request(admin, `/api/users/${groupRecord.id}`, {
+  const selfDeactivation = await request(admin, `/api/users/${adminRecord.id}`, {
     method: "PATCH",
     host: "tenant.localhost",
     body: { active: false },
@@ -605,9 +470,6 @@ it("enforces the resolved tenant and role boundary on direct requests", async ()
 it("manages users through projections and keeps active selection separate", async () => {
   const admin = new PocketBase(harness.baseUrl);
   await authenticate(admin, "admin-a@example.test");
-  const authRecord = admin.authStore.record;
-  if (!authRecord) throw new Error("Expected the administrator auth record.");
-
   const createdResponse = await request(admin, "/api/users", {
     method: "POST",
     host: "tenant.localhost",
@@ -615,7 +477,7 @@ it("manages users through projections and keeps active selection separate", asyn
       first_name: "  New  ",
       last_name: "  Person  ",
       email: "  New.Person@Example.Test  ",
-      group: authRecord.organizational_unit,
+      account_reference_number: "  REF-001  ",
       role: "administrator",
       tenant: "client-selected-tenant-is-ignored",
     },
@@ -627,7 +489,7 @@ it("manages users through projections and keeps active selection separate", asyn
     last_name: "Person",
     display_name: "New Person",
     email: "new.person@example.test",
-    group: authRecord.organizational_unit,
+    account_reference_number: "REF-001",
     role: "administrator",
     active: true,
     password_setup_pending: true,
@@ -641,9 +503,30 @@ it("manages users through projections and keeps active selection separate", asyn
     host: "tenant.localhost",
   });
   expect(activeBeforeDeactivation.status).toBe(200);
-  expect((await activeBeforeDeactivation.json()).items).toContainEqual(
+  const activeBeforeDeactivationItems = (await activeBeforeDeactivation.json()).items;
+  expect(activeBeforeDeactivationItems).toContainEqual(
     expect.objectContaining({ id: created.id, email: "new.person@example.test" }),
   );
+  expect(
+    activeBeforeDeactivationItems.find((item: { id: string }) => item.id === created.id),
+  ).not.toHaveProperty("account_reference_number");
+
+  const updatedAccountReference = await request(admin, `/api/users/${created.id}`, {
+    method: "PATCH",
+    host: "tenant.localhost",
+    body: { account_reference_number: "  INV-2026  " },
+  });
+  expect(updatedAccountReference.status).toBe(200);
+  expect(await updatedAccountReference.json()).toMatchObject({
+    account_reference_number: "INV-2026",
+  });
+
+  const invalidAccountReference = await request(admin, `/api/users/${created.id}`, {
+    method: "PATCH",
+    host: "tenant.localhost",
+    body: { account_reference_number: "x".repeat(201) },
+  });
+  expect(invalidAccountReference.status).toBe(400);
 
   const emailChange = await request(admin, `/api/users/${created.id}`, {
     method: "PATCH",
@@ -711,7 +594,6 @@ it("manages users through projections and keeps active selection separate", asyn
       first_name: "Another",
       last_name: "Person",
       email: " NEW.PERSON@example.test ",
-      group: authRecord.organizational_unit,
       role: "regular",
     },
   });

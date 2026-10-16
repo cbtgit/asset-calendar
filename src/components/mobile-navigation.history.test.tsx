@@ -38,14 +38,14 @@ const administrationRoute = createRoute({
   path: "/administration",
   component: () => <Outlet />,
 });
-const groupsRoute = createRoute({
+const usersRoute = createRoute({
   getParentRoute: () => administrationRoute,
-  path: "/groups",
-  component: () => <p>Groups destination</p>,
+  path: "/users",
+  component: () => <p>Users destination</p>,
 });
 const routeTree = rootRoute.addChildren([
   calendarRoute,
-  administrationRoute.addChildren([groupsRoute]),
+  administrationRoute.addChildren([usersRoute]),
 ]);
 
 afterEach(() => {
@@ -73,14 +73,14 @@ it("keeps the selected route after the drawer closes without traversing history"
 
   fireEvent.click(await screen.findByRole("button", { name: "Open navigation" }));
   fireEvent.click(screen.getByRole("button", { name: "Administration" }));
-  fireEvent.click(screen.getByRole("link", { name: "Groups" }));
+  fireEvent.click(screen.getByRole("link", { name: "Users" }));
 
   await waitFor(() => {
-    expect(router.state.location.pathname).toBe("/administration/groups");
-    expect(window.location.pathname).toBe("/administration/groups");
+    expect(router.state.location.pathname).toBe("/administration/users");
+    expect(window.location.pathname).toBe("/administration/users");
   });
   await new Promise((resolve) => window.setTimeout(resolve, 10));
 
-  expect(router.state.location.pathname).toBe("/administration/groups");
-  expect(window.location.pathname).toBe("/administration/groups");
+  expect(router.state.location.pathname).toBe("/administration/users");
+  expect(window.location.pathname).toBe("/administration/users");
 });

@@ -24,7 +24,7 @@ const interval = {
 
 it("searches the server-generated billing preview with only the selected interval", async () => {
   saveAdministrator();
-  const preview = { start: interval.start, end: interval.end, groups: [], total: "0.00" };
+  const preview = { start: interval.start, end: interval.end, users: [], total: "0.00" };
   const send = vi.spyOn(pocketbase, "send").mockResolvedValue(preview as never);
 
   await expect(searchBilling(interval)).resolves.toEqual(preview);

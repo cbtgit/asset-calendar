@@ -93,7 +93,6 @@ it("shows administrator destinations and closes on outside tap with focus restor
       .getByRole("button", { name: "Administration" })
       .querySelector(".shell-mobile-section-chevron"),
   ).toBeTruthy();
-  expect(screen.getByRole("link", { name: "Groups" })).toBeTruthy();
   expect(screen.getByRole("link", { name: "Users" })).toBeTruthy();
   expect(screen.getByRole("link", { name: "Booking Types" })).toBeTruthy();
   const backdrop = document.querySelector(".shell-mobile-backdrop");

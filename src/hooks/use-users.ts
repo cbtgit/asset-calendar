@@ -28,7 +28,7 @@ function optimisticUser(input: UserCreate): User {
     last_name: input.last_name.trim(),
     display_name: `${input.first_name.trim()} ${input.last_name.trim()}`.trim(),
     email: input.email.trim().toLowerCase(),
-    group: input.group,
+    account_reference_number: input.account_reference_number?.trim() ?? "",
     role: input.role,
     active: true,
     password_setup_pending: true,
@@ -50,7 +50,6 @@ function toActiveUser(user: User): ActiveUser {
     id: user.id,
     display_name: user.display_name,
     email: user.email,
-    group: user.group,
     role: user.role,
   };
 }
@@ -135,6 +134,8 @@ export function useUpdateUserMutation() {
         ...input,
         first_name: input.first_name?.trim() ?? user.first_name,
         last_name: input.last_name?.trim() ?? user.last_name,
+        account_reference_number:
+          input.account_reference_number?.trim() ?? user.account_reference_number,
         display_name:
           `${input.first_name?.trim() ?? user.first_name} ${input.last_name?.trim() ?? user.last_name}`.trim(),
         updated: new Date().toISOString(),
