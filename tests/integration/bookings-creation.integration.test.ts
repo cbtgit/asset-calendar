@@ -526,6 +526,37 @@ it("creates role-safe bookings with snapshots and end-exclusive conflicts", asyn
     account_reference_number_snapshot: "ACCT-42",
   });
 
+  const updatedAccountReference = await request(admin, `/api/users/${regularRecord.id}`, {
+    method: "PATCH",
+    host: "tenant.localhost",
+    body: { account_reference_number: "ACCT-99" },
+  });
+  expect(updatedAccountReference.status).toBe(200);
+
+  const administratorSameBookerEdit = await request(
+    admin,
+    `/api/calendar/bookings/${regularBookingBody.id}`,
+    {
+      method: "PATCH",
+      host: "tenant.localhost",
+      body: {
+        booked_for_user: regularRecord.id,
+        booking_type: bookingType.id,
+      },
+    },
+  );
+  expect(administratorSameBookerEdit.status).toBe(200);
+  const preservedAdministratorSnapshot = await request(
+    privileged,
+    `/api/collections/bookings/records/${regularBookingBody.id}`,
+    { host: "tenant.localhost" },
+  );
+  expect(await preservedAdministratorSnapshot.json()).toMatchObject({
+    booked_for_user: regularRecord.id,
+    account_reference_number_snapshot: "ACCT-42",
+    booking_type_name_snapshot: "Training",
+  });
+
   const regularResourceChange = await request(
     regular,
     `/api/calendar/bookings/${regularBookingBody.id}`,
