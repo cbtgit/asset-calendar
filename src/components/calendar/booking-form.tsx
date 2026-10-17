@@ -294,7 +294,7 @@ export function BookingForm({
                 onChange={(event) => setBookingType(event.target.value)}
                 disabled={bookingTypes.isPending || bookingTypes.isError}
               >
-                <option value="">No booking type</option>
+                <option value="">Microscope</option>
                 {[
                   ...(initialBooking?.booking_type &&
                   !bookingTypes.data?.some((type) => type.id === initialBooking.booking_type)
