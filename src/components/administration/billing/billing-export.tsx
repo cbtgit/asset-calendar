@@ -87,7 +87,7 @@ export function BillingExport({ onHeadingReady }: BillingExportProps) {
       <h1 id="billing-export-title" ref={onHeadingReady} tabIndex={-1}>
         Billing
       </h1>
-      <p>Search billable bookings by date and review totals by Group/Org unit.</p>
+      <p>Search billable bookings by date and review totals by user.</p>
 
       <form className="billing-export-form" onSubmit={submit} noValidate>
         <div className="billing-export-field">
@@ -140,33 +140,39 @@ export function BillingExport({ onHeadingReady }: BillingExportProps) {
               ref={downloadRef}
               type="button"
               variant="secondary"
-              disabled={isDownloading || result.groups.length === 0}
+              disabled={isDownloading || result.users.length === 0}
               onClick={() => void download()}
             >
               {isDownloading ? "Preparing CSV..." : "Download CSV"}
             </Button>
           </div>
 
-          {result.groups.length === 0 ? (
+          {result.users.length === 0 ? (
             <p className="billing-export-empty">
               No billable records were found for this interval.
             </p>
           ) : (
-            <div className="billing-export-groups">
-              {result.groups.map((group) => (
-                <section className="billing-export-group" key={group.name}>
-                  <div className="billing-export-group-header">
-                    <h3>{group.name || "Unassigned Group/Org unit"}</h3>
-                    <strong>{formatMinorUnitsForDisplay(Number(group.total) * 100)}</strong>
+            <div className="billing-export-users">
+              {result.users.map((user) => (
+                <section className="billing-export-user" key={user.email}>
+                  <div className="billing-export-user-header">
+                    <div>
+                      <h3>{user.name || "Unknown user"}</h3>
+                      <p>{user.email}</p>
+                    </div>
+                    <strong>{formatMinorUnitsForDisplay(Number(user.total) * 100)}</strong>
                   </div>
-                  <ul className="billing-export-records">
-                    {group.records.map((record) => (
+                  <ul className="billing-export-user-records">
+                    {user.records.map((record) => (
                       <li
-                        className="billing-export-record"
-                        key={`${record.start}-${record.end}-${record.booker}-${record.resource}`}
+                        className="billing-export-user-record"
+                        key={`${record.start}-${record.end}-${record.booker_email}-${record.resource}`}
                       >
                         <div>
                           <strong>{record.booker}</strong>
+                          {record.account_reference_number ? (
+                            <span>Account/reference: {record.account_reference_number}</span>
+                          ) : null}
                           <span>{record.resource}</span>
                         </div>
                         <div>

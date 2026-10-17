@@ -13,7 +13,7 @@ const user: User = {
   last_name: "Lovelace",
   display_name: "Ada Lovelace",
   email: "ada@example.test",
-  group: "group-1",
+  account_reference_number: "AC-42",
   role: "regular",
   active: true,
   password_setup_pending: false,
@@ -25,7 +25,6 @@ const activeUser: ActiveUser = {
   id: user.id,
   display_name: user.display_name,
   email: user.email,
-  group: user.group,
   role: user.role,
 };
 

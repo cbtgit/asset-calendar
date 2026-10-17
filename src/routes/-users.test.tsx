@@ -12,7 +12,7 @@ const user = {
   last_name: "Lovelace",
   display_name: "Ada Lovelace",
   email: "ada@example.test",
-  group: "group-1",
+  account_reference_number: "AC-42",
   role: "regular" as const,
   active: true,
   password_setup_pending: true,
@@ -60,15 +60,15 @@ it("renders a scannable user directory", async () => {
 });
 
 it("renders the editor with labeled controls and immutable email on edit", async () => {
-  vi.spyOn(pocketbase, "send").mockImplementation(async (path) => {
-    if (path === "/api/groups") return { items: [{ id: "group-1", name: "Operations" }] };
-    return user;
-  });
+  vi.spyOn(pocketbase, "send").mockResolvedValue(user);
   await renderUsers("/administration/users/user-1/edit");
 
   expect(await screen.findByRole("heading", { name: "Edit user" })).toBeTruthy();
   expect(screen.getByRole("textbox", { name: "Email" })).toHaveProperty("disabled", true);
-  expect(screen.getByRole("combobox", { name: "Group" })).toBeTruthy();
+  expect(screen.getByRole("textbox", { name: "Account/reference number" })).toHaveProperty(
+    "value",
+    "AC-42",
+  );
   expect(screen.getByRole("combobox", { name: "Role" })).toBeTruthy();
   expect(screen.getByRole("checkbox", { name: "Active user" })).toBeTruthy();
   expect(screen.getByRole("button", { name: "Resend invitation" })).toBeTruthy();
@@ -76,7 +76,6 @@ it("renders the editor with labeled controls and immutable email on edit", async
 
 it("loads the editor from the user detail query", async () => {
   const send = vi.spyOn(pocketbase, "send").mockImplementation(async (path) => {
-    if (path === "/api/groups") return { items: [{ id: "group-1", name: "Operations" }] };
     if (path === "/api/users") return { items: [user] };
     if (path === "/api/users/user-1") return user;
     throw new Error(`Unexpected request: ${path}`);
@@ -91,7 +90,6 @@ it("loads the editor from the user detail query", async () => {
 
 it("shows a specific validation message when the email is already in use", async () => {
   vi.spyOn(pocketbase, "send").mockImplementation(async (path, options) => {
-    if (path === "/api/groups") return { items: [{ id: "group-1", name: "Operations" }] };
     if (path === "/api/users" && options?.method === "POST") {
       throw Object.assign(new Error("Email_already_exists."), { status: 400 });
     }
@@ -108,12 +106,22 @@ it("shows a specific validation message when the email is already in use", async
   fireEvent.change(screen.getByRole("textbox", { name: "Email" }), {
     target: { value: "grace@example.test" },
   });
-  fireEvent.change(screen.getByRole("combobox", { name: "Group" }), {
-    target: { value: "group-1" },
+  fireEvent.change(screen.getByRole("textbox", { name: "Account/reference number" }), {
+    target: { value: "  INV-42  " },
   });
   fireEvent.click(screen.getByRole("button", { name: "Create user" }));
 
   await waitFor(() =>
     expect(screen.getByRole("alert").textContent).toBe("A user with this email already exists."),
   );
+  expect(pocketbase.send).toHaveBeenCalledWith("/api/users", {
+    method: "POST",
+    body: {
+      first_name: "Grace",
+      last_name: "Hopper",
+      email: "grace@example.test",
+      account_reference_number: "INV-42",
+      role: "regular",
+    },
+  });
 });

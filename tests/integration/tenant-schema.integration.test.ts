@@ -26,9 +26,6 @@ it("requires authenticated access to the tenant and auth schema", async () => {
     pocketbase.collection("tenants").create({ name: "Example", subdomain: "example" }),
   ).rejects.toThrow("Only superusers can perform this action.");
   await expect(
-    pocketbase.collection("organizational_units").create({ tenant: "foreign", name: "Example" }),
-  ).rejects.toThrow();
-  await expect(
     pocketbase.collection("users").create({
       tenant: "foreign",
       email: "admin@example.test",
@@ -36,7 +33,6 @@ it("requires authenticated access to the tenant and auth schema", async () => {
       passwordConfirm: "Correct horse battery staple!",
       role: "administrator",
       active: true,
-      organizational_unit: "foreign",
       password_setup_pending: false,
     }),
   ).rejects.toThrow();

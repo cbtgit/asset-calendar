@@ -26,16 +26,13 @@ Production onboarding is ready only after an operator has manually provisioned
 all of the following in the production PocketBase data:
 
 1. One tenant whose `subdomain` is `nejsumlab`.
-2. One group belonging to that tenant. Its `name` is the operator-supplied
-   stable group name.
-3. One active user belonging to that tenant and group, with the
+2. One active user belonging to that tenant, with the
    operator-supplied stable email identity, `role=administrator`, and completed
    initial password setup.
 
-Groups use the PocketBase collection name `organizational_units` for schema
-compatibility, while the product and API refer to them as Groups. Group names
-are trimmed and compared case-insensitively after lowercasing for
-tenant-scoped uniqueness.
+The application has no organizational-unit collection or user-to-unit
+relationship. Administrators may manage an optional account/reference number
+on each user; it is descriptive metadata, not a billing identity or key.
 
 The record IDs, administrator password, and any invitation or setup credential
 are operator-managed values and are not stored in Git. F03 has no tenant
@@ -46,8 +43,6 @@ administrator through the protected application flow.
 
 - Resolve the tenant by the exact normalized `tenants.subdomain` value
   `nejsumlab`, under the configured root domain.
-- Resolve the initial group by its `tenant` relation and its normalized
-  operator-supplied `name`. Group names are unique within a tenant.
 - Resolve the initial administrator by the tenant relation and the exact
   operator-supplied PocketBase email identity. Require `active=true` and
   `role=administrator`; do not select an administrator by position, creation
@@ -62,14 +57,15 @@ duplicate, or guess production records.
 
 - When the existing records and required relations are present, migrations
   preserve their IDs and intentional values while applying the versioned schema.
-- When the tenant, group, or administrator is missing, migrations
+- When the tenant or administrator is missing, migrations
   may still apply the schema, but production is not bootstrap-ready. An
   operator must provision the missing record manually before production
   onboarding or an invitation smoke test.
-- When a missing relation cannot be assigned to exactly one existing tenant or
-  group, migration reconciliation fails rather than choosing a record. Duplicate
-  tenant subdomains and duplicate group names within a tenant are rejected by
-  the schema's unique constraints.
+- Migration `1710000016` removes the legacy organizational-unit collection and
+  user/booking relations while preserving tenant, user, booking, and unrelated
+  snapshot data. It adds an optional account/reference field to users and a
+  separate booking snapshot field.
+- Duplicate tenant subdomains are rejected by the schema's unique constraint.
 - Migrations never import production data into a release, local workspace, or
   CI fixture. Production records are preserved and never duplicated or guessed.
 

@@ -27,10 +27,9 @@ async function createSeededMigrations(): Promise<string> {
   await cp(productionMigrations, migrationsDir, { recursive: true });
   const setupTokenHash = createHash("sha256").update(setupToken).digest("hex");
   await writeFile(
-    resolve(migrationsDir, "1710000005_invitation_fixture.js"),
+    resolve(migrationsDir, "1710000017_invitation_fixture.js"),
     `migrate((app) => {
   const tenants = app.findCollectionByNameOrId("tenants");
-  const units = app.findCollectionByNameOrId("organizational_units");
   const users = app.findCollectionByNameOrId("users");
   const invitations = app.findCollectionByNameOrId("user_invitations");
   const tenant = new Record(tenants);
@@ -41,21 +40,16 @@ async function createSeededMigrations(): Promise<string> {
   otherTenant.set("name", "Tenant B");
   otherTenant.set("subdomain", "other");
   app.save(otherTenant);
-  const unit = new Record(units);
-  unit.set("tenant", tenant.id);
-  unit.set("name", "Unit A");
-  unit.set("name_normalized", "unit a");
-  app.save(unit);
   for (const data of [
     { email: "admin-a@example.test", pending: false },
     { email: ${JSON.stringify(pendingEmail)}, pending: true },
   ]) {
     const user = new Record(users);
     user.set("email", data.email);
+    user.set("email_normalized", data.email);
     user.set("password", ${JSON.stringify(adminPassword)});
     user.set("passwordConfirm", ${JSON.stringify(adminPassword)});
     user.set("tenant", tenant.id);
-    user.set("organizational_unit", unit.id);
     user.set("role", data.pending ? "regular" : "administrator");
     user.set("active", true);
     user.set("password_setup_pending", data.pending);

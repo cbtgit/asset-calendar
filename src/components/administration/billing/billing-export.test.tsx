@@ -14,13 +14,14 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-it("searches and renders records grouped with group and grand amount totals", async () => {
+it("renders billing totals per user and shows optional account references", async () => {
   vi.mocked(searchBilling).mockResolvedValue({
     start: "2026-09-01",
     end: "2026-10-01",
-    groups: [
+    users: [
       {
-        name: "Operations",
+        name: "Ada Lovelace",
+        email: "ada@example.test",
         total: "125.50",
         records: [
           {
@@ -28,14 +29,32 @@ it("searches and renders records grouped with group and grand amount totals", as
             end: "2026-09-03T09:00:00.000Z",
             duration_hours: "2",
             booker: "Ada Lovelace",
-            group: "Operations",
+            booker_email: "ada@example.test",
+            account_reference_number: "AC-42",
             resource: "Room A",
             booking_type: "Training",
             amount: "125.50",
           },
         ],
       },
-      { name: "Finance", total: "50.00", records: [] },
+      {
+        name: "Grace Hopper",
+        email: "grace@example.test",
+        total: "50.00",
+        records: [
+          {
+            start: "2026-09-04T07:00:00.000Z",
+            end: "2026-09-04T08:00:00.000Z",
+            duration_hours: "1",
+            booker: "Grace Hopper",
+            booker_email: "grace@example.test",
+            account_reference_number: "AC-42",
+            resource: "Room B",
+            booking_type: "",
+            amount: "50.00",
+          },
+        ],
+      },
     ],
     total: "175.50",
   });
@@ -45,11 +64,14 @@ it("searches and renders records grouped with group and grand amount totals", as
   fireEvent.change(screen.getByLabelText("End"), { target: { value: "2026-10-01" } });
   fireEvent.click(screen.getByRole("button", { name: "Search" }));
 
-  await waitFor(() => expect(screen.getByText("Ada Lovelace")).toBeTruthy());
-  expect(screen.getByRole("heading", { name: "Operations" })).toBeTruthy();
-  expect(screen.getByRole("heading", { name: "Finance" })).toBeTruthy();
+  await waitFor(() => expect(screen.getByRole("heading", { name: "Ada Lovelace" })).toBeTruthy());
+  expect(screen.getByRole("heading", { name: "Ada Lovelace" })).toBeTruthy();
+  expect(screen.getByText("ada@example.test")).toBeTruthy();
+  expect(screen.getByRole("heading", { name: "Grace Hopper" })).toBeTruthy();
+  expect(screen.getByText("grace@example.test")).toBeTruthy();
+  expect(screen.getAllByText("Account/reference: AC-42")).toHaveLength(2);
   expect(screen.getAllByText("125,50 kr.")).toHaveLength(2);
-  expect(screen.getByText("50,00 kr.")).toBeTruthy();
+  expect(screen.getAllByText("50,00 kr.")).toHaveLength(2);
   expect(screen.getByText("175,50 kr.")).toBeTruthy();
   expect(searchBilling).toHaveBeenCalledWith({
     start: "2026-09-01",
@@ -85,7 +107,7 @@ it("disables date fields while a search is pending", async () => {
     expect(end).toHaveProperty("disabled", true);
   });
 
-  resolveSearch({ start: "2026-09-01", end: "2026-10-01", groups: [], total: "0.00" });
+  resolveSearch({ start: "2026-09-01", end: "2026-10-01", users: [], total: "0.00" });
   await waitFor(() => {
     expect(start).toHaveProperty("disabled", false);
     expect(end).toHaveProperty("disabled", false);
@@ -96,7 +118,7 @@ it("keeps CSV download separate from Search", async () => {
   vi.mocked(searchBilling).mockResolvedValue({
     start: "2026-09-01T00:00",
     end: "2026-10-01T00:00",
-    groups: [{ name: "Operations", total: "10.00", records: [] }],
+    users: [{ name: "Ada Lovelace", email: "ada@example.test", total: "10.00", records: [] }],
     total: "10.00",
   });
   vi.mocked(downloadBillingCsv).mockResolvedValue(new Blob(["csv"]));

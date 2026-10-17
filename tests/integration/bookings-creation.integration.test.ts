@@ -34,10 +34,9 @@ async function createSeededMigrations(): Promise<string> {
   migrationsDir = await mkdtemp(resolve(tmpdir(), "asset-calendar-bookings-"));
   await cp(productionMigrations, migrationsDir, { recursive: true });
   await writeFile(
-    resolve(migrationsDir, "1710000011_f08_bookings_fixture.js"),
+    resolve(migrationsDir, "1710000017_bookings_fixture.js"),
     `migrate((app) => {
   const tenants = app.findCollectionByNameOrId("tenants");
-  const units = app.findCollectionByNameOrId("organizational_units");
   const users = app.findCollectionByNameOrId("users");
   const resources = app.findCollectionByNameOrId("resources");
 
@@ -46,15 +45,10 @@ async function createSeededMigrations(): Promise<string> {
   tenant.set("subdomain", "tenant");
   app.save(tenant);
 
-  const unit = new Record(units);
-  unit.set("tenant", tenant.id);
-  unit.set("name", "Unit A");
-  unit.set("name_normalized", "unit a");
-  app.save(unit);
-
   for (const data of [
-    { email: "admin-a@example.test", first_name: "Admin", last_name: "A", role: "administrator" },
-    { email: "regular-a@example.test", first_name: "Regular", last_name: "A", role: "regular" },
+    { email: "admin-a@example.test", first_name: "Admin", last_name: "A", role: "administrator", account_reference_number: "" },
+    { email: "regular-a@example.test", first_name: "Regular", last_name: "A", role: "regular", account_reference_number: "ACCT-42" },
+    { email: "regular-b@example.test", first_name: "Regular", last_name: "B", role: "regular", account_reference_number: "ACCT-42" },
   ]) {
     const user = new Record(users);
     user.set("email", data.email);
@@ -62,7 +56,7 @@ async function createSeededMigrations(): Promise<string> {
     user.set("password", ${JSON.stringify(password)});
     user.set("passwordConfirm", ${JSON.stringify(password)});
     user.set("tenant", tenant.id);
-    user.set("organizational_unit", unit.id);
+    user.set("account_reference_number", data.account_reference_number);
     user.set("first_name", data.first_name);
     user.set("last_name", data.last_name);
     user.set("role", data.role);
@@ -170,6 +164,11 @@ it("creates role-safe bookings with snapshots and end-exclusive conflicts", asyn
   await authenticate(regular, "regular-a@example.test");
   const regularRecord = regular.authStore.record;
   if (!regularRecord) throw new Error("Expected the regular user auth record.");
+
+  const secondRegular = new PocketBase(harness.baseUrl);
+  await authenticate(secondRegular, "regular-b@example.test");
+  const secondRegularRecord = secondRegular.authStore.record;
+  if (!secondRegularRecord) throw new Error("Expected the second regular user auth record.");
 
   const resourcesResponse = await request(admin, "/api/collections/resources/records", {
     host: "tenant.localhost",
@@ -325,6 +324,22 @@ it("creates role-safe bookings with snapshots and end-exclusive conflicts", asyn
   });
   expect(formulaBooking.status).toBe(200);
 
+  const secondUserBooking = await createBooking(admin, {
+    resource: resource.id,
+    booked_for_user: secondRegularRecord.id,
+    start: scenarioTime(9),
+    end: scenarioTime(10),
+  });
+  expect(secondUserBooking.status).toBe(200);
+
+  const noReferenceBooking = await createBooking(admin, {
+    resource: resource.id,
+    booked_for_user: adminRecord.id,
+    start: scenarioTime(11),
+    end: scenarioTime(12),
+  });
+  expect(noReferenceBooking.status).toBe(200);
+
   const privileged = new PocketBase(harness.baseUrl);
   await authenticateSuperuser(privileged);
   const storedBookings = await request(privileged, "/api/collections/bookings/records", {
@@ -344,8 +359,8 @@ it("creates role-safe bookings with snapshots and end-exclusive conflicts", asyn
     booking_type_surcharge_minor_units: 0,
     effective_rate_minor_units: 1500,
     booker_display_name_snapshot: "Regular A",
-    booker_group_snapshot: "Unit A",
     booker_email_snapshot: "regular-a@example.test",
+    account_reference_number_snapshot: "ACCT-42",
     resource_name_snapshot: "Room A",
     booking_type_name_snapshot: "",
     booking_type_color_snapshot: "",
@@ -369,14 +384,16 @@ it("creates role-safe bookings with snapshots and end-exclusive conflicts", asyn
   expect(billingPreview.status).toBe(200);
   const billingPreviewBody = await billingPreview.json();
   expect(billingPreviewBody).toMatchObject({
-    groups: [
+    users: [
       expect.objectContaining({
-        name: "Unit A",
+        name: "Regular A",
+        email: "regular-a@example.test",
         total: "57.50",
         records: expect.arrayContaining([
           expect.objectContaining({
             booker: "Regular A",
-            group: "Unit A",
+            booker_email: "regular-a@example.test",
+            account_reference_number: "ACCT-42",
             resource: "Room A",
             amount: "15.00",
           }),
@@ -387,9 +404,26 @@ it("creates role-safe bookings with snapshots and end-exclusive conflicts", asyn
           }),
         ]),
       }),
+      expect.objectContaining({
+        name: "Regular B",
+        email: "regular-b@example.test",
+        total: "15.00",
+        records: expect.arrayContaining([
+          expect.objectContaining({ account_reference_number: "ACCT-42" }),
+        ]),
+      }),
+      expect.objectContaining({
+        name: "Admin A",
+        email: "admin-a@example.test",
+        total: "15.00",
+        records: expect.arrayContaining([
+          expect.objectContaining({ account_reference_number: "" }),
+        ]),
+      }),
     ],
-    total: "57.50",
+    total: "87.50",
   });
+  expect(billingPreviewBody.users).toHaveLength(3);
   expect(JSON.stringify(billingPreviewBody)).not.toContain("Maintenance");
 
   const oversizedBookingRange = await request(
@@ -422,9 +456,9 @@ it("creates role-safe bookings with snapshots and end-exclusive conflicts", asyn
   );
   const billingCsvBody = await billingCsv.text();
   expect(billingCsvBody).toContain(
-    "start,end,duration_hours,booker,group,resource,booking_type,amount\r\n",
+    "start,end,duration_hours,booker,booker_email,account_reference_number,resource,booking_type,amount\r\n",
   );
-  expect(billingCsvBody).toContain(",Regular A,Unit A,Room A,,15.00\r\n");
+  expect(billingCsvBody).toContain(",Regular A,regular-a@example.test,ACCT-42,Room A,,15.00\r\n");
   expect(billingCsvBody).toContain('"\'=HYPERLINK(""http://x"")"');
   expect(billingCsvBody).not.toContain("Maintenance");
 
@@ -483,6 +517,45 @@ it("creates role-safe bookings with snapshots and end-exclusive conflicts", asyn
     can_edit: true,
     can_delete: true,
   });
+  const preservedSnapshot = await request(
+    privileged,
+    `/api/collections/bookings/records/${regularBookingBody.id}`,
+    { host: "tenant.localhost" },
+  );
+  expect(await preservedSnapshot.json()).toMatchObject({
+    account_reference_number_snapshot: "ACCT-42",
+  });
+
+  const updatedAccountReference = await request(admin, `/api/users/${regularRecord.id}`, {
+    method: "PATCH",
+    host: "tenant.localhost",
+    body: { account_reference_number: "ACCT-99" },
+  });
+  expect(updatedAccountReference.status).toBe(200);
+
+  const administratorSameBookerEdit = await request(
+    admin,
+    `/api/calendar/bookings/${regularBookingBody.id}`,
+    {
+      method: "PATCH",
+      host: "tenant.localhost",
+      body: {
+        booked_for_user: regularRecord.id,
+        booking_type: bookingType.id,
+      },
+    },
+  );
+  expect(administratorSameBookerEdit.status).toBe(200);
+  const preservedAdministratorSnapshot = await request(
+    privileged,
+    `/api/collections/bookings/records/${regularBookingBody.id}`,
+    { host: "tenant.localhost" },
+  );
+  expect(await preservedAdministratorSnapshot.json()).toMatchObject({
+    booked_for_user: regularRecord.id,
+    account_reference_number_snapshot: "ACCT-42",
+    booking_type_name_snapshot: "Training",
+  });
 
   const regularResourceChange = await request(
     regular,
@@ -521,6 +594,14 @@ it("creates role-safe bookings with snapshots and end-exclusive conflicts", asyn
     booking_type: null,
     booking_type_name: null,
     start: "2026-09-01 12:00:00.000Z",
+  });
+  const refreshedSnapshot = await request(
+    privileged,
+    `/api/collections/bookings/records/${administratorBookingBody.id}`,
+    { host: "tenant.localhost" },
+  );
+  expect(await refreshedSnapshot.json()).toMatchObject({
+    account_reference_number_snapshot: "",
   });
 
   const administratorResourceChange = await request(

@@ -518,7 +518,6 @@
     .shell-content:has(
       .booking-types-list,
       .resources-list,
-      .groups-directory-list,
       .users-directory-list,
       .billing-export
     ) {
@@ -529,13 +528,11 @@
 
   .shell[data-active-module="administration"] .booking-types-list,
   .shell[data-active-module="administration"] .resources-list,
-  .shell[data-active-module="administration"] .groups-directory-list,
   .shell[data-active-module="administration"] .users-directory-list {
     min-height: auto;
     overflow: visible;
   }
 
-  .shell[data-active-module="administration"] .groups-directory,
   .shell[data-active-module="administration"] .users-directory {
     display: block;
     min-height: auto;

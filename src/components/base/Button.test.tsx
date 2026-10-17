@@ -14,7 +14,7 @@ describe("Button", () => {
 
   it("supports variants, compact sizing, and custom classes", () => {
     render(
-      <Button className="groups-directory-action" size="compact" variant="danger">
+      <Button className="custom-action-class" size="compact" variant="danger">
         Delete
       </Button>,
     );
@@ -22,7 +22,7 @@ describe("Button", () => {
     const button = screen.getByRole("button", { name: "Delete" });
     expect(button.className).toContain("button-compact");
     expect(button.className).toContain("button-danger");
-    expect(button.className).toContain("groups-directory-action");
+    expect(button.className).toContain("custom-action-class");
   });
 
   it("preserves disabled behavior and accepts refs as props", () => {

@@ -1,7 +1,7 @@
 # Asset Calendar Product Requirements
 
 **Status:** Normative MVP requirements
-**Last updated:** 2026-09-15
+**Last updated:** 2026-10-16
 
 The non-secret operator boundary for the existing production tenant is defined
 in the [production bootstrap contract](./production-bootstrap-contract.md).
@@ -16,7 +16,7 @@ MVP behavior beyond this branch.
 
 Asset Calendar is a multi-tenant resource booking system. Users select a
 resource and reserve a time period in a calendar. Tenant administrators manage
-resources, users, groups, bookings, and invoicing exports.
+resources, users, bookings, and invoicing exports.
 
 The MVP is intended for deployment on a small VPS and must provide strict
 tenant isolation while remaining simple to operate and develop locally.
@@ -33,7 +33,7 @@ The MVP must:
   24-hour rule.
 - Give administrators full booking and tenant administration capabilities.
 - Support regular, training, and maintenance booking types.
-- Provide administrator-only CSV and Excel exports for invoicing.
+- Provide administrator-only billing previews and CSV exports.
 - Isolate users and data by tenant, with the tenant resolved from the
   subdomain.
 - Run as a lightweight React/Vite+ SPA and PocketBase deployment behind the
@@ -48,7 +48,7 @@ The following are explicitly deferred:
 - Email notifications for booking creation, changes, or reminders.
 - Public registration or self-service tenant creation.
 - Cross-tenant user membership.
-- Resource-specific permissions or group-based resource restrictions.
+- Resource-specific permissions.
 - Resource capacity greater than one concurrent booking.
 - Audit logging.
 - VAT or other tax calculations.
@@ -56,9 +56,8 @@ The following are explicitly deferred:
 - Offline operation.
 - Drag-and-drop creation, movement, or resizing of calendar events.
 - Native mobile applications.
-
-User invitation email is required even though general booking notifications are
-not part of the MVP.
+  User invitation email is required even though general booking notifications are
+  not part of the MVP.
 
 ## 4. Users and permissions
 
@@ -72,10 +71,10 @@ not part of the MVP.
 - Every tenant-owned record must contain a tenant reference.
 - A user authenticated for one tenant must not be able to read or modify
   another tenant's data.
-- Initial tenant, group, and first-administrator provisioning is
-  outside the MVP product workflow. For production, the operator manually
-  provisions exactly one tenant for `nejsumlab.frontend-freelance.dk`, one
-  group, and one active administrator in PocketBase. There is no
+- Initial tenant and first-administrator provisioning is outside the MVP
+  product workflow. For production, the operator manually provisions exactly
+  one tenant for `nejsumlab.frontend-freelance.dk` and one active administrator
+  in PocketBase. There is no
   tenant onboarding or self-service provisioning UI in F03. The stable lookup
   rules and migration-preservation behavior are defined in the [production
   bootstrap contract](./production-bootstrap-contract.md).
@@ -99,8 +98,8 @@ Each user has one role within their tenant:
   - Create regular and administrator-selected typed bookings.
   - Choose any active tenant user as the booker for an administrator-selected
     booking, including a non-billable booking.
-  - Manage resources, groups, and users.
-  - Export booking data as CSV or Excel.
+  - Manage resources and users, including optional account/reference numbers.
+  - Preview billing and export booking data as CSV.
   - May view booking type in booking details and administration forms.
   - May view and edit resource rates in the resource administration form.
   - May manage booking-type names, surcharges, and the non-billable capability,
@@ -134,7 +133,6 @@ operator access is the documented recovery path.
   their resources unless an administrator edits or deletes an eligible booking.
 - A deactivated user cannot be selected as the booker for a new booking.
 - User display names are based on first name and last name.
-- A user must belong to exactly one group.
 
 SMTP2GO credentials remain server-side in protected VPS/PocketBase
 configuration. The SPA never sends email or receives SMTP credentials. Local
@@ -142,10 +140,6 @@ development and CI use a mail capture or test sink rather than sending real
 messages.
 
 ## 5. Booking requirements
-
-the booker.
-
-### 5.1 Booking types
 
 Booking types are tenant-owned records used for administrator-selected
 bookings. Each booking type has an administrator-configurable name, surcharge,
@@ -261,7 +255,7 @@ A booking stores both:
 For stable historical exports, the booking also stores:
 
 - The booker's display-name snapshot.
-- The booker's group snapshot.
+- The booker's optional account/reference-number snapshot.
 - The booker's email snapshot.
 - The resource-name snapshot.
 - The optional booking-type name snapshot.
@@ -445,24 +439,15 @@ Administrators have access to an administration area for:
   - View the tenant currency and edit the tenant display locale.
   - Currency is limited to `DKK`, `EUR`, `USD`, or `GBP` when provisioned and
     cannot be changed afterward.
-- Groups.
-  - Create and edit a name. Names are trimmed, must contain non-whitespace
-    content, and may be at most 200 characters.
-  - Group names must be unique within a tenant, case-insensitively after
-    trimming and lowercasing for comparison.
-  - Assign every user to exactly one group.
-  - Prevent deletion while users are assigned.
-  - The administrator directory uses the tenant-scoped `/api/groups`
-    projection, which includes member counts. The projection is unavailable to
-    regular users.
 - Users.
   - Create regular and administrator users.
-  - Assign a group.
+  - Manage an optional account/reference number, trimmed to at most 200
+    characters. It is display-only and never serves as a billing category key.
   - Send an invitation email so the user can create a password.
   - Change role, activate, deactivate, and resend invitations for users.
 - Exports.
   - Select a start date/time and end date/time.
-  - Export CSV or Excel (`.xlsx`).
+  - Preview and export CSV, grouped by the booker's normalized email address.
 
 Administrators use the regular booking area to create, edit, and permanently
 delete eligible future bookings. The administration area does not contain a
@@ -471,13 +456,10 @@ administrators can create bookings for active users and select a billable or
 non-billable booking type.
 
 The administration area uses the shared authenticated shell and is responsive
-from the first administration feature. Groups administration
-must provide a readable single-column or stacked list and a full-width or
-full-screen create/edit surface on narrow screens. Resource and user
-administration must define equivalent narrow-screen list, form, confirmation,
-loading, empty, and error states when those features are delivered. No admin
-workflow may require horizontal scrolling or a separate mobile authorization
-path.
+from the first administration feature. Resource and user administration must
+define narrow-screen list, form, confirmation, loading, empty, and error states.
+No admin workflow may require horizontal scrolling or a separate mobile
+authorization path.
 
 ## 8. Invoicing exports
 
@@ -489,12 +471,14 @@ and exclusive end. Include bookings whose start time is greater than or equal
 to the selected start and less than the selected end. Exclude non-billable and
 permanently deleted bookings.
 
-Each exported booking row contains:
+Billing categories are keyed by the booker's normalized email address. The
+optional account/reference number is displayed separately and never changes
+the category key. Each exported booking row contains:
 
 - Tenant
-- Group snapshot
 - Booker display-name snapshot
 - Booker email snapshot
+- Optional account/reference-number snapshot
 - Resource-name snapshot
 - Booking type
 - Start time
@@ -527,15 +511,9 @@ The MVP data model should include at least:
 - Last name
 - Email
 - Role: regular or administrator
-- Group ID
+- Optional account/reference number, trimmed to at most 200 characters
 - Active/deactivated status
 - Invitation and password-setup state required to complete first-time access
-
-### Group
-
-- ID
-- Tenant ID
-- Name
 
 ### Resource
 
@@ -567,7 +545,7 @@ The MVP data model should include at least:
 - Booking-type surcharge snapshot in integer currency minor units
 - Effective hourly-rate snapshot in integer currency minor units
 - Booker display-name snapshot
-- Group snapshot
+- Optional account/reference-number snapshot
 - Booker email snapshot
 - Resource-name snapshot
 - Created and updated timestamps
@@ -706,10 +684,10 @@ Automated tests must cover:
   remain ordinary user-assigned bookings.
 - Resource archive behavior.
 - User deactivation, reactivation, and active-user selection.
-- Group deletion protection.
-- Rate, booker name, booker email, resource name, and group
+- Rate, booker name, booker email, account/reference number, and resource-name
   snapshots.
-- CSV and Excel export filtering and contents.
+- Email-keyed billing categories, including users sharing an account/reference
+  number, and CSV export filtering and contents.
 - Tenant isolation for reads, writes, and exports.
 - Shared authenticated-shell navigation and role-aware destination visibility.
 - Narrow-screen layout and interaction for each feature as it is delivered,
@@ -738,11 +716,12 @@ The MVP is ready when:
 10. Calendar behavior works in desktop day/week/month views and mobile daily
     view.
 11. Mobile uses a compact resource selector and no drag-and-drop.
-12. Administrators can manage resources, users, and groups.
+12. Administrators can manage resources and users, including optional
+    account/reference numbers.
 13. Administrators can manage booking types and configure the tenant locale;
     the tenant currency is one of `DKK`, `EUR`, `USD`, or `GBP` and is
     immutable after provisioning.
-14. Administrators can export the selected booking interval as CSV and Excel.
+14. Administrators can preview and export the selected booking interval as CSV.
 15. Exported rates and amounts use booking snapshots, actual elapsed duration,
     the tenant currency, and exact decimal half-up rounding for that currency.
 16. Cross-tenant reads and writes are rejected by backend enforcement.
@@ -750,8 +729,8 @@ The MVP is ready when:
     Nginx installation.
 18. The existing production tenant is resolved from
     `nejsumlab.frontend-freelance.dk`; tenant identity is never client-selected.
-19. Production readiness requires the manually provisioned tenant,
-    group, and active administrator; F03 provides no tenant
+19. Production readiness requires the manually provisioned tenant and
+    active administrator; F03 provides no tenant
     onboarding workflow.
 20. Invitation links are one-time and valid for 30 days; authenticated
     sessions last one workday and survive reloads.
@@ -780,7 +759,6 @@ Potential post-MVP work includes:
 - Email booking notifications and reminders.
 - Approval workflows.
 - Resource availability schedules and capacity.
-- Group-based resource access.
 - Cross-tenant memberships.
 - Tenant provisioning and platform administration.
 - Mobile applications.

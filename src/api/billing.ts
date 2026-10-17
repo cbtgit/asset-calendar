@@ -7,14 +7,16 @@ export type BillingRecord = {
   end: string;
   duration_hours: string;
   booker: string;
-  group: string;
+  booker_email: string;
+  account_reference_number: string;
   resource: string;
   booking_type: string;
   amount: string;
 };
 
-export type BillingGroup = {
+export type BillingUser = {
   name: string;
+  email: string;
   records: BillingRecord[];
   total: string;
 };
@@ -22,7 +24,7 @@ export type BillingGroup = {
 export type BillingPreview = {
   start: string;
   end: string;
-  groups: BillingGroup[];
+  users: BillingUser[];
   total: string;
 };
 

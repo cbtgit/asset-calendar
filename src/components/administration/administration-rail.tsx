@@ -1,5 +1,5 @@
 import { Link } from "@tanstack/react-router";
-import { BookOpen, Boxes, ReceiptText, Settings, UserRound, Users } from "lucide-react";
+import { BookOpen, Boxes, ReceiptText, Settings, UserRound } from "lucide-react";
 
 export function AdministrationRail() {
   return (
@@ -14,16 +14,6 @@ export function AdministrationRail() {
         <UserRound aria-hidden="true" className="shell-rail-icon" />
         Users
       </Link>
-      <Link
-        className="shell-rail-link"
-        to="/administration/groups"
-        activeOptions={{ exact: false }}
-        activeProps={{ "data-active": "true" }}
-      >
-        <Users aria-hidden="true" className="shell-rail-icon" />
-        Groups
-      </Link>
-
       <Link
         className="shell-rail-link"
         to="/administration/booking-types"

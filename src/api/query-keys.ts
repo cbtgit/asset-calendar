@@ -3,12 +3,6 @@ export const healthKeys = {
   check: () => [...healthKeys.all, "check"] as const,
 };
 
-export const groupsKeys = {
-  all: ["groups"] as const,
-  list: () => [...groupsKeys.all, "list"] as const,
-  detail: (id: string) => [...groupsKeys.all, "detail", id] as const,
-};
-
 export const bookingTypesKeys = {
   all: ["booking-types"] as const,
   list: () => [...bookingTypesKeys.all, "list"] as const,

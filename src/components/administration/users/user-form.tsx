@@ -1,8 +1,6 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { ApplicationError, hasValidationCode } from "@/api/errors";
 import type { User, UserCreate, UserRole, UserUpdate } from "@/api/users";
-import { Loading } from "@/components/base/Loading";
-import { useGroupsQuery } from "@/hooks/use-groups";
 import {
   useCreateUserMutation,
   useResendUserInvitationMutation,
@@ -43,12 +41,13 @@ export function UserForm(props: UserFormProps) {
   const [firstName, setFirstName] = useState(user?.first_name ?? "");
   const [lastName, setLastName] = useState(user?.last_name ?? "");
   const [email, setEmail] = useState(user?.email ?? "");
-  const [group, setGroup] = useState(user?.group ?? "");
+  const [accountReferenceNumber, setAccountReferenceNumber] = useState(
+    user?.account_reference_number ?? "",
+  );
   const [role, setRole] = useState<UserRole>(user?.role ?? "regular");
   const [active, setActive] = useState(user?.active ?? true);
   const [validationError, setValidationError] = useState<string>();
   const firstNameRef = useRef<HTMLInputElement>(null);
-  const groups = useGroupsQuery();
   const createMutation = useCreateUserMutation();
   const updateMutation = useUpdateUserMutation();
   const resendMutation = useResendUserInvitationMutation();
@@ -69,8 +68,8 @@ export function UserForm(props: UserFormProps) {
     setValidationError(undefined);
     const nameError = validateName(firstName, "first name") ?? validateName(lastName, "last name");
     const emailError = editing ? undefined : validateEmail(email);
-    if (nameError || emailError || !group) {
-      setValidationError(nameError ?? emailError ?? "Choose a group.");
+    if (nameError || emailError) {
+      setValidationError(nameError ?? emailError);
       firstNameRef.current?.focus();
       return;
     }
@@ -79,7 +78,7 @@ export function UserForm(props: UserFormProps) {
       const input: UserUpdate = {
         first_name: firstName.trim(),
         last_name: lastName.trim(),
-        group,
+        account_reference_number: accountReferenceNumber.trim(),
         role,
         active,
       };
@@ -89,15 +88,12 @@ export function UserForm(props: UserFormProps) {
         first_name: firstName.trim(),
         last_name: lastName.trim(),
         email: email.trim().toLowerCase(),
-        group,
+        account_reference_number: accountReferenceNumber.trim(),
         role,
       };
       createMutation.mutate(input, { onSuccess: props.onSuccess });
     }
   }
-
-  if (groups.isPending) return <Loading />;
-  if (groups.isError) return <p role="alert">Unable to load groups: {groups.error.message}</p>;
 
   const error =
     validationError ??
@@ -147,19 +143,13 @@ export function UserForm(props: UserFormProps) {
             />
           </label>
           <label>
-            Group
-            <select
-              value={group}
+            Account/reference number
+            <input
+              value={accountReferenceNumber}
+              maxLength={200}
               disabled={pending}
-              onChange={(event) => setGroup(event.target.value)}
-            >
-              <option value="">Choose a group</option>
-              {groups.data.map((item) => (
-                <option key={item.id} value={item.id}>
-                  {item.name}
-                </option>
-              ))}
-            </select>
+              onChange={(event) => setAccountReferenceNumber(event.target.value)}
+            />
           </label>
           <label>
             Role

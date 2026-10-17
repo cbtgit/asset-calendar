@@ -46,15 +46,15 @@ const administrationRoute = createRoute({
   path: "/administration",
   component: () => <Outlet />,
 });
-const groupsRoute = createRoute({
+const usersRoute = createRoute({
   getParentRoute: () => administrationRoute,
-  path: "/groups",
-  component: () => <p>Groups destination</p>,
+  path: "/users",
+  component: () => <p>Users destination</p>,
 });
 const routeTree = rootRoute.addChildren([
   signInRoute,
   calendarRoute,
-  administrationRoute.addChildren([groupsRoute]),
+  administrationRoute.addChildren([usersRoute]),
 ]);
 
 afterEach(() => {
@@ -94,10 +94,10 @@ it("restores hamburger focus when route selection remounts the mobile navigation
 
   fireEvent.click(await screen.findByRole("button", { name: "Open navigation" }));
   fireEvent.click(screen.getByRole("button", { name: "Administration" }));
-  fireEvent.click(screen.getByRole("link", { name: "Groups" }));
+  fireEvent.click(screen.getByRole("link", { name: "Users" }));
 
   await waitFor(() => {
-    expect(router.state.location.pathname).toBe("/administration/groups");
+    expect(router.state.location.pathname).toBe("/administration/users");
     expect(document.activeElement).toBe(screen.getByRole("button", { name: "Open navigation" }));
   });
 });
