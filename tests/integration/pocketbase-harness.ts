@@ -36,7 +36,7 @@ export async function startPocketBaseIntegrationHarness(
   let port = 0;
   const superuser = {
     email: "integration-superuser@example.test",
-    password: randomBytes(32).toString("base64url"),
+    password: randomBytes(32).toString("hex"),
   };
   try {
     const paths = { ...resolveRuntimePaths(root), dataDir };
