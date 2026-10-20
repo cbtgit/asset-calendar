@@ -53,6 +53,11 @@ function copenhagenWeekStart(value: Date): number {
   return localDate - (weekday - 1) * DAY_MS;
 }
 
+function copenhagenWeekday(value: Date): number {
+  const { year, month, day } = datePartsInTimeZone(value, "Europe/Copenhagen");
+  return new Date(Date.UTC(year, month - 1, day)).getUTCDay() || 7;
+}
+
 let harness: PocketBaseIntegrationHarness;
 let migrationsDir: string;
 
@@ -209,6 +214,7 @@ it("creates role-safe bookings with snapshots and end-exclusive conflicts", asyn
   if (!resource || !archivedResource) throw new Error("Expected booking test resources.");
   expect(resource.archived_at).toBe("");
 
+  const releaseWeekday = copenhagenWeekday(scenarioStart);
   const releaseResourceResponse = await request(admin, "/api/collections/resources/records", {
     method: "POST",
     host: "tenant.localhost",
@@ -216,8 +222,8 @@ it("creates role-safe bookings with snapshots and end-exclusive conflicts", asyn
       name: "Priority Room",
       base_rate_minor_units: 0,
       priority_booking_enabled: true,
-      public_booking_release_weekday: 3,
-      public_booking_release_time: "10:00",
+      public_booking_release_weekday: releaseWeekday,
+      public_booking_release_time: "00:00",
     },
   });
   expect(releaseResourceResponse.status).toBe(200);
@@ -232,8 +238,8 @@ it("creates role-safe bookings with snapshots and end-exclusive conflicts", asyn
   );
   expect(calendarReleaseResource).toMatchObject({
     priority_booking_enabled: true,
-    public_booking_release_weekday: 3,
-    public_booking_release_time: "10:00",
+    public_booking_release_weekday: releaseWeekday,
+    public_booking_release_time: "00:00",
   });
   expect(calendarReleaseResource).not.toHaveProperty("base_rate_minor_units");
   const currentWeekStart = copenhagenWeekStart(new Date());
