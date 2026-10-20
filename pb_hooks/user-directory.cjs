@@ -39,6 +39,12 @@ function requireRole(value) {
   return value;
 }
 
+function requireBookingAccess(value) {
+  if (value === "") return "";
+  if (value !== "priority") throw new BadRequestError("booking_access_invalid");
+  return value;
+}
+
 function requireBoolean(value) {
   if (typeof value !== "boolean") throw new BadRequestError("active_invalid");
   return value;
@@ -71,6 +77,17 @@ function displayName(record) {
     .join(" ");
 }
 
+function bookingAccess(record) {
+  const access = record.get("booking_access");
+  return Array.isArray(access)
+    ? access.includes("priority")
+      ? "priority"
+      : ""
+    : access === "priority"
+      ? "priority"
+      : "";
+}
+
 function projection(record) {
   return {
     id: record.id,
@@ -80,6 +97,7 @@ function projection(record) {
     email: record.get("email"),
     account_reference_number: record.get("account_reference_number") || "",
     role: record.get("role"),
+    booking_access: bookingAccess(record),
     active: record.get("active") === true,
     password_setup_pending: record.get("password_setup_pending") === true,
     created: record.get("created"),
@@ -146,6 +164,9 @@ function createUser(event) {
   const firstName = requireText(body.first_name ?? "", "first_name_required");
   const lastName = requireText(body.last_name ?? "", "last_name_required");
   const role = requireRole(body.role);
+  const bookingAccess = has(body, "booking_access")
+    ? requireBookingAccess(body.booking_access)
+    : "";
   const accountReferenceNumber = has(body, "account_reference_number")
     ? requireText(body.account_reference_number, "account_reference_number_invalid", {
         max: 200,
@@ -166,6 +187,7 @@ function createUser(event) {
   user.set("first_name", firstName);
   user.set("last_name", lastName);
   user.set("role", role);
+  user.set("booking_access", bookingAccess);
   user.set("active", true);
   user.set("password_setup_pending", true);
   try {
@@ -195,6 +217,7 @@ function updateUser(event) {
         key !== "last_name" &&
         key !== "account_reference_number" &&
         key !== "role" &&
+        key !== "booking_access" &&
         key !== "active" &&
         key !== "action",
     )
@@ -203,6 +226,9 @@ function updateUser(event) {
   }
 
   const nextRole = has(body, "role") ? requireRole(body.role) : user.get("role");
+  const nextBookingAccess = has(body, "booking_access")
+    ? requireBookingAccess(body.booking_access)
+    : user.get("booking_access") || "";
   const nextActive = has(body, "active") ? requireBoolean(body.active) : user.get("active");
   if (
     user.get("role") === "administrator" &&
@@ -227,6 +253,7 @@ function updateUser(event) {
     );
   }
   if (has(body, "role")) user.set("role", nextRole);
+  if (has(body, "booking_access")) user.set("booking_access", nextBookingAccess);
   if (has(body, "active")) user.set("active", nextActive);
 
   if (has(body, "action")) {
@@ -255,6 +282,7 @@ function listActiveUsers(event) {
       display_name: displayName(record),
       email: record.get("email"),
       role: record.get("role"),
+      booking_access: bookingAccess(record),
     })),
   });
 }

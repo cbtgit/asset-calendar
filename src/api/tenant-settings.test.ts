@@ -7,6 +7,7 @@ const settings = {
   tenant: "tenant-id",
   site_title: "Asset Calendar",
   booking_lock_hours: 24,
+  time_zone: "Europe/Copenhagen",
   created: "2026-01-01T00:00:00Z",
   updated: "2026-01-01T00:00:00Z",
 };
@@ -30,10 +31,15 @@ it("updates only editable tenant settings fields", async () => {
   vi.spyOn(pocketbase, "collection").mockReturnValue({ update } as never);
 
   await expect(
-    updateTenantSettings(settings.id, { siteTitle: "  Workshop  ", bookingLockHours: 12 }),
+    updateTenantSettings(settings.id, {
+      siteTitle: "  Workshop  ",
+      bookingLockHours: 12,
+      timeZone: "Europe/Paris",
+    }),
   ).resolves.toMatchObject({ site_title: "Workshop", booking_lock_hours: 24 });
   expect(update).toHaveBeenCalledWith(settings.id, {
     site_title: "Workshop",
     booking_lock_hours: 12,
+    time_zone: "Europe/Paris",
   });
 });

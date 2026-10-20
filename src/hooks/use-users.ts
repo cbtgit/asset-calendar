@@ -30,6 +30,7 @@ function optimisticUser(input: UserCreate): User {
     email: input.email.trim().toLowerCase(),
     account_reference_number: input.account_reference_number?.trim() ?? "",
     role: input.role,
+    booking_access: input.booking_access ?? "",
     active: true,
     password_setup_pending: true,
     created: now,
@@ -51,6 +52,7 @@ function toActiveUser(user: User): ActiveUser {
     display_name: user.display_name,
     email: user.email,
     role: user.role,
+    booking_access: user.booking_access,
   };
 }
 

@@ -7,18 +7,20 @@ import { utcToApplicationDateTime } from "@/lib/time";
 type BookingDetailProps = {
   booking: CalendarBooking;
   isAdministrator: boolean;
+  timeZone: string;
   onClose: () => void;
   onEdit: () => void;
   onDelete: () => void;
 };
 
-function formatDateTime(value: string): string {
-  return utcToApplicationDateTime(value).replace("T", " ");
+function formatDateTime(value: string, timeZone: string): string {
+  return utcToApplicationDateTime(value, timeZone).replace("T", " ");
 }
 
 export function BookingDetail({
   booking,
   isAdministrator,
+  timeZone,
   onClose,
   onEdit,
   onDelete,
@@ -51,11 +53,11 @@ export function BookingDetail({
       <dl className="booking-detail-list">
         <div>
           <dt>Start</dt>
-          <dd>{formatDateTime(booking.start)}</dd>
+          <dd>{formatDateTime(booking.start, timeZone)}</dd>
         </div>
         <div>
           <dt>End</dt>
-          <dd>{formatDateTime(booking.end)}</dd>
+          <dd>{formatDateTime(booking.end, timeZone)}</dd>
         </div>
         {isAdministrator && booking.booking_type_name ? (
           <div>
@@ -79,7 +81,9 @@ export function BookingDetail({
         </div>
       ) : (
         <p className="booking-detail-note">
-          This booking is no longer available to edit or delete.
+          {booking.edit_restriction === "booking_edit_window_closed"
+            ? "This booking is read-only because its current start is within the booking lock window."
+            : "This booking is no longer available to edit or delete."}
         </p>
       )}
     </section>

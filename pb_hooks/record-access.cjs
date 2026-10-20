@@ -11,6 +11,10 @@ const BOOKING_COLLECTION = "bookings";
 const TENANT_SETTINGS_COLLECTION = "tenant_settings";
 const DEFAULT_SITE_TITLE = "Asset Calendar";
 const DEFAULT_BOOKING_LOCK_HOURS = 24;
+const DEFAULT_TENANT_TIME_ZONE = "Europe/Copenhagen";
+const DEFAULT_PUBLIC_BOOKING_RELEASE_WEEKDAY = 3;
+const DEFAULT_PUBLIC_BOOKING_RELEASE_TIME = "10:00";
+const DAY_MS = 24 * 60 * 60 * 1000;
 const MAX_BOOKING_RANGE_DAYS = 366;
 const MAX_BILLING_INTERVAL_DAYS = 400;
 const MAX_BOOKING_RANGE_ROWS = 10000;
@@ -28,6 +32,7 @@ const PROTECTED_USER_FIELDS = [
   "email_normalized",
   "tenant",
   "role",
+  "booking_access",
   "active",
   "account_reference_number",
   "password_setup_pending",
@@ -124,6 +129,7 @@ function tenantSettingsRecord(tenantId, createIfMissing = false) {
     record.set(TENANT_FIELD, tenantId);
     record.set("site_title", DEFAULT_SITE_TITLE);
     record.set("booking_lock_hours", DEFAULT_BOOKING_LOCK_HOURS);
+    record.set("time_zone", DEFAULT_TENANT_TIME_ZONE);
     $app.save(record);
     return record;
   }
@@ -233,13 +239,40 @@ function normalizeResource(event, info, record, tenantId) {
     throw new BadRequestError("resource_base_rate_invalid");
   }
 
+  const priorityBookingEnabled = hasField(info.body, "priority_booking_enabled")
+    ? info.body.priority_booking_enabled
+    : record.get("priority_booking_enabled") === true;
+  if (typeof priorityBookingEnabled !== "boolean") {
+    throw new BadRequestError("resource_priority_booking_enabled_invalid");
+  }
+
+  const releaseWeekday = hasField(info.body, "public_booking_release_weekday")
+    ? info.body.public_booking_release_weekday
+    : record.get("public_booking_release_weekday") || DEFAULT_PUBLIC_BOOKING_RELEASE_WEEKDAY;
+  if (!Number.isSafeInteger(releaseWeekday) || releaseWeekday < 1 || releaseWeekday > 7) {
+    throw new BadRequestError("resource_public_booking_release_weekday_invalid");
+  }
+
+  const releaseTime = hasField(info.body, "public_booking_release_time")
+    ? info.body.public_booking_release_time
+    : record.get("public_booking_release_time") || DEFAULT_PUBLIC_BOOKING_RELEASE_TIME;
+  if (typeof releaseTime !== "string" || !/^([01]\d|2[0-3]):[0-5]\d$/.test(releaseTime)) {
+    throw new BadRequestError("resource_public_booking_release_time_invalid");
+  }
+
   info.body.name = trimmedName;
   info.body.name_normalized = trimmedName.toLowerCase();
   info.body.base_rate_minor_units = rate;
+  info.body.priority_booking_enabled = priorityBookingEnabled;
+  info.body.public_booking_release_weekday = releaseWeekday;
+  info.body.public_booking_release_time = releaseTime;
   info.body[TENANT_FIELD] = tenantId;
   record.set("name", trimmedName);
   record.set("name_normalized", info.body.name_normalized);
   record.set("base_rate_minor_units", rate);
+  record.set("priority_booking_enabled", priorityBookingEnabled);
+  record.set("public_booking_release_weekday", releaseWeekday);
+  record.set("public_booking_release_time", releaseTime);
   record.set(TENANT_FIELD, tenantId);
 }
 
@@ -301,6 +334,63 @@ function parseBookingDate(value, code) {
     throw new BadRequestError("booking_time_alignment_invalid");
   }
   return date;
+}
+
+function bookingWeekStart(date, timeZone) {
+  const localized = new DateTime(date.toISOString()).time().in(new Timezone(timeZone));
+  const [year, month, day] = localized.date();
+  const localDate = Date.UTC(Number(year), Number(month) - 1, Number(day));
+  const weekday = new Date(localDate).getUTCDay() || 7;
+  return localDate - (weekday - 1) * DAY_MS;
+}
+
+function publicReleaseInstant(weekStart, weekday, time, timeZone) {
+  const releaseDate = new Date(weekStart - 7 * DAY_MS + (weekday - 1) * DAY_MS)
+    .toISOString()
+    .slice(0, 10);
+  return new DateTime(`${releaseDate} ${time}:00`, timeZone);
+}
+
+function hasPriorityBookingAccess(user) {
+  const access = user.get("booking_access");
+  return Array.isArray(access) ? access.includes("priority") : access === "priority";
+}
+
+function enforceBookingRelease(resource, user, start, end, tenantId) {
+  if (resource.get("priority_booking_enabled") !== true || hasPriorityBookingAccess(user)) return;
+
+  const weekday = resource.get("public_booking_release_weekday");
+  const time = resource.get("public_booking_release_time");
+  if (!Number.isSafeInteger(weekday) || weekday < 1 || weekday > 7) {
+    throw new BadRequestError("resource_public_booking_release_weekday_invalid");
+  }
+  if (typeof time !== "string" || !/^([01]\d|2[0-3]):[0-5]\d$/.test(time)) {
+    throw new BadRequestError("resource_public_booking_release_time_invalid");
+  }
+
+  const settings = tenantSettingsRecord(tenantId, true);
+  const timeZone = settings?.get("time_zone") || DEFAULT_TENANT_TIME_ZONE;
+  let zone;
+  try {
+    zone = new Timezone(timeZone);
+    if (zone.string() !== timeZone || timeZone === "Local") throw new Error("invalid timezone");
+  } catch {
+    throw new BadRequestError("tenant_settings_time_zone_invalid");
+  }
+
+  const currentWeekStart = bookingWeekStart(new Date(), timeZone);
+  const finalBookedInstant = new Date(end.getTime() - 1);
+  const finalWeekStart = bookingWeekStart(finalBookedInstant, timeZone);
+  if (finalWeekStart <= currentWeekStart) return;
+
+  const release = publicReleaseInstant(finalWeekStart, weekday, time, timeZone);
+  const releaseMilliseconds = release.unix() * 1000;
+  if (!Number.isFinite(releaseMilliseconds)) {
+    throw new BadRequestError("resource_public_booking_release_invalid");
+  }
+  if (Date.now() < releaseMilliseconds) {
+    throw new BadRequestError(`booking_week_not_open:${release.string()}`);
+  }
 }
 
 function pocketBaseDateValue(date) {
@@ -397,6 +487,9 @@ function normalizeBooking(event, info, record, context) {
   const start = parseBookingDate(body.start, "booking_start_invalid");
   const end = parseBookingDate(body.end, "booking_end_invalid");
   if (end <= start) throw new BadRequestError("booking_duration_invalid");
+  if (!administrator) {
+    enforceBookingRelease(resource, bookedForUser, start, end, tenantId);
+  }
 
   const startValue = start.toISOString();
   const endValue = end.toISOString();
@@ -512,6 +605,19 @@ function normalizeBookingUpdate(
     "booking_end_invalid",
   );
   if (end <= start) throw new BadRequestError("booking_duration_invalid");
+
+  const currentEnd = parseBookingDate(storedRecord.get("end"), "booking_end_invalid");
+  const timeChanged =
+    start.getTime() !== currentStart.getTime() || end.getTime() !== currentEnd.getTime();
+  if (!administrator && timeChanged) {
+    const resource = findTenantRecord(
+      RESOURCE_COLLECTION,
+      storedRecord.get("resource"),
+      tenantId,
+      "booking_resource_invalid",
+    );
+    enforceBookingRelease(resource, context.auth, start, end, tenantId);
+  }
 
   if (!administrator && bookingLockMs > 0) {
     if (record.get("booked_for_user") !== context.auth.id) deny();
@@ -645,7 +751,7 @@ function normalizeTenantSettings(event, info, record, context) {
 
   const body = info.body ?? {};
   for (const field of Object.keys(body)) {
-    if (!["site_title", "booking_lock_hours"].includes(field)) deny();
+    if (!["site_title", "booking_lock_hours", "time_zone"].includes(field)) deny();
   }
 
   const siteTitle = hasField(body, "site_title") ? body.site_title : record.get("site_title");
@@ -660,10 +766,23 @@ function normalizeTenantSettings(event, info, record, context) {
     throw new BadRequestError("tenant_settings_booking_lock_hours_invalid");
   }
 
+  const timeZone = hasField(body, "time_zone") ? body.time_zone : record.get("time_zone");
+  if (typeof timeZone !== "string" || timeZone.trim() === "" || timeZone.length > 100) {
+    throw new BadRequestError("tenant_settings_time_zone_invalid");
+  }
+  try {
+    const zone = new Timezone(timeZone);
+    if (zone.string() !== timeZone || timeZone === "Local") throw new Error("invalid timezone");
+  } catch {
+    throw new BadRequestError("tenant_settings_time_zone_invalid");
+  }
+
   record.set("site_title", siteTitle.trim());
   record.set("booking_lock_hours", bookingLockHours);
+  record.set("time_zone", timeZone);
   info.body.site_title = siteTitle.trim();
   info.body.booking_lock_hours = bookingLockHours;
+  info.body.time_zone = timeZone;
 }
 
 function authorizeBookingDelete(record, context, bookingLockMs) {
@@ -691,9 +810,11 @@ function bookingDateRange(event) {
 
 function bookingProjection(record, administrator, authId, bookingLockMs) {
   const currentStart = Date.parse(String(record.get("start")));
+  const isOwner = record.get("booked_for_user") === authId;
+  const editWindowClosed =
+    !administrator && isOwner && bookingLockMs > 0 && currentStart - Date.now() < bookingLockMs;
   const regularEligible =
-    record.get("booked_for_user") === authId &&
-    (bookingLockMs === 0 || currentStart - Date.now() >= bookingLockMs);
+    isOwner && (bookingLockMs === 0 || currentStart - Date.now() >= bookingLockMs);
   const projection = {
     id: record.id,
     resource: record.get("resource"),
@@ -703,6 +824,7 @@ function bookingProjection(record, administrator, authId, bookingLockMs) {
     can_edit: administrator || regularEligible,
     can_delete: administrator || regularEligible,
   };
+  if (editWindowClosed) projection.edit_restriction = "booking_edit_window_closed";
   projection.booking_type_name = record.get("booking_type_name_snapshot") || null;
   projection.booking_type_color = record.get("booking_type_color_snapshot") || null;
   if (administrator) {
@@ -1115,6 +1237,9 @@ function calendarResourcesRoute(event) {
   const items = resources.map((record) => ({
     id: record.id,
     name: record.get("name"),
+    priority_booking_enabled: record.get("priority_booking_enabled") === true,
+    public_booking_release_weekday: record.get("public_booking_release_weekday"),
+    public_booking_release_time: record.get("public_booking_release_time"),
   }));
   return event.json(200, { items });
 }

@@ -13,4 +13,8 @@ it("uses the viewed month instead of FullCalendar's spillover range start", () =
   } as DatesSetArg;
 
   expect(getCalendarSearchFromDatesSet(range)).toEqual({ view: "month", date: "2026-09-01" });
+  expect(getCalendarSearchFromDatesSet(range, "America/Los_Angeles")).toEqual({
+    view: "month",
+    date: "2026-08-31",
+  });
 });

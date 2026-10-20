@@ -291,11 +291,23 @@ it("returns only active calendar resources for the resolved tenant", async () =>
   });
   expect(tenantAResponse.status).toBe(200);
   const tenantAItems = (await tenantAResponse.json()).items;
-  expect(tenantAItems).toContainEqual({ id: activeA.id, name: "Active Room A" });
+  expect(tenantAItems).toContainEqual({
+    id: activeA.id,
+    name: "Active Room A",
+    priority_booking_enabled: false,
+    public_booking_release_weekday: 3,
+    public_booking_release_time: "10:00",
+  });
   expect(tenantAItems).not.toContainEqual(expect.objectContaining({ name: "Archived Room A" }));
   expect(tenantAItems).not.toContainEqual(expect.objectContaining({ name: "Active Room B" }));
   for (const item of tenantAItems) {
-    expect(Object.keys(item).sort()).toEqual(["id", "name"]);
+    expect(Object.keys(item).sort()).toEqual([
+      "id",
+      "name",
+      "priority_booking_enabled",
+      "public_booking_release_time",
+      "public_booking_release_weekday",
+    ]);
     expect(item).not.toHaveProperty("base_rate_minor_units");
     expect(item).not.toHaveProperty("archived_at");
     expect(item).not.toHaveProperty("tenant");
@@ -479,6 +491,7 @@ it("manages users through projections and keeps active selection separate", asyn
       email: "  New.Person@Example.Test  ",
       account_reference_number: "  REF-001  ",
       role: "administrator",
+      booking_access: "priority",
       tenant: "client-selected-tenant-is-ignored",
     },
   });
@@ -491,6 +504,7 @@ it("manages users through projections and keeps active selection separate", asyn
     email: "new.person@example.test",
     account_reference_number: "REF-001",
     role: "administrator",
+    booking_access: "priority",
     active: true,
     password_setup_pending: true,
   });
@@ -505,7 +519,11 @@ it("manages users through projections and keeps active selection separate", asyn
   expect(activeBeforeDeactivation.status).toBe(200);
   const activeBeforeDeactivationItems = (await activeBeforeDeactivation.json()).items;
   expect(activeBeforeDeactivationItems).toContainEqual(
-    expect.objectContaining({ id: created.id, email: "new.person@example.test" }),
+    expect.objectContaining({
+      id: created.id,
+      email: "new.person@example.test",
+      booking_access: "priority",
+    }),
   );
   expect(
     activeBeforeDeactivationItems.find((item: { id: string }) => item.id === created.id),
@@ -514,12 +532,20 @@ it("manages users through projections and keeps active selection separate", asyn
   const updatedAccountReference = await request(admin, `/api/users/${created.id}`, {
     method: "PATCH",
     host: "tenant.localhost",
-    body: { account_reference_number: "  INV-2026  " },
+    body: { account_reference_number: "  INV-2026  ", booking_access: "" },
   });
   expect(updatedAccountReference.status).toBe(200);
   expect(await updatedAccountReference.json()).toMatchObject({
     account_reference_number: "INV-2026",
+    booking_access: "",
   });
+
+  const invalidBookingAccess = await request(admin, `/api/users/${created.id}`, {
+    method: "PATCH",
+    host: "tenant.localhost",
+    body: { booking_access: "administrator" },
+  });
+  expect(invalidBookingAccess.status).toBe(400);
 
   const invalidAccountReference = await request(admin, `/api/users/${created.id}`, {
     method: "PATCH",

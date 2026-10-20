@@ -27,6 +27,8 @@ export const calendarKeys = {
 
 export const bookingsKeys = {
   all: ["bookings"] as const,
+  detail: (tenantId: string, userId: string, role: string, id: string) =>
+    [...bookingsKeys.all, "detail", tenantId, userId, role, id] as const,
   visible: (
     tenantId: string,
     userId: string,

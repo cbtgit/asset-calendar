@@ -12,6 +12,7 @@ export type CalendarBooking = {
   booker_display_name: string;
   can_edit?: boolean;
   can_delete?: boolean;
+  edit_restriction?: "booking_edit_window_closed";
   booking_type?: string | null;
   booking_type_name?: string | null;
   booking_type_color?: string | null;
@@ -102,6 +103,15 @@ export function calendarBookingsQueryOptions(range: BookingRange) {
     ),
     queryFn: () => getCalendarBookings(range),
     enabled: Boolean(range.resourceId && range.start && range.end),
+    staleTime: 15 * 1000,
+  });
+}
+
+export function bookingDetailQueryOptions(id: string) {
+  const user = getAuthSnapshot().user;
+  return queryOptions<CalendarBooking>({
+    queryKey: bookingsKeys.detail(user?.tenant ?? "", user?.id ?? "", user?.role ?? "", id),
+    queryFn: () => getBooking(id),
     staleTime: 15 * 1000,
   });
 }

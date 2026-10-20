@@ -14,6 +14,7 @@ const user = {
   email: "ada@example.test",
   account_reference_number: "AC-42",
   role: "regular" as const,
+  booking_access: "" as const,
   active: true,
   password_setup_pending: true,
   created: "2026-01-01T00:00:00Z",
@@ -71,6 +72,7 @@ it("renders the editor with labeled controls and immutable email on edit", async
   );
   expect(screen.getByRole("combobox", { name: "Role" })).toBeTruthy();
   expect(screen.getByRole("checkbox", { name: "Active user" })).toBeTruthy();
+  expect(screen.getByRole("checkbox", { name: "Priority booking access" })).toBeTruthy();
   expect(screen.getByRole("button", { name: "Resend invitation" })).toBeTruthy();
 });
 
@@ -122,6 +124,7 @@ it("shows a specific validation message when the email is already in use", async
       email: "grace@example.test",
       account_reference_number: "INV-42",
       role: "regular",
+      booking_access: "",
     },
   });
 });

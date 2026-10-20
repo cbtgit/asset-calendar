@@ -5,6 +5,7 @@ import { toAppError } from "./errors";
 import { usersKeys } from "./query-keys";
 
 export type UserRole = "administrator" | "regular";
+export type BookingAccess = "" | "priority";
 
 export type User = {
   id: string;
@@ -14,6 +15,7 @@ export type User = {
   email: string;
   account_reference_number: string;
   role: UserRole;
+  booking_access: BookingAccess;
   active: boolean;
   password_setup_pending: boolean;
   created: string;
@@ -25,6 +27,7 @@ export type ActiveUser = {
   display_name: string;
   email: string;
   role: UserRole;
+  booking_access: BookingAccess;
 };
 
 export type UserCreate = {
@@ -33,10 +36,14 @@ export type UserCreate = {
   email: string;
   account_reference_number?: string;
   role: UserRole;
+  booking_access?: BookingAccess;
 };
 
 export type UserUpdate = Partial<
-  Pick<UserCreate, "first_name" | "last_name" | "account_reference_number" | "role">
+  Pick<
+    UserCreate,
+    "first_name" | "last_name" | "account_reference_number" | "role" | "booking_access"
+  >
 > & {
   active?: boolean;
 };

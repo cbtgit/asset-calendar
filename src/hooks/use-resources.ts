@@ -27,6 +27,9 @@ function optimisticResource(input: ResourceCreate): Resource {
     name,
     name_normalized: name.toLowerCase(),
     base_rate_minor_units: input.baseRateMinorUnits ?? 0,
+    priority_booking_enabled: input.priorityBookingEnabled ?? false,
+    public_booking_release_weekday: input.publicBookingReleaseWeekday ?? 3,
+    public_booking_release_time: input.publicBookingReleaseTime ?? "10:00",
     archived_at: "",
     created: now,
     updated: now,
@@ -46,7 +49,13 @@ function sortCalendarResources(resources: CalendarResource[]): CalendarResource[
 }
 
 function toCalendarResource(resource: Resource): CalendarResource {
-  return { id: resource.id, name: resource.name };
+  return {
+    id: resource.id,
+    name: resource.name,
+    priority_booking_enabled: resource.priority_booking_enabled,
+    public_booking_release_weekday: resource.public_booking_release_weekday,
+    public_booking_release_time: resource.public_booking_release_time,
+  };
 }
 
 export function useResourcesQuery() {
@@ -125,6 +134,9 @@ export function useUpdateResourceMutation() {
         name: input.name.trim(),
         name_normalized: input.name.trim().toLowerCase(),
         base_rate_minor_units: input.baseRateMinorUnits ?? 0,
+        priority_booking_enabled: input.priorityBookingEnabled ?? false,
+        public_booking_release_weekday: input.publicBookingReleaseWeekday ?? 3,
+        public_booking_release_time: input.publicBookingReleaseTime ?? "10:00",
       });
       queryClient.setQueryData<Resource[]>(resourcesKeys.list(), (resources) =>
         resources
@@ -140,7 +152,15 @@ export function useUpdateResourceMutation() {
         resources
           ? sortCalendarResources(
               resources.map((resource) =>
-                resource.id === id ? { ...resource, name: input.name.trim() } : resource,
+                resource.id === id
+                  ? {
+                      ...resource,
+                      name: input.name.trim(),
+                      priority_booking_enabled: input.priorityBookingEnabled ?? false,
+                      public_booking_release_weekday: input.publicBookingReleaseWeekday ?? 3,
+                      public_booking_release_time: input.publicBookingReleaseTime ?? "10:00",
+                    }
+                  : resource,
               ),
             )
           : resources,

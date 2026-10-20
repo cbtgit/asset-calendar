@@ -13,6 +13,7 @@ const settings: TenantSettings = {
   tenant: "tenant-id",
   site_title: "Asset Calendar",
   booking_lock_hours: 24,
+  time_zone: "Europe/Copenhagen",
   created: "2026-01-01T00:00:00Z",
   updated: "2026-01-01T00:00:00Z",
 };
@@ -59,7 +60,7 @@ it("optimistically updates settings and rolls back a failed update", async () =>
   await act(async () => {
     mutation = result.current.mutateAsync({
       id: settings.id,
-      input: { siteTitle: "Workshop", bookingLockHours: 12 },
+      input: { siteTitle: "Workshop", bookingLockHours: 12, timeZone: "Europe/Paris" },
     });
     await Promise.resolve();
   });
@@ -68,6 +69,7 @@ it("optimistically updates settings and rolls back a failed update", async () =>
       ...settings,
       site_title: "Workshop",
       booking_lock_hours: 12,
+      time_zone: "Europe/Paris",
     },
   );
 

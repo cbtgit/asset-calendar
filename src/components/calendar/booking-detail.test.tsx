@@ -23,6 +23,7 @@ it("moves focus into the detail surface when it opens", () => {
     <BookingDetail
       booking={booking}
       isAdministrator={false}
+      timeZone="America/Los_Angeles"
       onClose={vi.fn()}
       onEdit={vi.fn()}
       onDelete={vi.fn()}
@@ -30,6 +31,8 @@ it("moves focus into the detail surface when it opens", () => {
   );
 
   expect(screen.getByRole("button", { name: "Close booking details" })).toBeTruthy();
+  expect(screen.getByText("2026-12-01 01:00")).toBeTruthy();
+  expect(screen.getByText("2026-12-01 02:00")).toBeTruthy();
 
   expect(document.activeElement).toBe(screen.getByRole("region", { name: "Regular A" }));
 });

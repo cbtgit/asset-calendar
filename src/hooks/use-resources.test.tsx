@@ -15,6 +15,9 @@ const resource: Resource = {
   name: "Operations",
   name_normalized: "operations",
   base_rate_minor_units: 1250,
+  priority_booking_enabled: false,
+  public_booking_release_weekday: 3,
+  public_booking_release_time: "10:00",
   archived_at: "",
   created: "2026-01-01T00:00:00Z",
   updated: "2026-01-01T00:00:00Z",
@@ -27,7 +30,15 @@ function setup() {
   );
   queryClient.setQueryData(resourcesKeys.list(), [resource]);
   queryClient.setQueryData(resourcesKeys.detail(resource.id), resource);
-  queryClient.setQueryData(calendarResourcesQueryKey(), [{ id: resource.id, name: resource.name }]);
+  queryClient.setQueryData(calendarResourcesQueryKey(), [
+    {
+      id: resource.id,
+      name: resource.name,
+      priority_booking_enabled: false,
+      public_booking_release_weekday: 3,
+      public_booking_release_time: "10:00",
+    },
+  ]);
   return { queryClient, wrapper };
 }
 
@@ -67,8 +78,20 @@ it("optimistically adds and sorts a resource", async () => {
     queryClient.getQueryData<Resource[]>(resourcesKeys.list())?.map(({ name }) => name),
   ).toEqual(["New resource", "Operations"]);
   expect(queryClient.getQueryData(calendarResourcesQueryKey())).toEqual([
-    { id: expect.stringMatching(/^optimistic-/), name: "New resource" },
-    { id: "resource-1", name: "Operations" },
+    {
+      id: expect.stringMatching(/^optimistic-/),
+      name: "New resource",
+      priority_booking_enabled: false,
+      public_booking_release_weekday: 3,
+      public_booking_release_time: "10:00",
+    },
+    {
+      id: "resource-1",
+      name: "Operations",
+      priority_booking_enabled: false,
+      public_booking_release_weekday: 3,
+      public_booking_release_time: "10:00",
+    },
   ]);
 
   resolveCreate({ ...resource, id: "resource-2", name: "New resource" });
@@ -92,7 +115,13 @@ it("rolls back a failed resource update and invalidates the list", async () => {
   await act(async () => {
     mutation = result.current.mutateAsync({
       id: resource.id,
-      input: { name: "Duplicate", baseRateMinorUnits: 250 },
+      input: {
+        name: "Duplicate",
+        baseRateMinorUnits: 250,
+        priorityBookingEnabled: true,
+        publicBookingReleaseWeekday: 4,
+        publicBookingReleaseTime: "15:30",
+      },
     });
     await Promise.resolve();
   });
@@ -101,7 +130,13 @@ it("rolls back a failed resource update and invalidates the list", async () => {
     "Duplicate",
   );
   expect(queryClient.getQueryData(calendarResourcesQueryKey())).toEqual([
-    { id: "resource-1", name: "Duplicate" },
+    {
+      id: "resource-1",
+      name: "Duplicate",
+      priority_booking_enabled: true,
+      public_booking_release_weekday: 4,
+      public_booking_release_time: "15:30",
+    },
   ]);
 
   rejectUpdate(error);
@@ -109,7 +144,13 @@ it("rolls back a failed resource update and invalidates the list", async () => {
   expect(queryClient.getQueryData<Resource[]>(resourcesKeys.list())).toEqual([resource]);
   expect(queryClient.getQueryData<Resource>(resourcesKeys.detail(resource.id))).toEqual(resource);
   expect(queryClient.getQueryData(calendarResourcesQueryKey())).toEqual([
-    { id: "resource-1", name: "Operations" },
+    {
+      id: "resource-1",
+      name: "Operations",
+      priority_booking_enabled: false,
+      public_booking_release_weekday: 3,
+      public_booking_release_time: "10:00",
+    },
   ]);
   expect(invalidate).toHaveBeenCalledWith({ queryKey: resourcesKeys.list() });
   expect(invalidate).toHaveBeenCalledWith({ queryKey: resourcesKeys.detail(resource.id) });

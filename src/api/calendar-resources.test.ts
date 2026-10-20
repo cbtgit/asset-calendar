@@ -9,7 +9,15 @@ afterEach(() => {
 });
 
 it("loads the calendar-safe active resource projection", async () => {
-  const resources = [{ id: "resource-1", name: "Studio A" }];
+  const resources = [
+    {
+      id: "resource-1",
+      name: "Studio A",
+      priority_booking_enabled: false,
+      public_booking_release_weekday: 3,
+      public_booking_release_time: "10:00",
+    },
+  ];
   const send = vi.spyOn(pocketbase, "send").mockResolvedValue({ items: resources });
 
   await expect(getCalendarResources()).resolves.toEqual(resources);
