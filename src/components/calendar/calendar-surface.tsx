@@ -296,6 +296,7 @@ export function CalendarSurface({ search }: CalendarSurfaceProps) {
               bookingOpenerRef.current = event.currentTarget;
               bookingOpenerIdRef.current = null;
               setBookingDraft({ kind: "create", resourceId: selectedResource.id });
+              updateSearch({ booking: undefined, bookingMode: undefined });
             }}
           >
             Create booking
@@ -372,6 +373,7 @@ export function CalendarSurface({ search }: CalendarSurfaceProps) {
                   <BookingDetail
                     booking={bookingDetail.data}
                     isAdministrator={isAdministrator(auth.user)}
+                    timeZone={tenantSettings.data?.time_zone ?? APPLICATION_TIME_ZONE}
                     onClose={closeBooking}
                     onEdit={() => updateSearch({ bookingMode: "edit" })}
                     onDelete={() => setBookingToDelete(bookingDetail.data)}

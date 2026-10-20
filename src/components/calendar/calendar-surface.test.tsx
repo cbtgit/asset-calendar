@@ -139,6 +139,34 @@ it("opens the inline create form for the selected resource", () => {
   expect(screen.getByRole("heading", { name: "Studio A" })).toBeTruthy();
 });
 
+it("clears URL-selected booking state when opening the create form", () => {
+  const queryClient = new QueryClient();
+  queryClient.setQueryData(bookingDetailQueryOptions(booking.id).queryKey, booking);
+  const { rerender } = render(
+    <QueryClientProvider client={queryClient}>
+      <CalendarSurface
+        search={{ date: "2026-09-14", view: "week", resource: "resource-1", booking: booking.id }}
+      />
+    </QueryClientProvider>,
+  );
+
+  fireEvent.click(screen.getByRole("button", { name: "Create booking" }));
+
+  const searchUpdate = navigate.mock.calls[0]?.[0].search;
+  expect(searchUpdate?.({ booking: booking.id, bookingMode: "edit" })).toEqual({
+    booking: undefined,
+    bookingMode: undefined,
+  });
+
+  rerender(
+    <QueryClientProvider client={queryClient}>
+      <CalendarSurface search={{ date: "2026-09-14", view: "week", resource: "resource-1" }} />
+    </QueryClientProvider>,
+  );
+
+  expect(screen.getByText("New booking", { exact: true })).toBeTruthy();
+});
+
 it("opens a booking from the calendar with a pushed booking search entry", () => {
   vi.mocked(useBookingsQuery).mockReturnValue({
     data: [booking],

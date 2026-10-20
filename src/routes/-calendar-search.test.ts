@@ -5,6 +5,7 @@ import {
   normalizeCalendarBookingMode,
   normalizeCalendarDate,
   normalizeCalendarView,
+  shouldWaitForTenantSettings,
 } from "./_authenticated/calendar";
 
 it("keeps valid calendar dates and falls back for invalid values", () => {
@@ -21,6 +22,12 @@ it("uses the tenant timezone when choosing today's fallback date", () => {
       new Date("2026-11-30T02:00:00.000Z"),
     ),
   ).toBe("2026-11-29");
+});
+
+it("waits for tenant settings only when the calendar date is implicit", () => {
+  expect(shouldWaitForTenantSettings("", true)).toBe(true);
+  expect(shouldWaitForTenantSettings("2026-09-15", true)).toBe(false);
+  expect(shouldWaitForTenantSettings("", false)).toBe(false);
 });
 
 it("accepts the supported calendar views and defaults unknown values", () => {

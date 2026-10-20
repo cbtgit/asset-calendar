@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import dayjs from "dayjs";
 import { calendarResourcesQueryOptions } from "@/api/calendar-resources";
+import { Loading } from "@/components/base/Loading";
 import { CalendarSurface } from "@/components/calendar/calendar-surface";
 import { useTenantSettingsQuery } from "@/hooks/use-tenant-settings";
 import { queryClient } from "@/lib/query-client";
@@ -21,6 +22,10 @@ export function normalizeCalendarDate(
   now = new Date(),
 ): string {
   return isCalendarDate(value) ? value : formatApplicationDate(now, timeZone);
+}
+
+export function shouldWaitForTenantSettings(date: string, isPending: boolean): boolean {
+  return !date && isPending;
 }
 
 export function normalizeCalendarView(value: unknown): CalendarView {
@@ -61,6 +66,9 @@ function CalendarPage() {
   const search = Route.useSearch();
   const tenantSettings = useTenantSettingsQuery();
   const timeZone = tenantSettings.data?.time_zone ?? APPLICATION_TIME_ZONE;
+  if (shouldWaitForTenantSettings(search.date, tenantSettings.isPending)) {
+    return <Loading />;
+  }
   const calendarSearch = { ...search, date: normalizeCalendarDate(search.date, timeZone) };
 
   return <CalendarSurface search={calendarSearch} />;

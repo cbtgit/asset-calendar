@@ -301,7 +301,7 @@ it("creates role-safe bookings with snapshots and end-exclusive conflicts", asyn
     {
       method: "PATCH",
       host: "tenant.localhost",
-      body: { start: scenarioTime(0), end: scenarioTime(1) },
+      body: { start: nearFutureScenarioTime(48), end: nearFutureScenarioTime(49) },
     },
   );
   expect(regularOpenWeekEdit.status).toBe(200);
