@@ -5,6 +5,7 @@ import { toAppError, type ApplicationError } from "./errors";
 
 export type AuthUser = RecordModel & {
   active?: boolean;
+  booking_access?: "" | "priority" | "priority"[];
   email: string;
   first_name?: string;
   last_name?: string;

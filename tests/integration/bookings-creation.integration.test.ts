@@ -13,6 +13,7 @@ import {
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
 const productionMigrations = resolve(root, "pb_migrations");
 const password = "Correct horse battery staple!";
+const DAY_MS = 24 * 60 * 60 * 1000;
 const scenarioStart = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
 scenarioStart.setUTCMinutes(0, 0, 0);
 
@@ -23,8 +24,33 @@ function scenarioTime(hours = 0, minutes = 0): string {
   return value.toISOString();
 }
 
+function nearFutureScenarioTime(hours = 12): string {
+  const value = new Date(Date.now() + hours * 60 * 60 * 1000);
+  value.setUTCSeconds(0, 0);
+  value.setUTCMinutes(Math.ceil(value.getUTCMinutes() / 15) * 15);
+  return value.toISOString();
+}
+
 function pocketBaseDate(value: string): string {
   return value.replace("T", " ");
+}
+
+function datePartsInTimeZone(value: Date, timeZone: string) {
+  const parts = new Intl.DateTimeFormat("en", {
+    timeZone,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(value);
+  const values = Object.fromEntries(parts.map(({ type, value: part }) => [type, part]));
+  return { year: Number(values.year), month: Number(values.month), day: Number(values.day) };
+}
+
+function copenhagenWeekStart(value: Date): number {
+  const { year, month, day } = datePartsInTimeZone(value, "Europe/Copenhagen");
+  const localDate = Date.UTC(year, month - 1, day);
+  const weekday = new Date(localDate).getUTCDay() || 7;
+  return localDate - (weekday - 1) * DAY_MS;
 }
 
 let harness: PocketBaseIntegrationHarness;
@@ -34,7 +60,7 @@ async function createSeededMigrations(): Promise<string> {
   migrationsDir = await mkdtemp(resolve(tmpdir(), "asset-calendar-bookings-"));
   await cp(productionMigrations, migrationsDir, { recursive: true });
   await writeFile(
-    resolve(migrationsDir, "1710000017_bookings_fixture.js"),
+    resolve(migrationsDir, "1710000018_bookings_fixture.js"),
     `migrate((app) => {
   const tenants = app.findCollectionByNameOrId("tenants");
   const users = app.findCollectionByNameOrId("users");
@@ -48,7 +74,7 @@ async function createSeededMigrations(): Promise<string> {
   for (const data of [
     { email: "admin-a@example.test", first_name: "Admin", last_name: "A", role: "administrator", account_reference_number: "" },
     { email: "regular-a@example.test", first_name: "Regular", last_name: "A", role: "regular", account_reference_number: "ACCT-42" },
-    { email: "regular-b@example.test", first_name: "Regular", last_name: "B", role: "regular", account_reference_number: "ACCT-42" },
+    { email: "regular-b@example.test", first_name: "Regular", last_name: "B", role: "regular", account_reference_number: "ACCT-42", booking_access: "priority" },
   ]) {
     const user = new Record(users);
     user.set("email", data.email);
@@ -60,6 +86,7 @@ async function createSeededMigrations(): Promise<string> {
     user.set("first_name", data.first_name);
     user.set("last_name", data.last_name);
     user.set("role", data.role);
+    user.set("booking_access", data.booking_access || []);
     user.set("active", true);
     user.set("password_setup_pending", false);
     app.save(user);
@@ -182,6 +209,173 @@ it("creates role-safe bookings with snapshots and end-exclusive conflicts", asyn
   if (!resource || !archivedResource) throw new Error("Expected booking test resources.");
   expect(resource.archived_at).toBe("");
 
+  const releaseResourceResponse = await request(admin, "/api/collections/resources/records", {
+    method: "POST",
+    host: "tenant.localhost",
+    body: {
+      name: "Priority Room",
+      base_rate_minor_units: 0,
+      priority_booking_enabled: true,
+      public_booking_release_weekday: 3,
+      public_booking_release_time: "10:00",
+    },
+  });
+  expect(releaseResourceResponse.status).toBe(200);
+  const releaseResource = await releaseResourceResponse.json();
+  const calendarResourcesResponse = await request(regular, "/api/calendar/resources", {
+    host: "tenant.localhost",
+  });
+  expect(calendarResourcesResponse.status).toBe(200);
+  const calendarResources = (await calendarResourcesResponse.json()).items;
+  const calendarReleaseResource = calendarResources.find(
+    (item: { id: string }) => item.id === releaseResource.id,
+  );
+  expect(calendarReleaseResource).toMatchObject({
+    priority_booking_enabled: true,
+    public_booking_release_weekday: 3,
+    public_booking_release_time: "10:00",
+  });
+  expect(calendarReleaseResource).not.toHaveProperty("base_rate_minor_units");
+  const currentWeekStart = copenhagenWeekStart(new Date());
+  const currentWeekBooking = await createBooking(regular, {
+    resource: releaseResource.id,
+    start: new Date(currentWeekStart + 12 * 60 * 60 * 1000).toISOString(),
+    end: new Date(currentWeekStart + 13 * 60 * 60 * 1000).toISOString(),
+  });
+  expect(currentWeekBooking.status).toBe(200);
+
+  const targetWeekStart = currentWeekStart + 21 * DAY_MS;
+  const futureBookingStart = new Date(targetWeekStart + 12 * 60 * 60 * 1000).toISOString();
+  const futureBookingEnd = new Date(targetWeekStart + 13 * 60 * 60 * 1000).toISOString();
+  const earlyBooking = await createBooking(regular, {
+    resource: releaseResource.id,
+    start: futureBookingStart,
+    end: futureBookingEnd,
+  });
+  expect(earlyBooking.status).toBe(400);
+  expect((await earlyBooking.text()).toLowerCase()).toContain("booking_week_not_open");
+
+  const priorityUser = new PocketBase(harness.baseUrl);
+  await authenticate(priorityUser, "regular-b@example.test");
+  const priorityBooking = await createBooking(priorityUser, {
+    resource: releaseResource.id,
+    start: futureBookingStart,
+    end: futureBookingEnd,
+  });
+  if (priorityBooking.status !== 200) {
+    throw new Error(`Priority booking was rejected: ${await priorityBooking.text()}`);
+  }
+  expect(priorityBooking.status).toBe(200);
+
+  const regularEditStart = scenarioTime(48);
+  const regularEditEnd = scenarioTime(49);
+  const regularEditableResponse = await createBooking(admin, {
+    resource: releaseResource.id,
+    start: regularEditStart,
+    end: regularEditEnd,
+    booked_for_user: regularRecord.id,
+  });
+  expect(regularEditableResponse.status).toBe(200);
+  const regularEditableBooking = await regularEditableResponse.json();
+  const regularClosedWeekEdit = await request(
+    regular,
+    `/api/calendar/bookings/${regularEditableBooking.id}`,
+    {
+      method: "PATCH",
+      host: "tenant.localhost",
+      body: { start: futureBookingStart, end: futureBookingEnd },
+    },
+  );
+  expect(regularClosedWeekEdit.status).toBe(400);
+  expect((await regularClosedWeekEdit.text()).toLowerCase()).toContain("booking_week_not_open");
+
+  const regularOpenWeekEdit = await request(
+    regular,
+    `/api/calendar/bookings/${regularEditableBooking.id}`,
+    {
+      method: "PATCH",
+      host: "tenant.localhost",
+      body: { start: scenarioTime(0), end: scenarioTime(1) },
+    },
+  );
+  expect(regularOpenWeekEdit.status).toBe(200);
+
+  const priorityEditResponse = await createBooking(admin, {
+    resource: releaseResource.id,
+    start: scenarioTime(72),
+    end: scenarioTime(73),
+    booked_for_user: secondRegularRecord.id,
+  });
+  expect(priorityEditResponse.status).toBe(200);
+  const priorityEditableBooking = await priorityEditResponse.json();
+  const closedPriorityStart = new Date(targetWeekStart + 15 * 60 * 60 * 1000).toISOString();
+  const closedPriorityEnd = new Date(targetWeekStart + 16 * 60 * 60 * 1000).toISOString();
+  const priorityClosedWeekEdit = await request(
+    priorityUser,
+    `/api/calendar/bookings/${priorityEditableBooking.id}`,
+    {
+      method: "PATCH",
+      host: "tenant.localhost",
+      body: { start: closedPriorityStart, end: closedPriorityEnd },
+    },
+  );
+  expect(priorityClosedWeekEdit.status).toBe(200);
+
+  const priorityTooSoonStart = nearFutureScenarioTime();
+  const priorityTooSoonEnd = new Date(
+    Date.parse(priorityTooSoonStart) + 60 * 60 * 1000,
+  ).toISOString();
+  const priorityLockedEdit = await request(
+    priorityUser,
+    `/api/calendar/bookings/${priorityEditableBooking.id}`,
+    {
+      method: "PATCH",
+      host: "tenant.localhost",
+      body: { start: priorityTooSoonStart, end: priorityTooSoonEnd },
+    },
+  );
+  expect(priorityLockedEdit.status).toBe(400);
+  expect((await priorityLockedEdit.text()).toLowerCase()).toContain("booking_edit_start_too_soon");
+
+  const adminLockedStart = nearFutureScenarioTime();
+  const adminLockedEnd = new Date(Date.parse(adminLockedStart) + 60 * 60 * 1000).toISOString();
+  const adminEditableResponse = await createBooking(admin, {
+    resource: releaseResource.id,
+    start: adminLockedStart,
+    end: adminLockedEnd,
+    booked_for_user: regularRecord.id,
+  });
+  expect(adminEditableResponse.status).toBe(200);
+  const adminEditableBooking = await adminEditableResponse.json();
+  const lockRangeResponse = await request(
+    regular,
+    `/api/calendar/bookings?resource=${encodeURIComponent(releaseResource.id)}&start=${encodeURIComponent(adminLockedStart)}&end=${encodeURIComponent(adminLockedEnd)}`,
+    { host: "tenant.localhost" },
+  );
+  expect(lockRangeResponse.status).toBe(200);
+  const lockRange = await lockRangeResponse.json();
+  expect(lockRange.items).toContainEqual(
+    expect.objectContaining({
+      id: adminEditableBooking.id,
+      can_edit: false,
+      can_delete: false,
+      edit_restriction: "booking_edit_window_closed",
+    }),
+  );
+
+  const closedAdminStart = new Date(targetWeekStart + 18 * 60 * 60 * 1000).toISOString();
+  const closedAdminEnd = new Date(targetWeekStart + 19 * 60 * 60 * 1000).toISOString();
+  const administratorClosedWeekEdit = await request(
+    admin,
+    `/api/calendar/bookings/${adminEditableBooking.id}`,
+    {
+      method: "PATCH",
+      host: "tenant.localhost",
+      body: { start: closedAdminStart, end: closedAdminEnd },
+    },
+  );
+  expect(administratorClosedWeekEdit.status).toBe(200);
+
   const formulaResourceResponse = await request(admin, "/api/collections/resources/records", {
     method: "POST",
     host: "tenant.localhost",
@@ -190,6 +384,9 @@ it("creates role-safe bookings with snapshots and end-exclusive conflicts", asyn
       base_rate_minor_units: 0,
     },
   });
+  if (formulaResourceResponse.status !== 200) {
+    throw new Error(`Formula resource was rejected: ${await formulaResourceResponse.text()}`);
+  }
   expect(formulaResourceResponse.status).toBe(200);
   const formulaResource = await formulaResourceResponse.json();
 

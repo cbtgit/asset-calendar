@@ -7,6 +7,9 @@ import { calendarKeys } from "./query-keys";
 export type CalendarResource = {
   id: string;
   name: string;
+  priority_booking_enabled: boolean;
+  public_booking_release_weekday: number;
+  public_booking_release_time: string;
 };
 
 type CalendarResourcesResponse = {

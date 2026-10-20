@@ -10,6 +10,7 @@ export type TenantSettings = {
   tenant: string;
   site_title: string;
   booking_lock_hours: number;
+  time_zone: string;
   created: string;
   updated: string;
 };
@@ -17,6 +18,7 @@ export type TenantSettings = {
 export type TenantSettingsUpdate = {
   siteTitle: string;
   bookingLockHours: number;
+  timeZone: string;
 };
 
 type TenantSettingsRecord = RecordModel & TenantSettings;
@@ -56,6 +58,7 @@ export async function updateTenantSettings(
     return await records().update(id, {
       site_title: input.siteTitle.trim(),
       booking_lock_hours: input.bookingLockHours,
+      time_zone: input.timeZone.trim(),
     });
   } catch (cause) {
     throw toAppError(cause);

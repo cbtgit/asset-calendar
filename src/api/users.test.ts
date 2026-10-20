@@ -14,6 +14,7 @@ const user = {
   email: "ada@example.test",
   account_reference_number: "AC-42",
   role: "regular" as const,
+  booking_access: "" as const,
   active: true,
   password_setup_pending: true,
   created: "2026-01-01T00:00:00Z",
@@ -26,6 +27,7 @@ it("uses server-owned projections for directory and active users", async () => {
     display_name: user.display_name,
     email: user.email,
     role: user.role,
+    booking_access: user.booking_access,
   };
   const send = vi
     .spyOn(pocketbase, "send")
@@ -46,16 +48,17 @@ it("sends creation, update, and invitation mutations through user routes", async
     email: "ada@example.test",
     account_reference_number: "AC-42",
     role: "regular" as const,
+    booking_access: "priority" as const,
   };
 
   await createUser(input);
-  await updateUser(user.id, { active: false });
+  await updateUser(user.id, { active: false, booking_access: "priority" });
   await resendUserInvitation(user.id);
 
   expect(send).toHaveBeenNthCalledWith(1, "/api/users", { method: "POST", body: input });
   expect(send).toHaveBeenNthCalledWith(2, "/api/users/user-1", {
     method: "PATCH",
-    body: { active: false },
+    body: { active: false, booking_access: "priority" },
   });
   expect(send).toHaveBeenNthCalledWith(3, "/api/users/user-1", {
     method: "PATCH",

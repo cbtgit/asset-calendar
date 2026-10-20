@@ -9,6 +9,7 @@ const settings = {
   tenant: "tenant-id",
   site_title: "Asset Calendar",
   booking_lock_hours: 24,
+  time_zone: "Europe/Copenhagen",
   created: "2026-01-01T00:00:00Z",
   updated: "2026-01-01T00:00:00Z",
 };
@@ -54,6 +55,7 @@ it("submits the site title and whole-hour lock setting", async () => {
     expect(updateTenantSettings).toHaveBeenCalledWith("settings-1", {
       siteTitle: "Workshop",
       bookingLockHours: 12,
+      timeZone: "Europe/Copenhagen",
     }),
   );
   expect(screen.getByText("Tenant settings saved.")).toBeTruthy();
@@ -73,6 +75,7 @@ it("disables both fields while saving", async () => {
   await waitFor(() => expect(tenantSettingsApi.updateTenantSettings).toHaveBeenCalled());
   expect((screen.getByLabelText("Site title") as HTMLInputElement).disabled).toBe(true);
   expect((screen.getByLabelText("Booking lock hours") as HTMLInputElement).disabled).toBe(true);
+  expect((screen.getByLabelText("Tenant time zone") as HTMLInputElement).disabled).toBe(true);
 
   resolveUpdate(settings);
   await waitFor(() => expect(screen.getByText("Tenant settings saved.")).toBeTruthy());

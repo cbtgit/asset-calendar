@@ -22,6 +22,9 @@ function renderForm() {
           name: "Operations",
           name_normalized: "operations",
           base_rate_minor_units: 1250,
+          priority_booking_enabled: true,
+          public_booking_release_weekday: 3,
+          public_booking_release_time: "10:00",
           archived_at: "2026-01-01 00:00:00.000Z",
           created: "2026-01-01T00:00:00Z",
           updated: "2026-01-01T00:00:00Z",
@@ -43,6 +46,9 @@ it("initializes Danish hourly-price input and submits integer minor units", asyn
     expect(updateResource).toHaveBeenCalledWith("resource-1", {
       name: "Operations",
       baseRateMinorUnits: 1250,
+      priorityBookingEnabled: true,
+      publicBookingReleaseWeekday: 3,
+      publicBookingReleaseTime: "10:00",
     }),
   );
 });

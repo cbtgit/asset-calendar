@@ -79,7 +79,9 @@ export function BookingDetail({
         </div>
       ) : (
         <p className="booking-detail-note">
-          This booking is no longer available to edit or delete.
+          {booking.edit_restriction === "booking_edit_window_closed"
+            ? "This booking is read-only because its current start is within the booking lock window."
+            : "This booking is no longer available to edit or delete."}
         </p>
       )}
     </section>

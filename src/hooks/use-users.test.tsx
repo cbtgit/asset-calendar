@@ -15,6 +15,7 @@ const user: User = {
   email: "ada@example.test",
   account_reference_number: "AC-42",
   role: "regular",
+  booking_access: "",
   active: true,
   password_setup_pending: false,
   created: "2026-01-01T00:00:00Z",
@@ -26,6 +27,7 @@ const activeUser: ActiveUser = {
   display_name: user.display_name,
   email: user.email,
   role: user.role,
+  booking_access: user.booking_access,
 };
 
 afterEach(() => {

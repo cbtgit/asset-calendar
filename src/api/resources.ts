@@ -11,6 +11,9 @@ export type Resource = {
   name: string;
   name_normalized: string;
   base_rate_minor_units: number;
+  priority_booking_enabled: boolean;
+  public_booking_release_weekday: number;
+  public_booking_release_time: string;
   archived_at: string;
   created: string;
   updated: string;
@@ -19,6 +22,9 @@ export type Resource = {
 export type ResourceCreate = {
   name: string;
   baseRateMinorUnits?: number;
+  priorityBookingEnabled?: boolean;
+  publicBookingReleaseWeekday?: number;
+  publicBookingReleaseTime?: string;
 };
 
 export type ResourceUpdate = ResourceCreate;
@@ -28,6 +34,9 @@ type ResourceRecord = RecordModel & Resource;
 type ResourcePayload = {
   name: string;
   base_rate_minor_units: number;
+  priority_booking_enabled: boolean;
+  public_booking_release_weekday: number;
+  public_booking_release_time: string;
 };
 
 function records() {
@@ -69,6 +78,9 @@ function toResourcePayload(input: ResourceCreate): ResourcePayload {
   return {
     name: input.name.trim(),
     base_rate_minor_units: input.baseRateMinorUnits ?? 0,
+    priority_booking_enabled: input.priorityBookingEnabled ?? false,
+    public_booking_release_weekday: input.publicBookingReleaseWeekday ?? 3,
+    public_booking_release_time: input.publicBookingReleaseTime ?? "10:00",
   };
 }
 
@@ -82,10 +94,7 @@ export async function createResource(input: ResourceCreate): Promise<Resource> {
 
 export async function updateResource(id: string, input: ResourceUpdate): Promise<Resource> {
   try {
-    return await records().update(id, {
-      name: input.name.trim(),
-      base_rate_minor_units: input.baseRateMinorUnits ?? 0,
-    });
+    return await records().update(id, toResourcePayload(input));
   } catch (cause) {
     throw toAppError(cause);
   }

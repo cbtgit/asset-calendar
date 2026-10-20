@@ -29,6 +29,15 @@ export function ResourceForm({
 }: ResourceFormProps) {
   const [name, setName] = useState(initialResource?.name ?? "");
   const [hourlyPrice, setHourlyPrice] = useState(initialHourlyPrice(initialResource, locale));
+  const [priorityBookingEnabled, setPriorityBookingEnabled] = useState(
+    initialResource?.priority_booking_enabled ?? false,
+  );
+  const [releaseWeekday, setReleaseWeekday] = useState(
+    initialResource?.public_booking_release_weekday ?? 3,
+  );
+  const [releaseTime, setReleaseTime] = useState(
+    initialResource?.public_booking_release_time ?? "10:00",
+  );
   const [nameError, setNameError] = useState("");
   const [rateError, setRateError] = useState("");
   const [submitted, setSubmitted] = useState(false);
@@ -67,7 +76,13 @@ export function ResourceForm({
       return;
     }
     setRateError("");
-    const input = { name: trimmedName, baseRateMinorUnits: hourlyPriceMinorUnits };
+    const input = {
+      name: trimmedName,
+      baseRateMinorUnits: hourlyPriceMinorUnits,
+      priorityBookingEnabled,
+      publicBookingReleaseWeekday: releaseWeekday,
+      publicBookingReleaseTime: releaseTime,
+    };
     if (mode === "edit" && initialResource) {
       updateMutation.mutate({ id: initialResource.id, input }, { onSuccess: () => onSuccess?.() });
     } else {
@@ -116,6 +131,40 @@ export function ResourceForm({
             setRateError("");
           }}
         />
+        <label className="resource-form-toggle">
+          <input
+            type="checkbox"
+            checked={priorityBookingEnabled}
+            onChange={(event) => setPriorityBookingEnabled(event.target.checked)}
+          />
+          Restrict booking until a weekly release
+        </label>
+        {priorityBookingEnabled ? (
+          <div className="resource-form-release-fields">
+            <label htmlFor="resource-release-weekday">Public release weekday</label>
+            <select
+              id="resource-release-weekday"
+              value={releaseWeekday}
+              onChange={(event) => setReleaseWeekday(Number(event.target.value))}
+            >
+              <option value={1}>Monday</option>
+              <option value={2}>Tuesday</option>
+              <option value={3}>Wednesday</option>
+              <option value={4}>Thursday</option>
+              <option value={5}>Friday</option>
+              <option value={6}>Saturday</option>
+              <option value={7}>Sunday</option>
+            </select>
+            <label htmlFor="resource-release-time">Public release time</label>
+            <input
+              id="resource-release-time"
+              type="time"
+              step={60}
+              value={releaseTime}
+              onChange={(event) => setReleaseTime(event.target.value)}
+            />
+          </div>
+        ) : null}
         <div className="resource-form-actions">
           <Button type="button" onClick={onCancel}>
             Cancel

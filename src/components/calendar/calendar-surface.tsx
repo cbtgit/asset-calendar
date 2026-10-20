@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import FullCalendar from "@fullcalendar/react";
 import dayGridPlugin from "@fullcalendar/daygrid";
 import timeGridPlugin from "@fullcalendar/timegrid";
@@ -10,6 +10,7 @@ import type { DateClickArg } from "@fullcalendar/interaction";
 import { useNavigate } from "@tanstack/react-router";
 import { isAdministrator } from "@/api/auth";
 import {
+  bookingDetailQueryOptions,
   calendarBookingsQueryOptions,
   type CalendarBooking,
   type BookingRange,
@@ -37,10 +38,13 @@ type CalendarSurfaceProps = {
   search: CalendarSearch;
 };
 
-type BookingDraft =
-  | { kind: "create"; resourceId: string; start?: string; end?: string; date?: string }
-  | { kind: "detail"; booking: CalendarBooking }
-  | { kind: "edit"; booking: CalendarBooking };
+type BookingDraft = {
+  kind: "create";
+  resourceId: string;
+  start?: string;
+  end?: string;
+  date?: string;
+};
 
 const MOBILE_QUERY = "(width < 48rem)";
 let mobileMediaQuery: MediaQueryList | undefined;
@@ -138,6 +142,11 @@ export function CalendarSurface({ search }: CalendarSurfaceProps) {
     start: visibleRange.start,
     end: visibleRange.end,
   });
+  const bookingDetail = useQuery({
+    ...bookingDetailQueryOptions(search.booking ?? ""),
+    enabled: Boolean(search.booking),
+    initialData: () => bookings.data?.find((booking) => booking.id === search.booking),
+  });
   const events = useMemo<EventInput[]>(
     () => toCalendarEvents(bookings.data ?? []),
     [bookings.data],
@@ -158,7 +167,13 @@ export function CalendarSurface({ search }: CalendarSurfaceProps) {
   }
 
   useEffect(() => {
-    if (bookingDraft || (!bookingOpenerRef.current && !bookingOpenerIdRef.current)) return;
+    if (
+      bookingDraft ||
+      search.booking ||
+      (!bookingOpenerRef.current && !bookingOpenerIdRef.current)
+    ) {
+      return;
+    }
 
     const openerId = bookingOpenerIdRef.current;
     const frame = requestAnimationFrame(() => {
@@ -173,7 +188,7 @@ export function CalendarSurface({ search }: CalendarSurfaceProps) {
     });
 
     return () => cancelAnimationFrame(frame);
-  }, [bookingDraft]);
+  }, [bookingDraft, search.booking]);
 
   useEffect(() => {
     if (resources.isPending || resources.isError) return;
@@ -204,24 +219,28 @@ export function CalendarSurface({ search }: CalendarSurfaceProps) {
     }
   }, [isMobile, navigate, search.view]);
 
-  function updateSearch(changes: Partial<CalendarSearch>) {
+  function updateSearch(changes: Partial<CalendarSearch>, replace = false) {
+    const nextChanges = { ...changes };
     if (changes.resource !== undefined && changes.resource !== search.resource) {
       setBookingDraft(null);
       setBookingToDelete(null);
       bookingOpenerRef.current = null;
       bookingOpenerIdRef.current = null;
+      nextChanges.booking = undefined;
+      nextChanges.bookingMode = undefined;
     }
     void navigate({
-      search: (current) => ({ ...current, ...changes }),
+      search: (current) => ({ ...current, ...nextChanges }),
+      replace,
     });
   }
 
+  function closeBooking() {
+    updateSearch({ booking: undefined, bookingMode: undefined }, true);
+  }
+
   const activeBookingDraft =
-    bookingDraft &&
-    selectedResource &&
-    (bookingDraft.kind === "create"
-      ? bookingDraft.resourceId === selectedResource.id
-      : bookingDraft.booking.resource === selectedResource.id)
+    bookingDraft && selectedResource && bookingDraft.resourceId === selectedResource.id
       ? bookingDraft
       : null;
   const activeBookingToDelete =
@@ -317,42 +336,59 @@ export function CalendarSurface({ search }: CalendarSurfaceProps) {
 
           <section className="calendar-frame" aria-label="Resource calendar">
             {selectedResource ? (
-              activeBookingDraft ? (
-                activeBookingDraft.kind === "detail" ? (
-                  <BookingDetail
-                    booking={activeBookingDraft.booking}
-                    isAdministrator={isAdministrator(auth.user)}
-                    onClose={() => setBookingDraft(null)}
-                    onEdit={() =>
-                      setBookingDraft({ kind: "edit", booking: activeBookingDraft.booking })
-                    }
-                    onDelete={() => setBookingToDelete(activeBookingDraft.booking)}
-                  />
-                ) : activeBookingDraft.kind === "edit" ? (
+              search.booking ? (
+                bookingDetail.isPending ? (
+                  <Loading />
+                ) : bookingDetail.isError ||
+                  !bookingDetail.data ||
+                  bookingDetail.data.resource !== selectedResource.id ? (
+                  <div className="calendar-empty" role="status">
+                    <strong>Booking unavailable</strong>
+                    <p role="alert">
+                      {bookingDetail.isError
+                        ? bookingDetail.error instanceof Error
+                          ? bookingDetail.error.message
+                          : "Unable to load this booking."
+                        : "This booking is not available for the selected resource."}
+                    </p>
+                    <Button type="button" onClick={closeBooking}>
+                      Back to calendar
+                    </Button>
+                  </div>
+                ) : search.bookingMode === "edit" &&
+                  (bookingDetail.data.can_edit || isAdministrator(auth.user)) ? (
                   <BookingForm
                     resourceId={selectedResource.id}
                     resourceName={selectedResource.name}
                     isAdministrator={isAdministrator(auth.user)}
-                    initialStart={activeBookingDraft.booking.start}
-                    initialEnd={activeBookingDraft.booking.end}
-                    initialBooking={activeBookingDraft.booking}
-                    onCancel={() =>
-                      setBookingDraft({ kind: "detail", booking: activeBookingDraft.booking })
-                    }
-                    onSuccess={() => setBookingDraft(null)}
+                    bookingReleasePolicy={selectedResource}
+                    initialStart={bookingDetail.data.start}
+                    initialEnd={bookingDetail.data.end}
+                    initialBooking={bookingDetail.data}
+                    onCancel={() => updateSearch({ bookingMode: undefined }, true)}
+                    onSuccess={closeBooking}
                   />
                 ) : (
-                  <BookingForm
-                    resourceId={selectedResource.id}
-                    resourceName={selectedResource.name}
+                  <BookingDetail
+                    booking={bookingDetail.data}
                     isAdministrator={isAdministrator(auth.user)}
-                    initialStart={activeBookingDraft.start}
-                    initialEnd={activeBookingDraft.end}
-                    initialDate={activeBookingDraft.date}
-                    onCancel={() => setBookingDraft(null)}
-                    onSuccess={() => setBookingDraft(null)}
+                    onClose={closeBooking}
+                    onEdit={() => updateSearch({ bookingMode: "edit" })}
+                    onDelete={() => setBookingToDelete(bookingDetail.data)}
                   />
                 )
+              ) : activeBookingDraft ? (
+                <BookingForm
+                  resourceId={selectedResource.id}
+                  resourceName={selectedResource.name}
+                  isAdministrator={isAdministrator(auth.user)}
+                  bookingReleasePolicy={selectedResource}
+                  initialStart={activeBookingDraft.start}
+                  initialEnd={activeBookingDraft.end}
+                  initialDate={activeBookingDraft.date}
+                  onCancel={() => setBookingDraft(null)}
+                  onSuccess={() => setBookingDraft(null)}
+                />
               ) : (
                 <>
                   {bookings.isError ? (
@@ -363,7 +399,7 @@ export function CalendarSurface({ search }: CalendarSurfaceProps) {
                   <FullCalendar
                     key={`${search.date}:${effectiveView}:${selectedResource.id}`}
                     plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin, luxon3Plugin]}
-                    timeZone={APPLICATION_TIME_ZONE}
+                    timeZone={tenantSettings.data?.time_zone ?? APPLICATION_TIME_ZONE}
                     initialDate={search.date}
                     initialView={initialView}
                     firstDay={1}
@@ -390,7 +426,10 @@ export function CalendarSurface({ search }: CalendarSurfaceProps) {
                         setBookingDraft({
                           kind: "create",
                           resourceId: selectedResource.id,
-                          date: formatApplicationDate(click.date),
+                          date: formatApplicationDate(
+                            click.date,
+                            tenantSettings.data?.time_zone ?? APPLICATION_TIME_ZONE,
+                          ),
                         });
                         return;
                       }
@@ -409,7 +448,7 @@ export function CalendarSurface({ search }: CalendarSurfaceProps) {
                       if (booking) {
                         bookingOpenerRef.current = click.el;
                         bookingOpenerIdRef.current = booking.id;
-                        setBookingDraft({ kind: "detail", booking });
+                        updateSearch({ booking: booking.id, bookingMode: undefined });
                       }
                     }}
                     datesSet={(range: DatesSetArg) => {
@@ -423,7 +462,10 @@ export function CalendarSurface({ search }: CalendarSurfaceProps) {
                           : nextRange,
                       );
                       prefetchAdjacentBookings(selectedResource.id, nextRange);
-                      const nextSearch = getCalendarSearchFromDatesSet(range);
+                      const nextSearch = getCalendarSearchFromDatesSet(
+                        range,
+                        tenantSettings.data?.time_zone ?? APPLICATION_TIME_ZONE,
+                      );
                       if (nextSearch.view !== search.view || nextSearch.date !== search.date) {
                         updateSearch(nextSearch);
                       }
@@ -456,7 +498,7 @@ export function CalendarSurface({ search }: CalendarSurfaceProps) {
               .mutateAsync({ id: activeBookingToDelete.id })
               .then(() => {
                 setBookingToDelete(null);
-                setBookingDraft(null);
+                closeBooking();
               })
               .catch(() => undefined);
           }}

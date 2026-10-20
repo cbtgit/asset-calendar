@@ -38,6 +38,7 @@ export function useUpdateTenantSettingsMutation() {
               ...settings,
               site_title: input.siteTitle.trim(),
               booking_lock_hours: input.bookingLockHours,
+              time_zone: input.timeZone.trim(),
             }
           : settings,
       );

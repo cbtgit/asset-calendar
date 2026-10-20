@@ -45,6 +45,9 @@ export function UserForm(props: UserFormProps) {
     user?.account_reference_number ?? "",
   );
   const [role, setRole] = useState<UserRole>(user?.role ?? "regular");
+  const [priorityBookingAccess, setPriorityBookingAccess] = useState(
+    user?.booking_access === "priority",
+  );
   const [active, setActive] = useState(user?.active ?? true);
   const [validationError, setValidationError] = useState<string>();
   const firstNameRef = useRef<HTMLInputElement>(null);
@@ -80,6 +83,7 @@ export function UserForm(props: UserFormProps) {
         last_name: lastName.trim(),
         account_reference_number: accountReferenceNumber.trim(),
         role,
+        booking_access: priorityBookingAccess ? "priority" : "",
         active,
       };
       updateMutation.mutate({ id: props.user.id, input }, { onSuccess: props.onSuccess });
@@ -90,6 +94,7 @@ export function UserForm(props: UserFormProps) {
         email: email.trim().toLowerCase(),
         account_reference_number: accountReferenceNumber.trim(),
         role,
+        booking_access: priorityBookingAccess ? "priority" : "",
       };
       createMutation.mutate(input, { onSuccess: props.onSuccess });
     }
@@ -161,6 +166,15 @@ export function UserForm(props: UserFormProps) {
               <option value="regular">Regular user</option>
               <option value="administrator">Administrator</option>
             </select>
+          </label>
+          <label className="user-form-checkbox">
+            <input
+              type="checkbox"
+              checked={priorityBookingAccess}
+              disabled={pending}
+              onChange={(event) => setPriorityBookingAccess(event.target.checked)}
+            />
+            Priority booking access
           </label>
           {editing ? (
             <label className="user-form-checkbox">

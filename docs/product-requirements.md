@@ -29,6 +29,8 @@ The MVP must:
 - Provide desktop day, week, and month calendar views.
 - Provide a focused mobile daily calendar view.
 - Prevent overlapping bookings for the same resource.
+- Support optional per-resource weekly booking release windows and separate
+  priority booking access.
 - Allow regular users to manage only their own bookings, subject to the
   24-hour rule.
 - Give administrators full booking and tenant administration capabilities.
@@ -48,7 +50,8 @@ The following are explicitly deferred:
 - Email notifications for booking creation, changes, or reminders.
 - Public registration or self-service tenant creation.
 - Cross-tenant user membership.
-- Resource-specific permissions.
+- Per-resource booking quotas, arbitrary rule composition, and group-based
+  permissions.
 - Resource capacity greater than one concurrent booking.
 - Audit logging.
 - VAT or other tax calculations.
@@ -92,6 +95,8 @@ Each user has one role within their tenant:
   - Cannot create administrator-selected booking types, including
     non-billable types.
   - Must not see prices in booking views or forms.
+  - May separately be granted priority booking access without gaining
+    administrator permissions.
 - **Administrator**
   - View, create, and edit any booking.
   - Permanently delete any booking regardless of its current start time.
@@ -194,12 +199,29 @@ when a booking type is later edited.
 For a regular user's edit, both the current booking start and the proposed new
 start must be at least the tenant's configured booking lock window in the
 future. The setting is a whole number of hours and defaults to 24 hours.
-Administrators are not subject to the booking lock restriction. Administrators may change the booked-for user
-and booking type, but the resource remains fixed. Any administrator-selected
+Priority booking access does not waive this edit lock. Administrators are not
+subject to the booking lock restriction. Administrators may change the
+booked-for user and booking type, but the resource remains fixed. Any administrator-selected
 replacement user must be active and belong to the tenant. When an
 administrator changes the booked-for user or booking type, the server
 recalculates the affected snapshots and rate fields using the same trusted
 calculation as booking creation.
+
+Each resource may optionally enable a weekly public booking release policy.
+When disabled, the resource's booking availability is unchanged. When enabled,
+the current tenant-local calendar week remains open to everyone. Each later
+week opens to standard users on the configured weekday and time in the
+preceding week; priority access is an independent user entitlement that allows
+booking those weeks in advance. Administrators retain their existing booking
+authority. Release defaults to Wednesday at 10:00 and uses the tenant's
+configured IANA time zone, including daylight-saving transitions. A standard
+user's new booking or time-changing edit is rejected if its destination week
+has not opened. Unchanged-time edits do not re-run the release check. A booking
+created during priority access remains valid, but a later time-changing edit
+by a standard user must satisfy the destination week's release rule. The
+calendar shows the relevant release time in tenant-local time and prevents
+saving a booking that the server would reject. The server remains authoritative
+for all release checks.
 
 ### 5.3 Pricing
 

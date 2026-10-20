@@ -11,8 +11,10 @@ type TenantSettingsFormProps = {
 export function TenantSettingsForm({ settings }: TenantSettingsFormProps) {
   const [siteTitle, setSiteTitle] = useState(settings.site_title);
   const [bookingLockHours, setBookingLockHours] = useState(String(settings.booking_lock_hours));
+  const [timeZone, setTimeZone] = useState(settings.time_zone);
   const [siteTitleError, setSiteTitleError] = useState("");
   const [bookingLockHoursError, setBookingLockHoursError] = useState("");
+  const [timeZoneError, setTimeZoneError] = useState("");
   const [submitted, setSubmitted] = useState(false);
   const siteTitleRef = useRef<HTMLInputElement>(null);
   const mutation = useUpdateTenantSettingsMutation();
@@ -25,6 +27,7 @@ export function TenantSettingsForm({ settings }: TenantSettingsFormProps) {
     event.preventDefault();
     setSiteTitleError("");
     setBookingLockHoursError("");
+    setTimeZoneError("");
     setSubmitted(false);
 
     const trimmedSiteTitle = siteTitle.trim();
@@ -49,10 +52,22 @@ export function TenantSettingsForm({ settings }: TenantSettingsFormProps) {
       return;
     }
 
+    const trimmedTimeZone = timeZone.trim();
+    try {
+      new Intl.DateTimeFormat("en", { timeZone: trimmedTimeZone });
+    } catch {
+      setTimeZoneError("Enter a valid IANA time zone, such as Europe/Copenhagen.");
+      return;
+    }
+
     mutation.mutate(
       {
         id: settings.id,
-        input: { siteTitle: trimmedSiteTitle, bookingLockHours: lockHours },
+        input: {
+          siteTitle: trimmedSiteTitle,
+          bookingLockHours: lockHours,
+          timeZone: trimmedTimeZone,
+        },
       },
       { onSuccess: () => setSubmitted(true) },
     );
@@ -114,6 +129,29 @@ export function TenantSettingsForm({ settings }: TenantSettingsFormProps) {
             role="alert"
           >
             {bookingLockHoursError}
+          </p>
+        ) : null}
+        <label htmlFor="tenant-settings-time-zone">Tenant time zone</label>
+        <input
+          id="tenant-settings-time-zone"
+          name="timeZone"
+          value={timeZone}
+          maxLength={100}
+          disabled={mutation.isPending}
+          aria-invalid={Boolean(timeZoneError)}
+          aria-describedby={timeZoneError ? "tenant-settings-time-zone-error" : undefined}
+          onChange={(event) => {
+            setTimeZone(event.target.value);
+            setTimeZoneError("");
+          }}
+        />
+        {timeZoneError ? (
+          <p
+            id="tenant-settings-time-zone-error"
+            className="tenant-settings-form-error"
+            role="alert"
+          >
+            {timeZoneError}
           </p>
         ) : null}
         <div className="tenant-settings-form-actions">

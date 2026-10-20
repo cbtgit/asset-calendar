@@ -12,15 +12,31 @@
 }
 
 .booking-form-heading {
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-areas:
+    "title close"
+    "release release"
+    "lock lock";
   align-items: start;
-  justify-content: space-between;
-  gap: var(--space-4);
+  column-gap: var(--space-4);
+  row-gap: var(--space-3);
+}
+
+.booking-form-heading-title {
+  grid-area: title;
+  min-inline-size: 0;
 }
 
 .booking-form-heading h2 {
   margin: 0;
   font-size: var(--font-size-heading);
+  overflow-wrap: anywhere;
+}
+
+.booking-form-close {
+  grid-area: close;
+  flex: 0 0 auto;
 }
 
 .booking-form {
@@ -65,6 +81,28 @@
   border-radius: var(--radius-sm);
   color: var(--color-destructive);
   background: color-mix(in srgb, var(--color-destructive) 8%, var(--color-surface));
+}
+
+.booking-form-release-status {
+  grid-area: release;
+  min-inline-size: 0;
+  margin: 0;
+  padding: var(--space-3);
+  border-left: 0.1875rem solid var(--color-accent);
+  color: var(--color-ink);
+  background: color-mix(in srgb, var(--color-accent) 8%, var(--color-surface));
+  overflow-wrap: anywhere;
+}
+
+.booking-form-lock-status {
+  grid-area: lock;
+  min-inline-size: 0;
+  margin: 0;
+  padding: var(--space-3);
+  border-left: 0.1875rem solid var(--color-destructive);
+  color: var(--color-destructive);
+  background: color-mix(in srgb, var(--color-destructive) 8%, var(--color-surface));
+  overflow-wrap: anywhere;
 }
 
 .booking-form-actions {
