@@ -1,7 +1,12 @@
 import type { RecordAuthResponse, RecordModel } from "pocketbase";
 import { queryClient } from "@/lib/query-client";
 import { pocketbase, setUnauthorizedHandler } from "./client";
-import { toAppError, type ApplicationError } from "./errors";
+import { hasValidationCode, toAppError, type ApplicationError } from "./errors";
+
+export const PASSWORD_MIN_LENGTH = 8;
+export const PASSWORD_TOO_SHORT_MESSAGE = `Password must be at least ${PASSWORD_MIN_LENGTH} characters.`;
+export const INVALID_SETUP_LINK_MESSAGE =
+  "This setup link is invalid or has expired. Ask an administrator to send a new invitation.";
 
 export type AuthUser = RecordModel & {
   active?: boolean;
@@ -148,9 +153,16 @@ export function setUnauthorizedRedirect(handler: (() => void) | undefined): void
 export function authErrorMessage(error: unknown, purpose: "sign-in" | "setup"): string {
   const appError = toAppError(error) as ApplicationError;
   if (purpose === "setup") {
+    if (
+      appError.kind === "validation" &&
+      hasValidationCode(appError, "validation_min_text_constraint")
+    ) {
+      return PASSWORD_TOO_SHORT_MESSAGE;
+    }
+
     return appError.kind === "network" || appError.kind === "server"
       ? "Password setup is currently unavailable. Try again later."
-      : "We could not complete password setup. The link may be invalid or expired.";
+      : INVALID_SETUP_LINK_MESSAGE;
   }
 
   return appError.kind === "network" || appError.kind === "server" || appError.kind === "not-found"

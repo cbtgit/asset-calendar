@@ -70,27 +70,80 @@ it("submits password setup and rejects missing or mismatched credentials locally
   const onSuccess = vi.fn();
 
   renderWithQueryClient(<SetupPasswordForm token="token" onSuccess={onSuccess} />);
-  fireEvent.change(screen.getByLabelText("Password"), { target: { value: "secret" } });
+  fireEvent.change(screen.getByLabelText("Password"), { target: { value: "secret12" } });
   fireEvent.change(screen.getByLabelText("Confirm password"), { target: { value: "different" } });
   fireEvent.submit(screen.getByLabelText("Password").closest("form")!);
 
   expect(screen.getByRole("alert").textContent).toContain("matching passwords");
   expect(setup).not.toHaveBeenCalled();
 
-  fireEvent.change(screen.getByLabelText("Confirm password"), { target: { value: "secret" } });
+  fireEvent.change(screen.getByLabelText("Confirm password"), {
+    target: { value: "secret12" },
+  });
   fireEvent.submit(screen.getByLabelText("Password").closest("form")!);
   await waitFor(() => expect(onSuccess).toHaveBeenCalledOnce());
-  expect(setup).toHaveBeenCalledWith("token", "secret");
+  expect(setup).toHaveBeenCalledWith("token", "secret12");
+});
+
+it("rejects short passwords locally with a specific message", () => {
+  const setup = vi.spyOn(auth, "setupPassword");
+
+  renderWithQueryClient(<SetupPasswordForm token="token" onSuccess={vi.fn()} />);
+  fireEvent.change(screen.getByLabelText("Password"), { target: { value: "short" } });
+  fireEvent.change(screen.getByLabelText("Confirm password"), { target: { value: "short" } });
+  fireEvent.submit(screen.getByLabelText("Password").closest("form")!);
+
+  expect(screen.getByRole("alert").textContent).toContain("at least 8 characters");
+  expect(setup).not.toHaveBeenCalled();
+});
+
+it("maps PocketBase password-length validation to a specific message", async () => {
+  const cause = Object.assign(new Error("The submitted data is invalid."), {
+    status: 400,
+    data: {
+      password: {
+        code: "validation_min_text_constraint",
+        message: "Must be at least 8 characters long.",
+      },
+    },
+  });
+  vi.spyOn(auth, "setupPassword").mockRejectedValue(cause);
+
+  renderWithQueryClient(<SetupPasswordForm token="token" onSuccess={vi.fn()} />);
+  fireEvent.change(screen.getByLabelText("Password"), { target: { value: "longpassword" } });
+  fireEvent.change(screen.getByLabelText("Confirm password"), {
+    target: { value: "longpassword" },
+  });
+  fireEvent.submit(screen.getByLabelText("Password").closest("form")!);
+
+  expect((await screen.findByRole("alert")).textContent).toContain("at least 8 characters");
+});
+
+it("keeps other setup validation failures as invitation errors", async () => {
+  vi.spyOn(auth, "setupPassword").mockRejectedValue(
+    new AppError("validation", "Invalid or expired invitation."),
+  );
+
+  renderWithQueryClient(<SetupPasswordForm token="token" onSuccess={vi.fn()} />);
+  fireEvent.change(screen.getByLabelText("Password"), { target: { value: "longpassword" } });
+  fireEvent.change(screen.getByLabelText("Confirm password"), {
+    target: { value: "longpassword" },
+  });
+  fireEvent.submit(screen.getByLabelText("Password").closest("form")!);
+
+  expect((await screen.findByRole("alert")).textContent).toContain("Ask an administrator");
 });
 
 it("shows a generic error for malformed password setup links", () => {
   const setup = vi.spyOn(auth, "setupPassword");
 
   renderWithQueryClient(<SetupPasswordForm token="" onSuccess={vi.fn()} />);
-  fireEvent.change(screen.getByLabelText("Password"), { target: { value: "secret" } });
-  fireEvent.change(screen.getByLabelText("Confirm password"), { target: { value: "secret" } });
+  fireEvent.change(screen.getByLabelText("Password"), { target: { value: "longpassword" } });
+  fireEvent.change(screen.getByLabelText("Confirm password"), {
+    target: { value: "longpassword" },
+  });
   fireEvent.submit(screen.getByLabelText("Password").closest("form")!);
 
-  expect(screen.getByRole("alert").textContent).toContain("invalid or expired");
+  expect(screen.getByRole("alert").textContent).toContain("invalid or has expired");
   expect(setup).not.toHaveBeenCalled();
 });

@@ -178,6 +178,9 @@ it("completes setup only for the owning tenant, validates with PocketBase, and r
     body: { token: setupToken, password: "short" },
   });
   expect(invalidPassword.status).toBe(400);
+  const invalidPasswordBody = await invalidPassword.json();
+  expect(invalidPasswordBody.data.password.code).toBe("validation_min_text_constraint");
+  expect(invalidPasswordBody.data.password.message).toContain("8");
 
   const setup = await request(new PocketBase(harness.baseUrl), "/api/invitations/setup", {
     method: "POST",
