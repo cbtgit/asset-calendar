@@ -21,10 +21,19 @@
   margin-top: 2rem;
 }
 
-.auth-form label {
+.auth-field {
   display: grid;
   gap: 0.4rem;
+}
+
+.auth-field label {
   font-weight: var(--font-weight-bold);
+}
+
+.auth-field-hint {
+  color: var(--color-muted);
+  font-size: 0.875rem;
+  font-weight: 400;
 }
 
 .auth-form input {

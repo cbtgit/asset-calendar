@@ -1,6 +1,11 @@
 import { useState, type FormEvent } from "react";
 import { useMutation } from "@tanstack/react-query";
-import { setupPassword } from "@/api/auth";
+import {
+  INVALID_SETUP_LINK_MESSAGE,
+  PASSWORD_MIN_LENGTH,
+  PASSWORD_TOO_SHORT_MESSAGE,
+  setupPassword,
+} from "@/api/auth";
 import { AuthErrorMessage } from "./auth-error-message";
 import { AuthSubmitButton } from "./auth-submit-button";
 import { PasswordFields } from "./password-fields";
@@ -19,13 +24,15 @@ export function SetupPasswordForm({ token, onSuccess }: { token: string; onSucce
     event.preventDefault();
     setValidationError(undefined);
     if (!token) {
-      setValidationError(
-        "We could not complete password setup. The link may be invalid or expired.",
-      );
+      setValidationError(INVALID_SETUP_LINK_MESSAGE);
       return;
     }
     if (!password || password !== confirmation) {
       setValidationError("Enter matching passwords to continue.");
+      return;
+    }
+    if (password.length < PASSWORD_MIN_LENGTH) {
+      setValidationError(PASSWORD_TOO_SHORT_MESSAGE);
       return;
     }
     mutation.mutate();

@@ -1,4 +1,5 @@
 import { AuthField } from "./auth-field";
+import { PASSWORD_MIN_LENGTH } from "@/api/auth";
 
 type PasswordFieldsProps = {
   confirmation: string;
@@ -18,9 +19,11 @@ export function PasswordFields({
       <AuthField
         id="setup-password"
         label="Password"
+        hint={`At least ${PASSWORD_MIN_LENGTH} characters.`}
         name="password"
         type="password"
         autoComplete="new-password"
+        minLength={PASSWORD_MIN_LENGTH}
         required
         value={password}
         onChange={(event) => onPasswordChange(event.target.value)}
