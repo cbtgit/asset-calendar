@@ -36,7 +36,7 @@ jobs:
       - name: Archive deployment artifact
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         run: tar -C "$GITHUB_WORKSPACE/.local/deployment/release" -czf "$RUNNER_TEMP/asset-calendar-release.tar.gz" .
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         with:
           name: asset-calendar-release-${{ github.sha }}
