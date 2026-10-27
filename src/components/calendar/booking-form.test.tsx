@@ -72,8 +72,23 @@ it("keeps administrator-only selectors out of the regular form", () => {
   renderForm(false);
 
   expect(screen.getByRole("button", { name: "Close booking form" })).toBeTruthy();
-  expect(screen.getByLabelText("Start time").getAttribute("step")).toBe("900");
-  expect(screen.getByLabelText("End time").getAttribute("step")).toBe("900");
+  expect(screen.getByLabelText("Start hour").tagName).toBe("SELECT");
+  expect(screen.getByLabelText("End hour").tagName).toBe("SELECT");
+  expect(
+    Array.from((screen.getByLabelText("Start hour") as HTMLSelectElement).options)
+      .map((option) => option.value)
+      .filter(Boolean),
+  ).toEqual(Array.from({ length: 24 }, (_, hour) => String(hour).padStart(2, "0")));
+  expect(
+    Array.from((screen.getByLabelText("Start minute") as HTMLSelectElement).options)
+      .map((option) => option.value)
+      .filter(Boolean),
+  ).toEqual(["00", "15", "30", "45"]);
+  expect(
+    Array.from((screen.getByLabelText("End minute") as HTMLSelectElement).options)
+      .map((option) => option.value)
+      .filter(Boolean),
+  ).toEqual(["00", "15", "30", "45"]);
   expect(screen.queryByLabelText("User")).toBeNull();
   expect(screen.queryByLabelText("Booking type")).toBeNull();
 });
@@ -301,18 +316,20 @@ it("updates untouched booking times when the tenant timezone loads", async () =>
   };
   const view = render(<BookingForm {...props} />, { wrapper });
 
-  expect((screen.getByLabelText("Start time") as HTMLInputElement).value).toBe("19:00");
+  expect((screen.getByLabelText("Start hour") as HTMLSelectElement).value).toBe("19");
+  expect((screen.getByLabelText("Start minute") as HTMLSelectElement).value).toBe("00");
   settingsQuery.mockReturnValue({ data: { time_zone: "America/Los_Angeles" } } as never);
   view.rerender(<BookingForm {...props} />);
 
   await waitFor(() =>
-    expect((screen.getByLabelText("Start time") as HTMLInputElement).value).toBe("10:00"),
+    expect((screen.getByLabelText("Start hour") as HTMLSelectElement).value).toBe("10"),
   );
-  fireEvent.change(screen.getByLabelText("Start time"), { target: { value: "12:00" } });
+  fireEvent.change(screen.getByLabelText("Start hour"), { target: { value: "12" } });
   settingsQuery.mockReturnValue({ data: { time_zone: "America/New_York" } } as never);
   view.rerender(<BookingForm {...props} />);
 
-  expect((screen.getByLabelText("Start time") as HTMLInputElement).value).toBe("12:00");
+  expect((screen.getByLabelText("Start hour") as HTMLSelectElement).value).toBe("12");
+  expect((screen.getByLabelText("Start minute") as HTMLSelectElement).value).toBe("00");
 });
 
 it("submits administrator-selected user and booking type", async () => {
@@ -325,8 +342,10 @@ it("submits administrator-selected user and booking type", async () => {
   } as never);
   renderForm(true);
 
-  fireEvent.change(screen.getByLabelText("Start time"), { target: { value: "09:00" } });
-  fireEvent.change(screen.getByLabelText("End time"), { target: { value: "10:00" } });
+  fireEvent.change(screen.getByLabelText("Start hour"), { target: { value: "09" } });
+  fireEvent.change(screen.getByLabelText("Start minute"), { target: { value: "00" } });
+  fireEvent.change(screen.getByLabelText("End hour"), { target: { value: "10" } });
+  fireEvent.change(screen.getByLabelText("End minute"), { target: { value: "00" } });
   fireEvent.change(screen.getByLabelText("User"), { target: { value: "user-2" } });
   fireEvent.change(screen.getByLabelText("Booking type"), { target: { value: "type-1" } });
   fireEvent.submit(screen.getByRole("button", { name: "Save" }).closest("form")!);
@@ -355,8 +374,10 @@ it("shows a descriptive message for a booking conflict", async () => {
   } as never);
   renderForm(false);
 
-  fireEvent.change(screen.getByLabelText("Start time"), { target: { value: "09:00" } });
-  fireEvent.change(screen.getByLabelText("End time"), { target: { value: "10:00" } });
+  fireEvent.change(screen.getByLabelText("Start hour"), { target: { value: "09" } });
+  fireEvent.change(screen.getByLabelText("Start minute"), { target: { value: "00" } });
+  fireEvent.change(screen.getByLabelText("End hour"), { target: { value: "10" } });
+  fireEvent.change(screen.getByLabelText("End minute"), { target: { value: "00" } });
   fireEvent.submit(screen.getByRole("button", { name: "Save" }).closest("form")!);
 
   await waitFor(() =>
@@ -397,15 +418,17 @@ it("initializes and submits administrator edit fields", async () => {
   expect(screen.getByLabelText("User")).toHaveProperty("value", "user-2");
   expect(screen.getByLabelText("Booking type")).toHaveProperty("value", "type-1");
 
-  fireEvent.change(screen.getByLabelText("Start time"), { target: { value: "10:00" } });
-  fireEvent.change(screen.getByLabelText("End time"), { target: { value: "11:00" } });
+  fireEvent.change(screen.getByLabelText("Start hour"), { target: { value: "10" } });
+  fireEvent.change(screen.getByLabelText("Start minute"), { target: { value: "15" } });
+  fireEvent.change(screen.getByLabelText("End hour"), { target: { value: "11" } });
+  fireEvent.change(screen.getByLabelText("End minute"), { target: { value: "45" } });
   fireEvent.submit(screen.getByRole("button", { name: "Save changes" }).closest("form")!);
 
   await waitFor(() => expect(mutateAsync).toHaveBeenCalled());
   expect(mutateAsync.mock.calls[0][0]).toMatchObject({
     id: "booking-1",
-    start: "2026-11-30T09:00:00.000Z",
-    end: "2026-11-30T10:00:00.000Z",
+    start: "2026-11-30T09:15:00.000Z",
+    end: "2026-11-30T10:45:00.000Z",
     booked_for_user: "user-2",
     booking_type: "type-1",
   });
@@ -428,8 +451,8 @@ it("preserves an ambiguous autumn DST slot when the edit fields are unchanged", 
   renderForm(false, {
     id: "booking-fold",
     resource: "resource-1",
-    start: "2026-10-25T00:30:00.000Z",
-    end: "2026-10-25T01:30:00.000Z",
+    start: "2027-10-31T00:30:00.000Z",
+    end: "2027-10-31T01:30:00.000Z",
     booker_display_name: "Regular A",
     can_edit: true,
     can_delete: true,
@@ -440,7 +463,7 @@ it("preserves an ambiguous autumn DST slot when the edit fields are unchanged", 
   await waitFor(() => expect(mutateAsync).toHaveBeenCalled());
   expect(mutateAsync.mock.calls[0][0]).toMatchObject({
     id: "booking-fold",
-    start: "2026-10-25T00:30:00.000Z",
-    end: "2026-10-25T01:30:00.000Z",
+    start: "2027-10-31T00:30:00.000Z",
+    end: "2027-10-31T01:30:00.000Z",
   });
 });

@@ -1,0 +1,575 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Quarter-hour time input alternatives</title>
+    <style>
+      :root {
+        color-scheme: light;
+        font-family:
+          Inter,
+          ui-sans-serif,
+          system-ui,
+          -apple-system,
+          BlinkMacSystemFont,
+          "Segoe UI",
+          sans-serif;
+        color: #172033;
+        background: #f3f6f7;
+        font-synthesis: none;
+        text-rendering: optimizeLegibility;
+        --ink: #172033;
+        --muted: #697586;
+        --border: #d6e0e3;
+        --surface: #fff;
+        --accent: #286c70;
+        --accent-soft: #e8f4f2;
+        --focus: #e59700;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        padding: 48px 24px 64px;
+      }
+
+      main {
+        width: min(100%, 960px);
+        margin: 0 auto;
+      }
+
+      header {
+        margin-bottom: 28px;
+      }
+
+      .eyebrow {
+        margin: 0 0 8px;
+        color: var(--accent);
+        font-size: 0.75rem;
+        font-weight: 750;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+      }
+
+      h1 {
+        margin: 0;
+        font-size: clamp(1.7rem, 4vw, 2.4rem);
+        letter-spacing: -0.04em;
+      }
+
+      .intro {
+        max-width: 620px;
+        margin: 10px 0 0;
+        color: var(--muted);
+        line-height: 1.6;
+      }
+
+      .gallery {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 16px;
+      }
+
+      .card {
+        min-width: 0;
+        padding: 22px;
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        background: var(--surface);
+        box-shadow: 0 3px 12px rgb(23 32 51 / 4%);
+      }
+
+      .card:last-child {
+        grid-column: 1 / -1;
+      }
+
+      .card-heading {
+        display: flex;
+        align-items: flex-start;
+        gap: 12px;
+        margin-bottom: 18px;
+      }
+
+      .number {
+        display: grid;
+        width: 30px;
+        height: 30px;
+        flex: 0 0 auto;
+        place-items: center;
+        border-radius: 9px;
+        background: var(--accent-soft);
+        color: var(--accent);
+        font-size: 0.85rem;
+        font-weight: 750;
+      }
+
+      h2 {
+        margin: 1px 0 4px;
+        font-size: 1rem;
+      }
+
+      .description {
+        margin: 0;
+        color: var(--muted);
+        font-size: 0.82rem;
+        line-height: 1.45;
+      }
+
+      .controls {
+        display: flex;
+        align-items: end;
+        gap: 12px;
+      }
+
+      .field {
+        display: grid;
+        min-width: 0;
+        flex: 1;
+        gap: 7px;
+      }
+
+      .field-label,
+      legend {
+        color: var(--muted);
+        font-size: 0.76rem;
+        font-weight: 700;
+      }
+
+      select,
+      input[type="number"] {
+        width: 100%;
+        min-height: 44px;
+        padding: 0 12px;
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        background: #f8fafb;
+        color: var(--ink);
+        font: inherit;
+        font-size: 0.9rem;
+        font-weight: 650;
+      }
+
+      select:focus-visible,
+      input:focus-visible,
+      button:focus-visible {
+        outline: 3px solid color-mix(in srgb, var(--focus), transparent 30%);
+        outline-offset: 2px;
+      }
+
+      fieldset {
+        min-width: 0;
+        margin: 0;
+        padding: 0;
+        border: 0;
+      }
+
+      legend {
+        margin-bottom: 8px;
+      }
+
+      .minute-options {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 8px;
+      }
+
+      .minute-options label {
+        position: relative;
+        display: grid;
+        min-height: 42px;
+        place-items: center;
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        background: #f8fafb;
+        color: var(--ink);
+        cursor: pointer;
+        font-size: 0.88rem;
+        font-weight: 700;
+        transition:
+          border-color 120ms ease,
+          background-color 120ms ease;
+      }
+
+      .minute-options input {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        overflow: hidden;
+        clip-path: inset(50%);
+        white-space: nowrap;
+      }
+
+      .minute-options label:has(input:checked) {
+        border-color: var(--accent);
+        background: var(--accent-soft);
+        color: var(--accent);
+      }
+
+      .minute-options label:has(input:focus-visible) {
+        outline: 3px solid color-mix(in srgb, var(--focus), transparent 30%);
+        outline-offset: 2px;
+      }
+
+      .hour-grid {
+        display: grid;
+        grid-template-columns: repeat(8, minmax(0, 1fr));
+        gap: 6px;
+        max-height: 100px;
+        overflow: auto;
+        padding: 2px;
+      }
+
+      .hour-grid button,
+      .step-button {
+        min-height: 36px;
+        border: 1px solid var(--border);
+        border-radius: 7px;
+        background: #f8fafb;
+        color: var(--ink);
+        cursor: pointer;
+        font: inherit;
+        font-size: 0.8rem;
+        font-weight: 650;
+      }
+
+      .hour-grid button[aria-pressed="true"] {
+        border-color: var(--accent);
+        background: var(--accent-soft);
+        color: var(--accent);
+      }
+
+      .time-readout {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        margin-top: 18px;
+        padding-top: 14px;
+        border-top: 1px solid #edf0f1;
+      }
+
+      .readout-label {
+        color: var(--muted);
+        font-size: 0.8rem;
+      }
+
+      output {
+        color: var(--accent);
+        font-variant-numeric: tabular-nums;
+        font-size: 1rem;
+        font-weight: 750;
+      }
+
+      .stepper {
+        display: flex;
+        align-items: end;
+        gap: 8px;
+      }
+
+      .stepper .field {
+        flex: 0 1 140px;
+      }
+
+      .step-actions {
+        display: flex;
+        gap: 6px;
+      }
+
+      .step-button {
+        width: 40px;
+        height: 44px;
+        font-size: 1.1rem;
+      }
+
+      .help {
+        margin: 10px 0 0;
+        color: var(--muted);
+        font-size: 0.75rem;
+      }
+
+      @media (max-width: 640px) {
+        body {
+          padding: 32px 16px 48px;
+        }
+
+        .gallery {
+          grid-template-columns: 1fr;
+        }
+
+        .card:last-child {
+          grid-column: auto;
+        }
+
+        .card {
+          padding: 18px;
+        }
+
+        .hour-grid {
+          grid-template-columns: repeat(6, minmax(0, 1fr));
+        }
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        *,
+        *::before,
+        *::after {
+          scroll-behavior: auto !important;
+          transition-duration: 0.01ms !important;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <header>
+        <p class="eyebrow">Booking form · input exploration</p>
+        <h1>Quarter-hour time inputs</h1>
+        <p class="intro">
+          Five ways to choose a time. Every option uses 24-hour time, and minutes are limited to 00,
+          15, 30, or 45.
+        </p>
+      </header>
+
+      <section class="gallery" aria-label="Time input alternatives">
+        <article class="card" data-card>
+          <div class="card-heading">
+            <span class="number" aria-hidden="true">1</span>
+            <div>
+              <h2>One time dropdown</h2>
+              <p class="description">A single native menu with every quarter-hour slot.</p>
+            </div>
+          </div>
+          <label class="field">
+            <span class="field-label">Start time</span>
+            <select data-time-select aria-label="Start time"></select>
+          </label>
+          <div class="time-readout">
+            <span class="readout-label">Selected time</span>
+            <output data-readout aria-live="polite"></output>
+          </div>
+        </article>
+
+        <article class="card" data-card>
+          <div class="card-heading">
+            <span class="number" aria-hidden="true">2</span>
+            <div>
+              <h2>Two compact dropdowns</h2>
+              <p class="description">Familiar controls; the minute menu has only four choices.</p>
+            </div>
+          </div>
+          <div class="controls">
+            <label class="field">
+              <span class="field-label">Hour</span>
+              <select data-hour aria-label="Hour"></select>
+            </label>
+            <label class="field">
+              <span class="field-label">Minute</span>
+              <select data-minute aria-label="Minute"></select>
+            </label>
+          </div>
+          <div class="time-readout">
+            <span class="readout-label">Selected time</span>
+            <output data-readout aria-live="polite"></output>
+          </div>
+        </article>
+
+        <article class="card" data-card>
+          <div class="card-heading">
+            <span class="number" aria-hidden="true">3</span>
+            <div>
+              <h2>Hour dropdown + minute buttons</h2>
+              <p class="description">Keep the four minute choices visible for quick selection.</p>
+            </div>
+          </div>
+          <label class="field">
+            <span class="field-label">Hour</span>
+            <select data-hour aria-label="Hour"></select>
+          </label>
+          <fieldset style="margin-top: 14px">
+            <legend>Minute</legend>
+            <div class="minute-options" data-minute-radios></div>
+          </fieldset>
+          <div class="time-readout">
+            <span class="readout-label">Selected time</span>
+            <output data-readout aria-live="polite"></output>
+          </div>
+        </article>
+
+        <article class="card" data-card>
+          <div class="card-heading">
+            <span class="number" aria-hidden="true">4</span>
+            <div>
+              <h2>Hour grid + minute buttons</h2>
+              <p class="description">A scan-friendly 24-hour grid with quarter-hour buttons.</p>
+            </div>
+          </div>
+          <fieldset>
+            <legend>Hour</legend>
+            <div class="hour-grid" data-hour-grid></div>
+          </fieldset>
+          <fieldset style="margin-top: 14px">
+            <legend>Minute</legend>
+            <div class="minute-options" data-minute-radios></div>
+          </fieldset>
+          <div class="time-readout">
+            <span class="readout-label">Selected time</span>
+            <output data-readout aria-live="polite"></output>
+          </div>
+        </article>
+
+        <article class="card" data-card>
+          <div class="card-heading">
+            <span class="number" aria-hidden="true">5</span>
+            <div>
+              <h2>Hour stepper + minute dropdown</h2>
+              <p class="description">Quickly nudge the hour, then choose one of four minutes.</p>
+            </div>
+          </div>
+          <div class="stepper">
+            <div class="field">
+              <label class="field-label" for="step-hour">Hour</label>
+              <input
+                id="step-hour"
+                data-hour-input
+                type="number"
+                min="0"
+                max="23"
+                step="1"
+                value="09"
+              />
+            </div>
+            <div class="step-actions" aria-label="Adjust hour">
+              <button
+                class="step-button"
+                type="button"
+                data-hour-step="-1"
+                aria-label="Previous hour"
+              >
+                −
+              </button>
+              <button class="step-button" type="button" data-hour-step="1" aria-label="Next hour">
+                +
+              </button>
+            </div>
+            <label class="field">
+              <span class="field-label">Minute</span>
+              <select data-minute aria-label="Minute"></select>
+            </label>
+          </div>
+          <p class="help">Hours wrap between 00 and 23.</p>
+          <div class="time-readout">
+            <span class="readout-label">Selected time</span>
+            <output data-readout aria-live="polite"></output>
+          </div>
+        </article>
+      </section>
+    </main>
+
+    <script>
+      const minutes = ["00", "15", "30", "45"];
+      const hours = Array.from({ length: 24 }, (_, hour) => String(hour).padStart(2, "0"));
+
+      function populateSelect(select, values, selectedValue) {
+        for (const value of values) {
+          const option = document.createElement("option");
+          option.value = value;
+          option.textContent = value;
+          option.selected = value === selectedValue;
+          select.append(option);
+        }
+      }
+
+      document.querySelectorAll("[data-time-select]").forEach((select) => {
+        const times = hours.flatMap((hour) => minutes.map((minute) => `${hour}:${minute}`));
+        populateSelect(select, times, "09:00");
+      });
+
+      document.querySelectorAll("[data-hour]").forEach((select) => {
+        populateSelect(select, hours, "09");
+      });
+
+      document.querySelectorAll("[data-minute]").forEach((select) => {
+        populateSelect(select, minutes, "00");
+      });
+
+      document.querySelectorAll("[data-minute-radios]").forEach((group, groupIndex) => {
+        const name = `minute-choice-${groupIndex}`;
+        for (const minute of minutes) {
+          const label = document.createElement("label");
+          const input = document.createElement("input");
+          input.type = "radio";
+          input.name = name;
+          input.value = minute;
+          input.checked = minute === "00";
+          input.setAttribute("aria-label", `${minute} minutes`);
+          input.addEventListener("change", () => updateCard(group.closest("[data-card]")));
+          label.append(input, document.createTextNode(minute));
+          group.append(label);
+        }
+      });
+
+      document.querySelectorAll("[data-hour-grid]").forEach((grid) => {
+        for (const hour of hours) {
+          const button = document.createElement("button");
+          button.type = "button";
+          button.textContent = hour;
+          button.setAttribute("aria-pressed", hour === "09" ? "true" : "false");
+          button.setAttribute("aria-label", `${hour} hours`);
+          button.addEventListener("click", () => {
+            grid.querySelectorAll("button").forEach((option) => {
+              option.setAttribute("aria-pressed", String(option === button));
+            });
+            updateCard(grid.closest("[data-card]"));
+          });
+          grid.append(button);
+        }
+      });
+
+      function updateCard(card) {
+        const output = card.querySelector("[data-readout]");
+        const combinedTime = card.querySelector("[data-time-select]");
+        if (combinedTime) {
+          output.value = combinedTime.value;
+          output.textContent = combinedTime.value;
+          return;
+        }
+
+        const hourInput = card.querySelector("[data-hour-input]");
+        const hourSelect = card.querySelector("[data-hour]");
+        const hourButton = card.querySelector('[data-hour-grid] button[aria-pressed="true"]');
+        const minuteInput = card.querySelector("[data-minute]");
+        const minuteRadio = card.querySelector("[data-minute-radios] input:checked");
+        const hour = hourInput
+          ? Number.isInteger(hourInput.valueAsNumber) &&
+            hourInput.valueAsNumber >= 0 &&
+            hourInput.valueAsNumber <= 23
+            ? String(hourInput.valueAsNumber).padStart(2, "0")
+            : null
+          : (hourSelect?.value ?? hourButton?.textContent);
+        const minute = minuteInput?.value ?? minuteRadio?.value;
+        const time = hour && minute ? `${hour}:${minute}` : "Choose a valid hour";
+        output.value = time;
+        output.textContent = time;
+      }
+
+      document.querySelectorAll("[data-card]").forEach((card) => {
+        card.addEventListener("input", () => updateCard(card));
+        card.addEventListener("change", () => updateCard(card));
+        card.querySelectorAll("[data-hour-step]").forEach((button) => {
+          button.addEventListener("click", () => {
+            const input = card.querySelector("[data-hour-input]");
+            const currentHour = Number.isInteger(input.valueAsNumber) ? input.valueAsNumber : 0;
+            const direction = Number(button.dataset.hourStep);
+            input.value = String(((currentHour + direction) % 24 + 24) % 24).padStart(2, "0");
+            updateCard(card);
+          });
+        });
+        updateCard(card);
+      });
+    </script>
+  </body>
+</html>

@@ -105,11 +105,27 @@ function projection(record) {
   };
 }
 
+function compareText(left, right) {
+  const normalizedLeft = String(left).toLowerCase();
+  const normalizedRight = String(right).toLowerCase();
+  return normalizedLeft < normalizedRight ? -1 : normalizedLeft > normalizedRight ? 1 : 0;
+}
+
+function compareUserRecords(left, right) {
+  for (const field of ["first_name", "last_name", "email"]) {
+    const comparison = compareText(left.get(field), right.get(field));
+    if (comparison !== 0) return comparison;
+  }
+  return compareText(left.id, right.id);
+}
+
 function recordsForTenant(tenantId, activeOnly = false) {
   const filter = activeOnly ? "tenant = {:tenant} && active = true" : "tenant = {:tenant}";
-  return $app.findRecordsByFilter(USER_COLLECTION, filter, "last_name,first_name,email,id", 0, 0, {
-    tenant: tenantId,
-  });
+  return $app
+    .findRecordsByFilter(USER_COLLECTION, filter, "first_name,last_name,email,id", 0, 0, {
+      tenant: tenantId,
+    })
+    .sort(compareUserRecords);
 }
 
 function activeAdministratorsForTenant(tenantId, limit = 0) {
