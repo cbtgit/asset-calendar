@@ -37,17 +37,25 @@ type BookingFormProps = {
 
 type BookingDateTimeValues = {
   startDate: string;
-  startTime: string;
+  startHour: string;
+  startMinute: string;
   endDate: string;
-  endTime: string;
+  endHour: string;
+  endMinute: string;
 };
 
-const BOOKING_TIME_STEP_SECONDS = 15 * 60;
+const BOOKING_HOURS = Array.from({ length: 24 }, (_, hour) => String(hour).padStart(2, "0"));
+const BOOKING_MINUTES = ["00", "15", "30", "45"];
 
 function initialDateTime(value: string | undefined, timeZone: string) {
   if (!value) return { date: "", time: "" };
   const local = utcToApplicationDateTime(value, timeZone);
   return { date: local.slice(0, 10), time: local.slice(11, 16) };
+}
+
+function timeParts(time: string) {
+  const [hour = "", minute = ""] = time.split(":");
+  return { hour, minute };
 }
 
 function submittedDateTime(
@@ -202,13 +210,19 @@ export function BookingForm({
   const inputTimeZone = dateTimeEditTimeZone ?? timeZone;
   const start = initialDateTime(initialStart, inputTimeZone);
   const end = initialDateTime(initialEnd, inputTimeZone);
+  const startParts = timeParts(start.time);
+  const endParts = timeParts(end.time);
   const dateTimeValues = dateTimeDraft ?? {
     startDate: start.date || initialDate || "",
-    startTime: start.time,
+    startHour: startParts.hour,
+    startMinute: startParts.minute,
     endDate: end.date || start.date || initialDate || "",
-    endTime: end.time,
+    endHour: endParts.hour,
+    endMinute: endParts.minute,
   };
-  const { startDate, startTime, endDate, endTime } = dateTimeValues;
+  const { startDate, startHour, startMinute, endDate, endHour, endMinute } = dateTimeValues;
+  const startTime = startHour && startMinute ? `${startHour}:${startMinute}` : "";
+  const endTime = endHour && endMinute ? `${endHour}:${endMinute}` : "";
   const [bookedForUser, setBookedForUser] = useState(initialBooking?.booked_for_user ?? "");
   const [bookingType, setBookingType] = useState(initialBooking?.booking_type ?? "");
   const [formError, setFormError] = useState("");
@@ -461,17 +475,48 @@ export function BookingForm({
               required
             />
           </label>
-          <label>
-            <span>Start time</span>
-            <input
-              type="time"
-              value={startTime}
-              onChange={(event) => updateDateTime("startTime", event.target.value)}
-              step={BOOKING_TIME_STEP_SECONDS}
-              disabled={currentStartLocked}
-              required
-            />
-          </label>
+          <fieldset className="booking-time-field">
+            <legend>Start time</legend>
+            <div className="booking-time-controls">
+              <label className="booking-time-part">
+                <span className="sr-only">Start hour</span>
+                <select
+                  className="booking-time-select"
+                  value={startHour}
+                  onChange={(event) => updateDateTime("startHour", event.target.value)}
+                  disabled={currentStartLocked}
+                  required
+                >
+                  <option value="">--</option>
+                  {BOOKING_HOURS.map((hour) => (
+                    <option key={hour} value={hour}>
+                      {hour}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <span className="booking-time-separator" aria-hidden="true">
+                :
+              </span>
+              <label className="booking-time-part">
+                <span className="sr-only">Start minute</span>
+                <select
+                  className="booking-time-select"
+                  value={startMinute}
+                  onChange={(event) => updateDateTime("startMinute", event.target.value)}
+                  disabled={currentStartLocked}
+                  required
+                >
+                  <option value="">--</option>
+                  {BOOKING_MINUTES.map((minute) => (
+                    <option key={minute} value={minute}>
+                      {minute}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            </div>
+          </fieldset>
           <label>
             <span>End date</span>
             <input
@@ -482,17 +527,48 @@ export function BookingForm({
               required
             />
           </label>
-          <label>
-            <span>End time</span>
-            <input
-              type="time"
-              value={endTime}
-              onChange={(event) => updateDateTime("endTime", event.target.value)}
-              step={BOOKING_TIME_STEP_SECONDS}
-              disabled={currentStartLocked}
-              required
-            />
-          </label>
+          <fieldset className="booking-time-field">
+            <legend>End time</legend>
+            <div className="booking-time-controls">
+              <label className="booking-time-part">
+                <span className="sr-only">End hour</span>
+                <select
+                  className="booking-time-select"
+                  value={endHour}
+                  onChange={(event) => updateDateTime("endHour", event.target.value)}
+                  disabled={currentStartLocked}
+                  required
+                >
+                  <option value="">--</option>
+                  {BOOKING_HOURS.map((hour) => (
+                    <option key={hour} value={hour}>
+                      {hour}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <span className="booking-time-separator" aria-hidden="true">
+                :
+              </span>
+              <label className="booking-time-part">
+                <span className="sr-only">End minute</span>
+                <select
+                  className="booking-time-select"
+                  value={endMinute}
+                  onChange={(event) => updateDateTime("endMinute", event.target.value)}
+                  disabled={currentStartLocked}
+                  required
+                >
+                  <option value="">--</option>
+                  {BOOKING_MINUTES.map((minute) => (
+                    <option key={minute} value={minute}>
+                      {minute}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            </div>
+          </fieldset>
         </div>
 
         {isAdministrator ? (
