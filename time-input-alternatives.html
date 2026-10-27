@@ -564,7 +564,7 @@
             const input = card.querySelector("[data-hour-input]");
             const currentHour = Number.isInteger(input.valueAsNumber) ? input.valueAsNumber : 0;
             const direction = Number(button.dataset.hourStep);
-            input.value = String(((currentHour + direction) % 24 + 24) % 24).padStart(2, "0");
+            input.value = String((((currentHour + direction) % 24) + 24) % 24).padStart(2, "0");
             updateCard(card);
           });
         });
