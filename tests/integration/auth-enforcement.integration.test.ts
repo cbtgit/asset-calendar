@@ -379,6 +379,12 @@ it("enforces the resolved tenant and role boundary on direct requests", async ()
   expect(usersResponse.status).toBe(200);
   const users = await usersResponse.json();
   expect(users.items).toHaveLength(4);
+  const firstNames = users.items.map((user: { first_name: string }) =>
+    user.first_name.toLowerCase(),
+  );
+  expect(firstNames).toEqual(
+    [...firstNames].sort((left, right) => (left < right ? -1 : left > right ? 1 : 0)),
+  );
   expect(users.items[0]).toEqual(
     expect.objectContaining({
       email: expect.any(String),

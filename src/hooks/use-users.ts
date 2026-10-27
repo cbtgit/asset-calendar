@@ -38,11 +38,19 @@ function optimisticUser(input: UserCreate): User {
   };
 }
 
+function compareText(left: string, right: string): number {
+  const normalizedLeft = left.toLowerCase();
+  const normalizedRight = right.toLowerCase();
+  return normalizedLeft < normalizedRight ? -1 : normalizedLeft > normalizedRight ? 1 : 0;
+}
+
 function sortUsers(users: User[]): User[] {
-  return [...users].sort((left, right) =>
-    (left.display_name || left.email).localeCompare(right.display_name || right.email, undefined, {
-      sensitivity: "base",
-    }),
+  return [...users].sort(
+    (left, right) =>
+      compareText(left.first_name, right.first_name) ||
+      compareText(left.last_name, right.last_name) ||
+      compareText(left.email, right.email) ||
+      compareText(left.id, right.id),
   );
 }
 
